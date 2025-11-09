@@ -29,48 +29,49 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
     <>
       <div className="h-screen snap-start relative flex flex-col bg-background overflow-hidden">
         {/* Top spacing for trending bar */}
-        <div className="h-[72px] flex-shrink-0" />
+        <div className="h-[60px] flex-shrink-0" />
+        
         {/* Token Header */}
-        <div className="px-3 md:px-4 lg:px-6 pt-1 md:pt-4 lg:pt-5 pb-1 md:pb-2 lg:pb-3 flex items-center justify-between bg-background flex-shrink-0">
-          <div className="flex items-center gap-2 md:gap-3 lg:gap-4 min-w-0 flex-1">
+        <div className="px-3 py-2 flex items-center justify-between bg-background flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <img 
               src={token.avatarUrl} 
               alt={token.symbol}
-              className="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full border-2 border-primary shadow-lg flex-shrink-0"
+              className="w-10 h-10 rounded-full border-2 border-primary shadow-lg flex-shrink-0"
             />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 md:gap-2">
-                <span className="font-bold text-foreground text-base md:text-lg lg:text-xl truncate">{token.symbol}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-foreground text-base truncate">{token.symbol}</span>
                 {token.isNew && (
-                  <Badge className="bg-primary text-primary-foreground text-[10px] md:text-xs lg:text-sm px-1 md:px-2 py-0">New</Badge>
+                  <Badge className="bg-primary text-primary-foreground text-[10px] px-1 py-0">New</Badge>
                 )}
               </div>
-              <span className="text-xs md:text-sm lg:text-base text-muted-foreground truncate block">{token.name}</span>
+              <span className="text-xs text-muted-foreground truncate block">{token.name}</span>
             </div>
           </div>
           
           {/* Social and External Links */}
-          <div className="flex items-center gap-0.5 md:gap-1 lg:gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-0.5 flex-shrink-0">
             {token.website && (
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9"
+                className="h-7 w-7"
                 onClick={() => window.open(token.website, '_blank')}
                 title="Website"
               >
-                <Globe className="w-3.5 h-3.5 md:w-4 md:h-4 lg:w-5 lg:h-5" />
+                <Globe className="w-3.5 h-3.5" />
               </Button>
             )}
             {token.telegram && (
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9"
+                className="h-7 w-7"
                 onClick={() => window.open(`https://t.me/${token.telegram}`, '_blank')}
                 title="Telegram"
               >
-                <svg className="w-3.5 h-3.5 md:w-4 md:h-4 lg:w-5 lg:h-5" viewBox="0 0 24 24" fill="currentColor">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
                 </svg>
               </Button>
@@ -79,11 +80,11 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9"
+                className="h-7 w-7"
                 onClick={() => window.open(`https://twitter.com/${token.twitter}`, '_blank')}
                 title="X (Twitter)"
               >
-                <svg className="w-3.5 h-3.5 md:w-4 md:h-4 lg:w-5 lg:h-5" viewBox="0 0 24 24" fill="currentColor">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                 </svg>
               </Button>
@@ -92,14 +93,14 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9"
+                className="h-7 w-7"
                 onClick={() => window.open(`https://solscan.io/token/${token.contractAddress}`, '_blank')}
                 title="View on Solscan"
               >
                 <img 
                   src="https://solscan.io/favicon.ico" 
                   alt="Solscan"
-                  className="w-3.5 h-3.5 md:w-4 md:h-4 lg:w-5 lg:h-5"
+                  className="w-3.5 h-3.5"
                 />
               </Button>
             )}
@@ -107,18 +108,18 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9"
+                className="h-7 w-7"
                 onClick={() => window.open(token.dexScreenerUrl, '_blank')}
                 title="View on DexScreener"
               >
-                <ExternalLink className="w-3.5 h-3.5 md:w-4 md:h-4 lg:w-5 lg:h-5" />
+                <ExternalLink className="w-3.5 h-3.5" />
               </Button>
             )}
           </div>
         </div>
 
         {/* DexScreener Chart */}
-        <div className="relative bg-card overflow-hidden flex-1" style={{ minHeight: '40vh' }}>
+        <div className="relative bg-card overflow-hidden" style={{ height: '35vh' }}>
           {token.dexScreenerUrl ? (
             <iframe
               src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
@@ -134,63 +135,58 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* Bottom - Token Info */}
-        <div className="relative px-3 md:px-4 lg:px-6 pt-2 md:pt-4 lg:pt-5 pb-20 flex flex-col gap-2 md:gap-3 lg:gap-4 bg-background flex-shrink-0">
+        <div className="flex-1 px-3 pt-2 pb-20 flex flex-col gap-2 bg-background overflow-hidden">
           {/* Price Info */}
           <div>
-            <div className="text-xl md:text-3xl lg:text-4xl font-bold text-foreground mb-0.5 md:mb-1">
+            <div className="text-2xl font-bold text-foreground">
               {formatPrice(token.price)}
             </div>
-            <div className={`text-xs md:text-base lg:text-lg font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
+            <div className={`text-sm font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
               {isPositive ? '+' : ''}{token.change24h.toFixed(2)}% (24h)
             </div>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-1.5 md:gap-2 lg:gap-3">
-            <div className="bg-secondary rounded-lg p-1.5 md:p-3 lg:p-4">
-              <div className="text-[9px] md:text-xs lg:text-sm text-muted-foreground mb-0.5">Market Cap</div>
-              <div className="text-xs md:text-base lg:text-lg font-bold text-foreground truncate">
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="bg-secondary rounded-lg p-2">
+              <div className="text-[9px] text-muted-foreground">Market Cap</div>
+              <div className="text-xs font-bold text-foreground truncate">
                 {formatCurrency(token.marketCap)}
               </div>
             </div>
-            <div className="bg-secondary rounded-lg p-1.5 md:p-3 lg:p-4">
-              <div className="text-[9px] md:text-xs lg:text-sm text-muted-foreground mb-0.5">Volume 24h</div>
-              <div className="text-xs md:text-base lg:text-lg font-bold text-foreground truncate">
+            <div className="bg-secondary rounded-lg p-2">
+              <div className="text-[9px] text-muted-foreground">Volume 24h</div>
+              <div className="text-xs font-bold text-foreground truncate">
                 {formatCurrency(token.volume24h)}
               </div>
             </div>
-            <div className="bg-secondary rounded-lg p-1.5 md:p-3 lg:p-4">
-              <div className="text-[9px] md:text-xs lg:text-sm text-muted-foreground mb-0.5">Liquidity</div>
-              <div className="text-xs md:text-base lg:text-lg font-bold text-foreground truncate">
+            <div className="bg-secondary rounded-lg p-2">
+              <div className="text-[9px] text-muted-foreground">Liquidity</div>
+              <div className="text-xs font-bold text-foreground truncate">
                 {formatCurrency(token.liquidity)}
               </div>
             </div>
-            <div className="bg-secondary rounded-lg p-1.5 md:p-3 lg:p-4">
-              <div className="text-[9px] md:text-xs lg:text-sm text-muted-foreground mb-0.5">Chain</div>
-              <div className="text-xs md:text-base lg:text-lg font-bold text-foreground truncate">
+            <div className="bg-secondary rounded-lg p-2">
+              <div className="text-[9px] text-muted-foreground">Chain</div>
+              <div className="text-xs font-bold text-foreground truncate">
                 {token.chain}
               </div>
             </div>
           </div>
 
-          {/* Description */}
-          <div className="text-[10px] md:text-xs lg:text-sm text-muted-foreground leading-relaxed line-clamp-2">
-            {token.description}
-          </div>
-
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-2 md:gap-3 lg:gap-4">
+          <div className="grid grid-cols-2 gap-2 mt-auto">
             <Button 
               onClick={() => setShowBuyDrawer(true)}
               size="lg"
-              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-xs md:text-base lg:text-lg h-9 md:h-12 lg:h-14"
+              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-sm h-11"
             >
               Buy
             </Button>
             <Button 
               onClick={() => setShowSellDrawer(true)}
               size="lg"
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-xs md:text-base lg:text-lg h-9 md:h-12 lg:h-14"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-sm h-11"
             >
               Sell
             </Button>
@@ -198,34 +194,34 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* Right Side Actions (TikTok style) */}
-        <div className="absolute right-2 md:right-4 lg:right-6 bottom-32 md:bottom-24 lg:bottom-28 flex flex-col gap-3 md:gap-4 lg:gap-5 z-10">
+        <div className="absolute right-2 bottom-24 flex flex-col gap-3 z-10">
           <button
             onClick={handleLike}
-            className="flex flex-col items-center gap-0.5 md:gap-1"
+            className="flex flex-col items-center gap-0.5"
           >
-            <div className="w-11 h-11 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center">
+            <div className="w-11 h-11 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center">
               <Heart 
-                className={`w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 ${isLiked ? 'fill-destructive text-destructive' : 'text-foreground'}`} 
+                className={`w-5 h-5 ${isLiked ? 'fill-destructive text-destructive' : 'text-foreground'}`} 
               />
             </div>
-            <span className="text-[10px] md:text-xs lg:text-sm font-medium text-foreground">{token.likes + (isLiked ? 1 : 0)}</span>
+            <span className="text-[10px] font-medium text-foreground">{token.likes + (isLiked ? 1 : 0)}</span>
           </button>
 
           <button
             onClick={() => onComment?.(token.id)}
-            className="flex flex-col items-center gap-0.5 md:gap-1"
+            className="flex flex-col items-center gap-0.5"
           >
-            <div className="w-11 h-11 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-foreground" />
+            <div className="w-11 h-11 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center">
+              <MessageCircle className="w-5 h-5 text-foreground" />
             </div>
-            <span className="text-[10px] md:text-xs lg:text-sm font-medium text-foreground">{token.comments}</span>
+            <span className="text-[10px] font-medium text-foreground">{token.comments}</span>
           </button>
 
-          <button className="flex flex-col items-center gap-0.5 md:gap-1">
-            <div className="w-11 h-11 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center">
-              <Share2 className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-foreground" />
+          <button className="flex flex-col items-center gap-0.5">
+            <div className="w-11 h-11 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center">
+              <Share2 className="w-5 h-5 text-foreground" />
             </div>
-            <span className="text-[10px] md:text-xs lg:text-sm font-medium text-foreground">Share</span>
+            <span className="text-[10px] font-medium text-foreground">Share</span>
           </button>
         </div>
       </div>
