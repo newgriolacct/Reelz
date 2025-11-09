@@ -168,12 +168,12 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
 
         {/* DexScreener Chart */}
         <div className="relative bg-card overflow-hidden flex-1 min-h-0">
-          {token.dexScreenerUrl ? (
+        {token.dexScreenerUrl ? (
             <iframe
               src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
               className="w-full h-full border-0 bg-secondary"
               title={`${token.symbol} Chart`}
-              loading="lazy"
+              loading="eager"
               style={{ marginTop: '-40px', height: 'calc(100% + 80px)' }}
             />
           ) : (

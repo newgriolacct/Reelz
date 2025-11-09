@@ -78,50 +78,58 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair
 
 /**
  * Aggregate random tokens from all APIs for scrolling feed
- * Note: No caching for random feed to ensure variety on scroll
+ * Ensures all tokens have at least $30k market cap
  */
 export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]> => {
   // Don't cache random tokens - we want fresh data each time for infinite scroll
   
   try {
-    // Fetch from both sources - DexScreener + GeckoTerminal for reliability
-    const [dexRandom, geckoNew] = await Promise.allSettled([
-      fetchDexRandom(chainId),
-      fetchGeckoNewPools(chainId),
-    ]);
-    
+    // Keep fetching until we have at least 30 tokens above $30k
     const allPairs: DexPair[] = [];
     const seenPairAddresses = new Set<string>();
+    let attempts = 0;
+    const maxAttempts = 3;
     
-    // Add DexScreener random tokens
-    if (dexRandom.status === 'fulfilled') {
-      dexRandom.value.forEach(pair => {
-        if (!seenPairAddresses.has(pair.pairAddress)) {
-          allPairs.push(pair);
-          seenPairAddresses.add(pair.pairAddress);
-        }
-      });
-    } else {
-      console.warn('DexScreener random tokens failed:', dexRandom.reason);
+    while (allPairs.length < 30 && attempts < maxAttempts) {
+      attempts++;
+      
+      // Fetch from both sources - DexScreener + GeckoTerminal for reliability
+      const [dexRandom, geckoNew] = await Promise.allSettled([
+        fetchDexRandom(chainId),
+        fetchGeckoNewPools(chainId),
+      ]);
+      
+      // Add DexScreener random tokens - FILTER by $30k+ market cap
+      if (dexRandom.status === 'fulfilled') {
+        dexRandom.value.forEach(pair => {
+          const marketCap = pair.marketCap || pair.fdv || 0;
+          if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
+            allPairs.push(pair);
+            seenPairAddresses.add(pair.pairAddress);
+          }
+        });
+      } else {
+        console.warn('DexScreener random tokens failed:', dexRandom.reason);
+      }
+      
+      // Add GeckoTerminal new pools - FILTER by $30k+ market cap
+      if (geckoNew.status === 'fulfilled') {
+        geckoNew.value.forEach(pair => {
+          const marketCap = pair.marketCap || pair.fdv || 0;
+          if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
+            allPairs.push(pair);
+            seenPairAddresses.add(pair.pairAddress);
+          }
+        });
+      } else {
+        console.warn('GeckoTerminal new pools failed:', geckoNew.reason);
+      }
     }
     
-    // Add GeckoTerminal new pools - filter by $30k+ market cap here
-    if (geckoNew.status === 'fulfilled') {
-      geckoNew.value.forEach(pair => {
-        const marketCap = pair.marketCap || pair.fdv || 0;
-        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
-          allPairs.push(pair);
-          seenPairAddresses.add(pair.pairAddress);
-        }
-      });
-    } else {
-      console.warn('GeckoTerminal new pools failed:', geckoNew.reason);
-    }
+    console.log(`Collected ${allPairs.length} tokens above $30k market cap`);
     
-    console.log(`Total pairs collected: ${allPairs.length}`);
-    
-    // Return more tokens initially for faster perceived loading
-    const result = allPairs.sort(() => Math.random() - 0.5).slice(0, 30);
+    // Shuffle and return
+    const result = allPairs.sort(() => Math.random() - 0.5);
     
     return result;
   } catch (error) {

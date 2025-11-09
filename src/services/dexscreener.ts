@@ -156,8 +156,8 @@ export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> 
         console.error(`Failed to fetch token ${boostedToken.tokenAddress}:`, error);
       }
       
-      // Stop once we have enough tokens
-      if (allPairs.length >= 30) break;
+      // If we don't have enough pairs yet, keep going
+      if (allPairs.length >= 20) break;
     }
     
     return allPairs;
@@ -290,8 +290,8 @@ export const fetchRandomTokens = async (chainId?: string): Promise<DexPair[]> =>
         console.error(`Failed to fetch token ${tokenAddress}:`, error);
       }
       
-      // Stop once we have enough pairs
-      if (allPairs.length >= 80) break;
+      // Stop once we have enough tokens above $30k
+      if (allPairs.length >= 50) break;
     }
     
     return allPairs;
