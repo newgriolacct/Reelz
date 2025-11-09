@@ -27,7 +27,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
 
   return (
     <>
-      <div className="h-screen snap-start relative flex flex-col bg-background">
+      <div className="h-screen snap-start relative flex flex-col bg-background pt-16">
         {/* Token Header */}
         <div className="px-4 pt-4 pb-2 flex items-center justify-between bg-background">
           <div className="flex items-center gap-3">

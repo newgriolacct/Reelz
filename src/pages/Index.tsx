@@ -114,7 +114,6 @@ const Index = () => {
       <div 
         ref={scrollContainerRef}
         className="h-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth scrollbar-hide"
-        style={{ paddingTop: '64px' }}
       >
         {tokens.map((token) => (
           <TokenCard
