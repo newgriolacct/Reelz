@@ -49,50 +49,80 @@ export interface DexScreenerResponse {
 
 const API_BASE = 'https://api.dexscreener.com/latest/dex';
 
+interface BoostedToken {
+  url: string;
+  chainId: string;
+  tokenAddress: string;
+  amount: number;
+  totalAmount: number;
+  icon?: string;
+  header?: string;
+  description?: string;
+  links?: Array<{
+    type: string;
+    label: string;
+    url: string;
+  }>;
+}
+
+/**
+ * Fetch trending tokens using DexScreener's boosted tokens endpoint
+ * Shows tokens with the most active boosts across all chains
+ */
 export const fetchTrendingTokens = async (): Promise<DexPair[]> => {
   try {
-    // Fetch popular Solana tokens individually to get diverse pairs
-    const tokens = [
-      'So11111111111111111111111111111111111111112', // SOL
-      'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', // BONK
-      'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN', // JUP
-      'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3', // PYTH
-      'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm', // WIF
-      'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So', // mSOL
-      'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn', // JitoSOL
-      'MEW1gQWJ3nEXg2qgERiKu7FAFj79PHvQVREQUzScPP5', // MEW
-    ];
-
+    // Step 1: Fetch top boosted tokens
+    const boostResponse = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
+    
+    if (!boostResponse.ok) {
+      throw new Error(`Failed to fetch boosted tokens: ${boostResponse.status}`);
+    }
+    
+    const boostedTokens: BoostedToken[] = await boostResponse.json();
+    
+    // Step 2: Fetch pair data for each boosted token
     const allPairs: DexPair[] = [];
     
-    // Fetch each token separately to get diverse pairs
-    for (const tokenAddress of tokens) {
+    // Take top 20 boosted tokens to ensure we get at least 10 good pairs
+    const topTokens = boostedTokens.slice(0, 20);
+    
+    for (const boostedToken of topTokens) {
       try {
-        const response = await fetch(`${API_BASE}/tokens/${tokenAddress}`);
-        if (response.ok) {
-          const data: DexScreenerResponse = await response.json();
-          // Get the pair with highest liquidity for this token
+        const response = await fetch(`${API_BASE}/tokens/${boostedToken.tokenAddress}`);
+        
+        if (!response.ok) continue;
+        
+        const data: DexScreenerResponse = await response.json();
+        
+        if (data.pairs && data.pairs.length > 0) {
+          // Get the best pair for this token (highest liquidity)
           const bestPair = data.pairs
-            .filter(pair => 
-              pair.liquidity.usd > 50000 && 
-              pair.volume.h24 > 1000 &&
-              // Prefer USDC/USDT pairs
-              (pair.quoteToken.symbol === 'USDC' || 
-               pair.quoteToken.symbol === 'USDT' ||
-               pair.quoteToken.symbol === 'SOL')
-            )
-            .sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
+            .filter(pair => {
+              const quoteSymbol = pair.quoteToken.symbol.toUpperCase();
+              // Prefer pairs with major quote tokens
+              return quoteSymbol === 'SOL' || 
+                     quoteSymbol === 'USDC' || 
+                     quoteSymbol === 'USDT' ||
+                     quoteSymbol === 'ETH' ||
+                     quoteSymbol === 'WETH' ||
+                     quoteSymbol === 'BNB' ||
+                     quoteSymbol === 'WBNB';
+            })
+            .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
           
           if (bestPair) {
             allPairs.push(bestPair);
           }
         }
-      } catch (err) {
-        console.error(`Error fetching token ${tokenAddress}:`, err);
+      } catch (error) {
+        console.error(`Failed to fetch token ${boostedToken.tokenAddress}:`, error);
       }
+      
+      // Stop once we have enough pairs
+      if (allPairs.length >= 10) break;
     }
     
-    return allPairs.slice(0, 10);
+    return allPairs;
   } catch (error) {
     console.error('Error fetching trending tokens:', error);
     throw error;

@@ -2,8 +2,8 @@ import { TokenCard } from "@/components/TokenCard";
 import { BottomNav } from "@/components/BottomNav";
 import { TrendingTokensList } from "@/components/TrendingTokensList";
 import { NetworkSelector } from "@/components/NetworkSelector";
-import { fetchTrendingPools } from "@/services/geckoterminal";
-import { convertGeckoTerminalToToken } from "@/types/token";
+import { fetchTrendingTokens } from "@/services/dexscreener";
+import { convertDexPairToToken } from "@/types/token";
 import { useEffect, useState, useRef } from "react";
 import { Token } from "@/types/token";
 
@@ -21,10 +21,8 @@ const Index = () => {
     
     try {
       setLoadingMore(true);
-      const response = await fetchTrendingPools();
-      const convertedTokens = response.data.map((pool) => 
-        convertGeckoTerminalToToken(pool, null, response)
-      );
+      const pairs = await fetchTrendingTokens();
+      const convertedTokens = pairs.map(convertDexPairToToken);
       setTokens(prev => [...prev, ...convertedTokens]);
     } catch (err) {
       console.error('Failed to load more tokens', err);
@@ -37,10 +35,8 @@ const Index = () => {
     const loadTokens = async () => {
       try {
         setLoading(true);
-        const response = await fetchTrendingPools();
-        const convertedTokens = response.data.map((pool) => 
-          convertGeckoTerminalToToken(pool, null, response)
-        );
+        const pairs = await fetchTrendingTokens();
+        const convertedTokens = pairs.map(convertDexPairToToken);
         setTokens(convertedTokens);
         if (convertedTokens.length > 0) {
           setCurrentTokenId(convertedTokens[0].id);
