@@ -89,76 +89,49 @@ const generateMockToken = (index: number, chainId?: string): Token => {
 };
 
 /**
- * Fetch trending tokens - Uses Birdeye API for all networks
+ * Fetch trending tokens - Uses Birdeye API for all networks - NO MOCK DATA
  */
 export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]> => {
-  try {
-    const network = chainId || 'solana';
-    console.log(`Fetching real ${network} trending tokens (100k-5M cap)...`);
-    // Get trending tokens with 100k-5M market cap range (max 20 per Birdeye API limit)
-    const tokens = await fetchBirdeyeTrending(network, 0, 20, 100000, 5000000);
-    
-    if (tokens.length === 0) {
-      console.warn('No tokens from API, using mock data');
-      throw new Error('No tokens returned');
-    }
-    
-    // Randomly select 5 tokens from the filtered results
-    const shuffled = tokens.sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, 5);
-    
-    return selected.map(token => convertBirdeyeToToken(token, network));
-  } catch (error) {
-    console.error('Error fetching trending tokens, using mock data:', error);
-    // Fallback to mock data on error
-    const tokens: Token[] = [];
-    for (let i = 0; i < 5; i++) {
-      const mockToken = generateMockToken(i, chainId);
-      // Override market cap to be in range
-      mockToken.marketCap = Math.floor(Math.random() * 4900000) + 100000;
-      tokens.push(mockToken);
-    }
-    return tokens;
+  const network = chainId || 'solana';
+  console.log(`Fetching real ${network} trending tokens (100k-5M cap)...`);
+  // Get trending tokens with 100k-5M market cap range (max 20 per Birdeye API limit)
+  const tokens = await fetchBirdeyeTrending(network, 0, 20, 100000, 5000000);
+  
+  if (tokens.length === 0) {
+    console.warn('No tokens from API');
+    return [];
   }
+  
+  // Randomly select 5 tokens from the filtered results
+  const shuffled = tokens.sort(() => 0.5 - Math.random());
+  const selected = shuffled.slice(0, 5);
+  
+  return selected.map(token => convertBirdeyeToToken(token, network));
 };
 
 /**
- * Fetch random tokens for scrolling - Uses real Birdeye data with market cap filter
+ * Fetch random tokens for scrolling - Uses real Birdeye data ONLY - NO MOCK DATA
  */
 let tokenOffset = 0;
 export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = false): Promise<Token[]> => {
-  try {
-    const network = chainId || 'solana';
-    
-    // Reset offset when switching networks
-    if (reset) {
-      tokenOffset = 0;
-    }
-    
-    console.log(`Fetching real ${network} tokens (offset: ${tokenOffset}, mcRange: 50k-10M)...`);
-    // Filter by market cap: 50k to 10M (max 20 per Birdeye API limit)
-    const tokens = await fetchBirdeyeTrending(network, tokenOffset, 20, 50000, 10000000);
-    
-    if (tokens.length === 0) {
-      console.warn('No tokens from API, using mock data');
-      throw new Error('No tokens returned');
-    }
-    
-    // Increment offset for next call
-    tokenOffset += 20;
-    
-    return tokens.map(token => convertBirdeyeToToken(token, network));
-  } catch (error) {
-    console.error('Error fetching tokens, using mock data:', error);
-    // Fallback to mock data on error
-    const tokens: Token[] = [];
-    for (let i = 0; i < 20; i++) {
-      const mockToken = generateMockToken(tokenOffset + i, chainId);
-      // Override market cap to be in range
-      mockToken.marketCap = Math.floor(Math.random() * 9950000) + 50000;
-      tokens.push(mockToken);
-    }
-    tokenOffset += 20;
-    return tokens;
+  const network = chainId || 'solana';
+  
+  // Reset offset when switching networks
+  if (reset) {
+    tokenOffset = 0;
   }
+  
+  console.log(`Fetching real ${network} tokens (offset: ${tokenOffset}, mcRange: 50k-10M)...`);
+  // Filter by market cap: 50k to 10M (max 20 per Birdeye API limit)
+  const tokens = await fetchBirdeyeTrending(network, tokenOffset, 20, 50000, 10000000);
+  
+  if (tokens.length === 0) {
+    console.warn('No tokens from API');
+    return [];
+  }
+  
+  // Increment offset for next call
+  tokenOffset += 20;
+  
+  return tokens.map(token => convertBirdeyeToToken(token, network));
 };
