@@ -69,7 +69,7 @@ const Index = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-background overflow-y-auto snap-y snap-mandatory scrollbar-hide">
+      <div className="h-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth scrollbar-hide">
         {tokens.map((token) => (
           <TokenCard
             key={token.id}
