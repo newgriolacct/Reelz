@@ -177,17 +177,23 @@ export const fetchGeckoTrendingPools = async (chainId?: string): Promise<DexPair
         
         const data: GeckoResponse = await response.json();
         console.log(`[GeckoTerminal] ${chain} returned ${data.data?.length || 0} pools`);
+        console.log(`[GeckoTerminal] ${chain} included ${data.included?.length || 0} tokens`);
         
         if (data.data && data.included) {
+          console.log(`[GeckoTerminal] Sample pool relationships:`, data.data[0]?.relationships);
+          console.log(`[GeckoTerminal] Sample token IDs:`, data.included.slice(0, 3).map(t => t.id));
+          
           for (const pool of data.data.slice(0, 10)) {
             const pair = convertGeckoPoolToDexPair(pool, data.included, chain);
             if (pair) {
               console.log(`[GeckoTerminal] Added ${pair.baseToken.symbol} - MCap: $${pair.marketCap || pair.fdv || 0}`);
               pairs.push(pair);
             } else {
-              console.log(`[GeckoTerminal] Failed to convert pool for ${chain}`);
+              console.log(`[GeckoTerminal] Failed to convert pool ${pool.id}`);
             }
           }
+        } else {
+          console.log(`[GeckoTerminal] Missing data or included array for ${chain}`);
         }
       } catch (error) {
         console.error(`[GeckoTerminal] Error fetching trending for ${chain}:`, error);
