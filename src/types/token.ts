@@ -73,7 +73,7 @@ export const convertDexPairToToken = (pair: DexPair): Token => {
     sparklineData,
     tags,
     isNew,
-    liquidity: pair.liquidity.usd || 0,
+    liquidity: pair.liquidity?.usd || 0,
     chain: pair.chainId.charAt(0).toUpperCase() + pair.chainId.slice(1),
     description: `Trading on ${pair.dexId}. ${pair.txns.h24.buys + pair.txns.h24.sells} transactions in 24h.`,
     likes: Math.floor(pair.txns.h24.buys / 10),

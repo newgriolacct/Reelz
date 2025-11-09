@@ -28,7 +28,7 @@ export interface DexPair {
   priceChange: {
     h24: number;
   };
-  liquidity: {
+  liquidity?: {
     usd: number;
     base: number;
     quote: number;
