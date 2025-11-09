@@ -64,7 +64,7 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair
         const volumeB = b.volume?.h24 || 0;
         return (liquidityB + volumeB) - (liquidityA + volumeA);
       })
-      .slice(0, 20); // Increased to 20 for trending
+      .slice(0, 10); // Reduced to 10 trending for speed
     
     // Cache the result
     apiCache.set(cacheKey, result);
@@ -120,8 +120,8 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
     
     console.log(`Total pairs collected: ${allPairs.length}`);
     
-    // Shuffle for variety and return up to 100 tokens
-    const result = allPairs.sort(() => Math.random() - 0.5).slice(0, 100);
+    // Return more tokens initially for faster perceived loading
+    const result = allPairs.sort(() => Math.random() - 0.5).slice(0, 30);
     
     return result;
   } catch (error) {
