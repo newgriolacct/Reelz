@@ -104,19 +104,10 @@ export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> 
     
     const boostedTokens: BoostedToken[] = await response.json();
     
-    // Filter by chain if specified
-    const chainFilteredTokens = chainId 
+    // STRICTLY filter by chain if specified
+    const tokensToFetch = chainId 
       ? boostedTokens.filter(token => token.chainId.toLowerCase() === chainId.toLowerCase())
       : boostedTokens;
-    
-    // If we don't have enough tokens for this chain, add more from all chains
-    let tokensToFetch = chainFilteredTokens;
-    if (chainFilteredTokens.length < 20 && chainId) {
-      const additionalTokens = boostedTokens
-        .filter(t => !chainFilteredTokens.includes(t))
-        .slice(0, 20 - chainFilteredTokens.length);
-      tokensToFetch = [...chainFilteredTokens, ...additionalTokens];
-    }
     
     // Fetch pair data for tokens
     const allPairs: DexPair[] = [];
@@ -137,8 +128,9 @@ export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> 
               // Skip duplicates
               if (seenPairAddresses.has(pair.pairAddress)) return false;
               
-              // Prefer selected chain but allow others if needed
+              // STRICTLY match chain if specified
               const matchesChain = !chainId || pair.chainId.toLowerCase() === chainId.toLowerCase();
+              if (chainId && !matchesChain) return false;
               
               const quoteSymbol = pair.quoteToken.symbol.toUpperCase();
               const hasGoodQuote = quoteSymbol === 'SOL' || 
@@ -151,8 +143,7 @@ export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> 
                      quoteSymbol === 'MATIC' ||
                      quoteSymbol === 'AVAX';
               
-              // Prefer chain matches, but accept others if we need more tokens
-              return hasGoodQuote && (matchesChain || allPairs.length < 5);
+              return hasGoodQuote;
             })
             .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
           
@@ -165,8 +156,8 @@ export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> 
         console.error(`Failed to fetch token ${boostedToken.tokenAddress}:`, error);
       }
       
-      // Stop once we have at least 8 tokens (ensures 5 for trending bar)
-      if (allPairs.length >= 8) break;
+      // Stop once we have enough tokens
+      if (allPairs.length >= 20) break;
     }
     
     return allPairs;
@@ -239,19 +230,11 @@ export const fetchRandomTokens = async (chainId?: string): Promise<DexPair[]> =>
       });
     }
     
-    // Filter by chain if specified, otherwise get from all chains
+    // STRICTLY filter by chain if specified
     let tokensToFetch: string[] = [];
     if (chainId) {
       const normalizedChain = chainId.toLowerCase();
       tokensToFetch = tokensByChain.get(normalizedChain) || [];
-      
-      // If not enough tokens for this chain (less than 30), add more from all chains
-      if (tokensToFetch.length < 30) {
-        const otherTokens = Array.from(allTokenAddresses)
-          .filter(addr => !tokensToFetch.includes(addr))
-          .slice(0, 50 - tokensToFetch.length);
-        tokensToFetch = [...tokensToFetch, ...otherTokens];
-      }
     } else {
       tokensToFetch = Array.from(allTokenAddresses).slice(0, 60);
     }
@@ -279,8 +262,9 @@ export const fetchRandomTokens = async (chainId?: string): Promise<DexPair[]> =>
               // Skip if we already have this pair
               if (seenPairAddresses.has(pair.pairAddress)) return false;
               
-              // Prefer selected chain but allow others if we don't have enough
+              // STRICTLY match chain if specified
               const matchesChain = !chainId || pair.chainId.toLowerCase() === chainId.toLowerCase();
+              if (chainId && !matchesChain) return false;
               
               const quoteSymbol = pair.quoteToken.symbol.toUpperCase();
               const hasGoodQuote = quoteSymbol === 'SOL' || 
@@ -293,8 +277,7 @@ export const fetchRandomTokens = async (chainId?: string): Promise<DexPair[]> =>
                      quoteSymbol === 'MATIC' ||
                      quoteSymbol === 'AVAX';
               
-              // Prioritize chain matches, but accept others if we need more
-              return hasGoodQuote && (matchesChain || allPairs.length < 15);
+              return hasGoodQuote;
             })
             .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
           
@@ -307,8 +290,8 @@ export const fetchRandomTokens = async (chainId?: string): Promise<DexPair[]> =>
         console.error(`Failed to fetch token ${tokenAddress}:`, error);
       }
       
-      // Stop once we have enough pairs (at least 30)
-      if (allPairs.length >= 30) break;
+      // Stop once we have enough pairs
+      if (allPairs.length >= 50) break;
     }
     
     return allPairs;
