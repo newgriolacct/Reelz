@@ -10,9 +10,26 @@ import { Token } from "@/types/token";
 const Index = () => {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentTokenId, setCurrentTokenId] = useState<string>('');
+  const [page, setPage] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const loadMoreTokens = async () => {
+    if (loadingMore) return;
+    
+    try {
+      setLoadingMore(true);
+      const pairs = await fetchTrendingTokens();
+      const convertedTokens = pairs.map(convertDexPairToToken);
+      setTokens(prev => [...prev, ...convertedTokens]);
+    } catch (err) {
+      console.error('Failed to load more tokens', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     const loadTokens = async () => {
@@ -35,24 +52,30 @@ const Index = () => {
     loadTokens();
   }, []);
 
-  // Track current token on scroll with threshold to prevent accidental switches
+  // Track current token on scroll and load more
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
     let scrollTimeout: NodeJS.Timeout;
     const handleScroll = () => {
-      // Clear previous timeout
       clearTimeout(scrollTimeout);
       
-      // Wait for scroll to settle before updating
       scrollTimeout = setTimeout(() => {
         const scrollTop = container.scrollTop;
+        const scrollHeight = container.scrollHeight;
+        const clientHeight = container.clientHeight;
         const windowHeight = window.innerHeight;
-        // Only switch if scrolled past 70% of the card
+        
+        // Update current token
         const currentIndex = Math.round(scrollTop / windowHeight);
         if (tokens[currentIndex]) {
           setCurrentTokenId(tokens[currentIndex].id);
+        }
+        
+        // Load more when near bottom
+        if (scrollHeight - scrollTop - clientHeight < windowHeight * 2 && !loadingMore) {
+          loadMoreTokens();
         }
       }, 100);
     };
@@ -62,7 +85,7 @@ const Index = () => {
       container.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimeout);
     };
-  }, [tokens]);
+  }, [tokens, loadingMore, loadMoreTokens]);
 
   const handleTokenClick = (tokenId: string) => {
     const container = scrollContainerRef.current;
@@ -126,7 +149,8 @@ const Index = () => {
       <NetworkSelector />
       <div
         ref={scrollContainerRef}
-        className="h-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth scrollbar-hide"
+        className="h-screen overflow-y-auto snap-y snap-mandatory scrollbar-hide"
+        style={{ scrollBehavior: 'smooth' }}
       >
         {tokens.map((token) => (
           <TokenCard
@@ -137,6 +161,11 @@ const Index = () => {
             onBookmark={handleBookmark}
           />
         ))}
+        {loadingMore && (
+          <div className="h-screen flex items-center justify-center snap-start">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
       </div>
       <BottomNav />
     </>
