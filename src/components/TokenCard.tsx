@@ -4,7 +4,9 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { useState } from "react";
 import { QuickTradeDrawer } from "./QuickTradeDrawer";
+import { CommentsDrawer } from "./CommentsDrawer";
 import { formatPrice, formatCurrency } from "@/lib/formatters";
+import { useToast } from "@/hooks/use-toast";
 
 interface TokenCardProps {
   token: Token;
@@ -17,12 +19,48 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
   const [isLiked, setIsLiked] = useState(token.isLiked || false);
   const [showBuyDrawer, setShowBuyDrawer] = useState(false);
   const [showSellDrawer, setShowSellDrawer] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState([
+    {
+      id: "1",
+      userName: "CryptoTrader",
+      userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=1",
+      text: "This token is going to the moon! 🚀",
+      timestamp: "2h ago",
+      likes: 12,
+    },
+    {
+      id: "2",
+      userName: "TokenHunter",
+      userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=2",
+      text: "Great fundamentals and solid team behind this project",
+      timestamp: "5h ago",
+      likes: 8,
+    },
+  ]);
+  const { toast } = useToast();
   
   const isPositive = token.change24h >= 0;
 
   const handleLike = () => {
     setIsLiked(!isLiked);
     onLike?.(token.id);
+  };
+
+  const handleAddComment = (text: string) => {
+    const newComment = {
+      id: Date.now().toString(),
+      userName: "You",
+      userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=you",
+      text,
+      timestamp: "Just now",
+      likes: 0,
+    };
+    setComments([newComment, ...comments]);
+    toast({
+      title: "Comment posted!",
+      description: "Your comment has been added.",
+    });
   };
 
   return (
@@ -208,13 +246,13 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
           </button>
 
           <button
-            onClick={() => onComment?.(token.id)}
+            onClick={() => setShowComments(true)}
             className="flex flex-col items-center gap-0.5"
           >
             <div className="w-11 h-11 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center">
               <MessageCircle className="w-5 h-5 text-foreground" />
             </div>
-            <span className="text-[10px] font-medium text-foreground">{token.comments}</span>
+            <span className="text-[10px] font-medium text-foreground">{comments.length}</span>
           </button>
 
           <button className="flex flex-col items-center gap-0.5">
@@ -237,6 +275,13 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         type="sell"
         open={showSellDrawer}
         onOpenChange={setShowSellDrawer}
+      />
+      <CommentsDrawer
+        open={showComments}
+        onOpenChange={setShowComments}
+        tokenSymbol={token.symbol}
+        comments={comments}
+        onAddComment={handleAddComment}
       />
     </>
   );
