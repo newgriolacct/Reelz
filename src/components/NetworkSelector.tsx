@@ -50,21 +50,21 @@ export const NetworkSelector = () => {
 
   return (
     <div className="fixed top-[52px] md:top-16 lg:top-[72px] left-0 right-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border">
-      <div className="flex gap-1 md:gap-1 lg:gap-2 p-1.5 md:p-2 lg:p-2 overflow-x-auto scrollbar-hide">
+      <div className="flex gap-1 md:gap-1 lg:gap-2 p-1.5 md:p-2 lg:p-2">
         {networks.map((network) => {
           const IconComponent = network.icon;
           return (
             <button
               key={network.id}
               onClick={() => setSelectedNetwork(network.id)}
-              className={`flex-shrink-0 flex items-center gap-1.5 lg:gap-2 px-3 md:px-4 lg:px-5 py-1.5 md:py-2 lg:py-2.5 rounded-md md:rounded-lg text-xs md:text-sm lg:text-base font-medium whitespace-nowrap transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 lg:gap-2 px-2 md:px-3 lg:px-4 py-1.5 md:py-2 lg:py-2.5 rounded-md md:rounded-lg text-xs md:text-sm lg:text-base font-medium whitespace-nowrap transition-all ${
                 selectedNetwork === network.id
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
               }`}
             >
               <IconComponent />
-              <span>{network.name}</span>
+              <span className="hidden sm:inline">{network.name}</span>
             </button>
           );
         })}
