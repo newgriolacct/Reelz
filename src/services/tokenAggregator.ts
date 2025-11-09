@@ -15,8 +15,6 @@ const MIN_MARKET_CAP = 1000; // $1k minimum to show more tokens across all chain
  */
 export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair[]> => {
   try {
-    console.log(`[Trending] Fetching for chain: ${chainId || 'all'}`);
-    
     // Fetch from all sources in parallel
     const [dexTrending, geckoTrending] = await Promise.allSettled([
       fetchDexTrending(chainId),
@@ -28,22 +26,17 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair
     
     // Add DexScreener trending
     if (dexTrending.status === 'fulfilled') {
-      console.log(`[Trending] DexScreener returned ${dexTrending.value.length} pairs`);
       dexTrending.value.forEach(pair => {
         const marketCap = pair.marketCap || pair.fdv || 0;
-        console.log(`[Trending] ${pair.baseToken.symbol} - Chain: ${pair.chainId}, MCap: $${marketCap}`);
         if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= MIN_MARKET_CAP) {
           allPairs.push(pair);
           seenPairAddresses.add(pair.pairAddress);
-        } else if (marketCap < MIN_MARKET_CAP) {
-          console.log(`[Trending] Filtered out ${pair.baseToken.symbol} - MCap too low`);
         }
       });
     }
     
     // Add GeckoTerminal trending
     if (geckoTrending.status === 'fulfilled') {
-      console.log(`[Trending] GeckoTerminal returned ${geckoTrending.value.length} pairs`);
       geckoTrending.value.forEach(pair => {
         const marketCap = pair.marketCap || pair.fdv || 0;
         if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= MIN_MARKET_CAP) {
@@ -52,8 +45,6 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair
         }
       });
     }
-    
-    console.log(`[Trending] Total pairs after filtering: ${allPairs.length}`);
     
     // Sort by liquidity and volume
     return allPairs
