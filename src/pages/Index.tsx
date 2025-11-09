@@ -17,7 +17,7 @@ const Index = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-background overflow-y-auto snap-y snap-mandatory">
+      <div className="min-h-screen bg-background overflow-y-auto snap-y snap-mandatory scrollbar-hide">
         {mockTokens.map((token) => (
           <TokenCard
             key={token.id}

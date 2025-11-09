@@ -65,48 +65,48 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* Bottom Half - Token Info (50%) */}
-        <div className="h-1/2 relative px-4 pt-6 pb-20 overflow-y-auto">
+        <div className="h-1/2 relative px-4 pt-4 pb-20 flex flex-col justify-between">
           {/* Price Info */}
-          <div className="mb-6">
-            <div className="text-4xl font-bold text-foreground mb-2">
+          <div>
+            <div className="text-3xl font-bold text-foreground mb-1">
               ${token.price.toFixed(6)}
             </div>
-            <div className={`text-lg font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
+            <div className={`text-base font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
               {isPositive ? '+' : ''}{token.change24h.toFixed(2)}% (24h)
             </div>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-secondary rounded-lg p-4">
-              <div className="text-xs text-muted-foreground mb-1">Market Cap</div>
-              <div className="text-lg font-bold text-foreground">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-secondary rounded-lg p-3">
+              <div className="text-xs text-muted-foreground mb-0.5">Market Cap</div>
+              <div className="text-base font-bold text-foreground">
                 ${(token.marketCap / 1000000).toFixed(2)}M
               </div>
             </div>
-            <div className="bg-secondary rounded-lg p-4">
-              <div className="text-xs text-muted-foreground mb-1">Volume 24h</div>
-              <div className="text-lg font-bold text-foreground">
+            <div className="bg-secondary rounded-lg p-3">
+              <div className="text-xs text-muted-foreground mb-0.5">Volume 24h</div>
+              <div className="text-base font-bold text-foreground">
                 ${(token.volume24h / 1000).toFixed(0)}K
               </div>
             </div>
-            <div className="bg-secondary rounded-lg p-4">
-              <div className="text-xs text-muted-foreground mb-1">Liquidity</div>
-              <div className="text-lg font-bold text-foreground">
+            <div className="bg-secondary rounded-lg p-3">
+              <div className="text-xs text-muted-foreground mb-0.5">Liquidity</div>
+              <div className="text-base font-bold text-foreground">
                 ${(token.liquidity / 1000).toFixed(0)}K
               </div>
             </div>
-            <div className="bg-secondary rounded-lg p-4">
-              <div className="text-xs text-muted-foreground mb-1">Chain</div>
-              <div className="text-lg font-bold text-foreground">
+            <div className="bg-secondary rounded-lg p-3">
+              <div className="text-xs text-muted-foreground mb-0.5">Chain</div>
+              <div className="text-base font-bold text-foreground">
                 {token.chain}
               </div>
             </div>
           </div>
 
           {/* Description */}
-          <div className="mb-6">
-            <div className="text-sm text-muted-foreground leading-relaxed">
+          <div>
+            <div className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
               {token.description}
             </div>
           </div>
@@ -116,14 +116,14 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
             <Button 
               onClick={() => setShowBuyDrawer(true)}
               size="lg"
-              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-lg h-14"
+              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-base h-12"
             >
               Buy
             </Button>
             <Button 
               onClick={() => setShowSellDrawer(true)}
               size="lg"
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-lg h-14"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-base h-12"
             >
               Sell
             </Button>
