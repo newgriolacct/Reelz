@@ -4,7 +4,7 @@ import { TrendingTokensList } from "@/components/TrendingTokensList";
 import { NetworkSelector } from "@/components/NetworkSelector";
 import { fetchAggregatedTrending, fetchAggregatedRandom } from "@/services/tokenAggregator";
 import { convertDexPairToToken } from "@/types/token";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Token } from "@/types/token";
 
 const Index = () => {
@@ -18,7 +18,7 @@ const Index = () => {
   const [seenTokenIds, setSeenTokenIds] = useState<Set<string>>(new Set());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const loadMoreTokens = async () => {
+  const loadMoreTokens = useCallback(async () => {
     if (loadingMore) return;
     
     try {
@@ -38,7 +38,7 @@ const Index = () => {
     } finally {
       setLoadingMore(false);
     }
-  };
+  }, [loadingMore, selectedNetwork, seenTokenIds]);
 
   useEffect(() => {
     const loadTokens = async () => {
@@ -176,7 +176,10 @@ const Index = () => {
         <div className="text-center">
           <p className="text-destructive mb-4">{error}</p>
           <button 
-            onClick={() => window.location.reload()} 
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+            }} 
             className="text-primary hover:underline"
           >
             Retry
