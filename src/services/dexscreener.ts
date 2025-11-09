@@ -51,31 +51,48 @@ const API_BASE = 'https://api.dexscreener.com/latest/dex';
 
 export const fetchTrendingTokens = async (): Promise<DexPair[]> => {
   try {
-    // Fetch some popular tokens from different chains
-    const popularAddresses = [
-      'So11111111111111111111111111111111111111112', // Solana SOL
-      'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC on Solana
+    // Fetch popular Solana tokens individually to get diverse pairs
+    const tokens = [
+      'So11111111111111111111111111111111111111112', // SOL
       'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', // BONK
       'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN', // JUP
       'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3', // PYTH
-      '27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4', // JTO
+      'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm', // WIF
+      'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So', // mSOL
+      'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn', // JitoSOL
+      'MEW1gQWJ3nEXg2qgERiKu7FAFj79PHvQVREQUzScPP5', // MEW
     ];
 
-    const response = await fetch(
-      `${API_BASE}/tokens/${popularAddresses.join(',')}`
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch tokens from DexScreener');
-    }
-
-    const data: DexScreenerResponse = await response.json();
+    const allPairs: DexPair[] = [];
     
-    // Return top 10 pairs sorted by liquidity
-    return data.pairs
-      .filter(pair => pair.liquidity.usd > 10000)
-      .sort((a, b) => b.liquidity.usd - a.liquidity.usd)
-      .slice(0, 10);
+    // Fetch each token separately to get diverse pairs
+    for (const tokenAddress of tokens) {
+      try {
+        const response = await fetch(`${API_BASE}/tokens/${tokenAddress}`);
+        if (response.ok) {
+          const data: DexScreenerResponse = await response.json();
+          // Get the pair with highest liquidity for this token
+          const bestPair = data.pairs
+            .filter(pair => 
+              pair.liquidity.usd > 50000 && 
+              pair.volume.h24 > 1000 &&
+              // Prefer USDC/USDT pairs
+              (pair.quoteToken.symbol === 'USDC' || 
+               pair.quoteToken.symbol === 'USDT' ||
+               pair.quoteToken.symbol === 'SOL')
+            )
+            .sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
+          
+          if (bestPair) {
+            allPairs.push(bestPair);
+          }
+        }
+      } catch (err) {
+        console.error(`Error fetching token ${tokenAddress}:`, err);
+      }
+    }
+    
+    return allPairs.slice(0, 10);
   } catch (error) {
     console.error('Error fetching trending tokens:', error);
     throw error;

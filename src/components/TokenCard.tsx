@@ -1,9 +1,8 @@
-import { Heart, MessageCircle, Share2, MoreVertical, ExternalLink } from "lucide-react";
+import { Heart, MessageCircle, Share2, ExternalLink } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { useState } from "react";
-import { MiniChart } from "./MiniChart";
 import { QuickTradeDrawer } from "./QuickTradeDrawer";
 
 interface TokenCardProps {
@@ -28,9 +27,19 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
   return (
     <>
       <div className="h-screen snap-start relative flex flex-col bg-background">
-        {/* Top Half - Chart (50%) */}
-        <div className="h-1/2 relative bg-gradient-to-b from-card to-background">
-          <MiniChart data={token.sparklineData} isPositive={isPositive} isLive={true} />
+        {/* Top Half - DexScreener Chart (50%) */}
+        <div className="h-1/2 relative bg-card overflow-hidden">
+          {token.dexScreenerUrl ? (
+            <iframe
+              src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
+              className="w-full h-full border-0"
+              title={`${token.symbol} Chart`}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-secondary">
+              <p className="text-muted-foreground">Chart not available</p>
+            </div>
+          )}
           
           {/* Floating Token Header */}
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
