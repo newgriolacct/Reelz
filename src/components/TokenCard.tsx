@@ -77,7 +77,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
     <>
       <div className="h-screen snap-start relative flex flex-col bg-background overflow-hidden">
         {/* Top spacing for trending bar and network selector */}
-        <div className="h-[115px] flex-shrink-0" />
+        <div className="h-[115px] md:h-[120px] lg:h-[140px] flex-shrink-0" />
         
         {/* Token Header */}
         <div className="px-3 py-2 flex items-center justify-between bg-background flex-shrink-0 border-b border-border/50">
