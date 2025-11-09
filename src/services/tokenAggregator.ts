@@ -1,119 +1,31 @@
 import { Token } from "@/types/token";
-import { BirdeyeToken, fetchBirdeyeTrending } from "./birdeye";
+import { fetchMixedDexTokens } from "./dexscreener";
+import { convertDexPairToToken } from "@/types/token";
 import { tokenCache } from "./apiCache";
 
 /**
- * Convert Birdeye token to our Token type
- */
-const convertBirdeyeToToken = (token: BirdeyeToken, chainId: string): Token => {
-  const priceChange = token.price24hChangePercent || token.volume24hChangePercent || 0;
-  
-  // Generate sparkline data from price change
-  const points = 24;
-  const sparklineData: number[] = [];
-  let value = 100;
-  
-  for (let i = 0; i < points; i++) {
-    const progress = i / points;
-    const randomVariation = (Math.random() - 0.5) * 5;
-    const trendChange = (priceChange / 100) * progress * 100;
-    value = 100 + trendChange + randomVariation;
-    sparklineData.push(Math.max(50, value));
-  }
-
-  return {
-    id: token.address,
-    symbol: token.symbol,
-    name: token.name,
-    avatarUrl: token.logoURI || `https://api.dicebear.com/7.x/shapes/svg?seed=${token.symbol}&backgroundColor=00d084`,
-    price: token.price || 0,
-    change24h: priceChange,
-    marketCap: token.marketcap || 0,
-    volume24h: token.volume24hUSD || 0,
-    sparklineData,
-    tags: [],
-    isNew: false,
-    liquidity: token.liquidity || 0,
-    chain: chainId.charAt(0).toUpperCase() + chainId.slice(1),
-    description: `Trading on ${chainId}. Market cap: $${(token.marketcap || 0).toLocaleString()}`,
-    likes: Math.floor((token.volume24hUSD || 0) / 10000),
-    comments: Math.floor((token.volume24hUSD || 0) / 50000),
-    pairAddress: token.address,
-    contractAddress: token.address,
-    website: token.extensions?.website,
-    twitter: token.extensions?.twitter,
-    telegram: token.extensions?.telegram,
-  };
-};
-/**
- * Mock data generator for fallback
- */
-const generateMockToken = (index: number, chainId?: string): Token => {
-  const chains = ['solana', 'ethereum', 'bsc', 'polygon', 'arbitrum', 'base'];
-  const chain = chainId || chains[Math.floor(Math.random() * chains.length)];
-  const symbols = ['PEPE', 'DOGE', 'SHIB', 'WIF', 'BONK', 'MEME', 'MOON', 'WOJAK', 'FLOKI', 'ELON'];
-  const symbol = symbols[index % symbols.length] + (Math.floor(index / symbols.length) + 1);
-  
-  const priceChange = (Math.random() * 200) - 100;
-  const points = 24;
-  const sparklineData: number[] = [];
-  let value = 100;
-  
-  for (let i = 0; i < points; i++) {
-    const progress = i / points;
-    const randomVariation = (Math.random() - 0.5) * 5;
-    const trendChange = (priceChange / 100) * progress * 100;
-    value = 100 + trendChange + randomVariation;
-    sparklineData.push(Math.max(50, value));
-  }
-  
-  return {
-    id: `mock_${index}_${Date.now()}`,
-    symbol: symbol,
-    name: `${symbol} Token`,
-    avatarUrl: `https://api.dicebear.com/7.x/shapes/svg?seed=${symbol}`,
-    price: Math.random() * 0.1,
-    change24h: priceChange,
-    marketCap: Math.floor(Math.random() * 500000) + 50000,
-    volume24h: Math.floor(Math.random() * 500000) + 50000,
-    sparklineData,
-    tags: [],
-    isNew: false,
-    liquidity: Math.floor(Math.random() * 100000) + 30000,
-    chain: chain.charAt(0).toUpperCase() + chain.slice(1),
-    description: `Mock token for ${chain}`,
-    likes: Math.floor(Math.random() * 100),
-    comments: Math.floor(Math.random() * 50),
-    pairAddress: `mock_${index}`,
-    contractAddress: `token_${index}`,
-  };
-};
-
-/**
- * Fetch trending tokens - Uses Birdeye API with cache fallback
+ * Fetch trending tokens - Uses DexScreener mixed endpoints with cache
  */
 export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]> => {
   const network = chainId || 'solana';
-  const cacheKey = `trending_${network}`;
+  const cacheKey = `trending_dex_${network}`;
   
-  console.log(`Fetching real ${network} trending tokens (50k-10M cap)...`);
+  console.log(`Fetching DexScreener trending tokens (30k-10M cap)...`);
   
   try {
-    // Use same range as main feed for better results
-    const tokens = await fetchBirdeyeTrending(network, 0, 20, 50000, 10000000);
+    const pairs = await fetchMixedDexTokens();
     
-    if (tokens.length > 0) {
-      // Randomly select 5 tokens from the filtered results
-      const shuffled = tokens.sort(() => 0.5 - Math.random());
-      const selected = shuffled.slice(0, 5);
-      const converted = selected.map(token => convertBirdeyeToToken(token, network));
+    if (pairs.length > 0) {
+      // Select 5 random tokens for trending
+      const selected = pairs.slice(0, 5);
+      const converted = selected.map(pair => convertDexPairToToken(pair));
       
       // Cache successful response
       tokenCache.set(cacheKey, converted);
       return converted;
     }
   } catch (error) {
-    console.error('API error, checking cache:', error);
+    console.error('DexScreener error, checking cache:', error);
   }
   
   // Try cache on failure
@@ -128,45 +40,64 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
 };
 
 /**
- * Fetch random tokens for scrolling - Uses real Birdeye data with cache fallback
+ * Fetch tokens for scrolling - Uses DexScreener mixed endpoints with cache
  */
 let tokenOffset = 0;
+let cachedPairs: Token[] = [];
+
 export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = false): Promise<Token[]> => {
   const network = chainId || 'solana';
   
-  // Reset offset when switching networks
+  // Reset when switching networks
   if (reset) {
     tokenOffset = 0;
+    cachedPairs = [];
   }
   
-  const cacheKey = `tokens_${network}_${tokenOffset}`;
+  const cacheKey = `tokens_dex_${network}`;
   
-  console.log(`Fetching real ${network} tokens (offset: ${tokenOffset}, mcRange: 50k-10M)...`);
+  console.log(`Fetching DexScreener tokens (offset: ${tokenOffset}, mcRange: 30k-10M)...`);
   
+  // If we have cached pairs, return the next batch
+  if (cachedPairs.length > tokenOffset) {
+    const batch = cachedPairs.slice(tokenOffset, tokenOffset + 20);
+    if (batch.length > 0) {
+      tokenOffset += 20;
+      return batch;
+    }
+  }
+  
+  // Fetch new data if cache is empty or exhausted
   try {
-    const tokens = await fetchBirdeyeTrending(network, tokenOffset, 20, 50000, 10000000);
+    const pairs = await fetchMixedDexTokens();
     
-    if (tokens.length > 0) {
-      const converted = tokens.map(token => convertBirdeyeToToken(token, network));
+    if (pairs.length > 0) {
+      const converted = pairs.map(pair => convertDexPairToToken(pair));
       
-      // Cache successful response
+      // Store all converted pairs
+      cachedPairs = converted;
+      
+      // Cache the full dataset
       tokenCache.set(cacheKey, converted);
       
-      // Increment offset for next call
-      tokenOffset += 20;
+      // Return first batch
+      const batch = converted.slice(0, 20);
+      tokenOffset = 20;
       
-      return converted;
+      return batch;
     }
   } catch (error) {
-    console.error('API error, checking cache:', error);
+    console.error('DexScreener error, checking cache:', error);
   }
   
   // Try cache on failure
   const cached = tokenCache.get<Token[]>(cacheKey);
-  if (cached) {
+  if (cached && cached.length > 0) {
     console.log('Using cached tokens');
+    cachedPairs = cached;
+    const batch = cached.slice(tokenOffset, tokenOffset + 20);
     tokenOffset += 20;
-    return cached;
+    return batch;
   }
   
   console.warn('No tokens available');

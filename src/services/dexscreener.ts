@@ -269,3 +269,92 @@ export const searchTokens = async (query: string): Promise<DexPair[]> => {
 export const getDexScreenerUrl = (chainId: string, pairAddress: string): string => {
   return `https://dexscreener.com/${chainId}/${pairAddress}`;
 };
+
+/**
+ * Fetch from multiple DexScreener endpoints and mix results
+ * Filters by Solana chain and market cap 30k-10M
+ */
+export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
+  const endpoints = [
+    'https://api.dexscreener.com/token-profiles/latest/v1',
+    'https://api.dexscreener.com/community-takeovers/latest/v1',
+    'https://api.dexscreener.com/ads/latest/v1',
+    'https://api.dexscreener.com/token-boosts/latest/v1',
+    'https://api.dexscreener.com/token-boosts/top/v1'
+  ];
+
+  try {
+    // Fetch from all endpoints in parallel
+    const responses = await Promise.allSettled(
+      endpoints.map(url => 
+        fetch(url).then(res => res.ok ? res.json() : null)
+      )
+    );
+
+    // Collect all token addresses
+    const tokenAddresses = new Set<string>();
+    
+    responses.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value && Array.isArray(result.value)) {
+        result.value.forEach((item: any) => {
+          if (item.tokenAddress && item.chainId?.toLowerCase() === 'solana') {
+            tokenAddresses.add(item.tokenAddress);
+          }
+        });
+      }
+    });
+
+    console.log(`Collected ${tokenAddresses.size} unique Solana token addresses`);
+
+    // Fetch pair data for each token
+    const allPairs: DexPair[] = [];
+    const seenPairAddresses = new Set<string>();
+    const tokenArray = Array.from(tokenAddresses).slice(0, 100); // Limit to 100 tokens
+    
+    for (const tokenAddress of tokenArray) {
+      try {
+        const response = await fetch(`${API_BASE}/tokens/${tokenAddress}`);
+        
+        if (!response.ok) continue;
+        
+        const data: DexScreenerResponse = await response.json();
+        
+        if (data.pairs && data.pairs.length > 0) {
+          // Get best pair for this token
+          const bestPair = data.pairs
+            .filter(pair => {
+              if (seenPairAddresses.has(pair.pairAddress)) return false;
+              if (pair.chainId.toLowerCase() !== 'solana') return false;
+              
+              const marketCap = pair.marketCap || pair.fdv || 0;
+              if (marketCap < 30000 || marketCap > 10000000) return false;
+              
+              const quoteSymbol = pair.quoteToken.symbol.toUpperCase();
+              return quoteSymbol === 'SOL' || quoteSymbol === 'USDC' || quoteSymbol === 'USDT';
+            })
+            .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+          
+          if (bestPair) {
+            allPairs.push(bestPair);
+            seenPairAddresses.add(bestPair.pairAddress);
+          }
+        }
+      } catch (error) {
+        // Silent fail for individual tokens
+      }
+      
+      // Stop once we have 60 pairs
+      if (allPairs.length >= 60) break;
+    }
+
+    // Shuffle for variety
+    const shuffled = allPairs.sort(() => 0.5 - Math.random());
+    
+    console.log(`Fetched ${allPairs.length} Solana pairs in 30k-10M market cap range`);
+    
+    return shuffled;
+  } catch (error) {
+    console.error('Error fetching from DexScreener:', error);
+    return [];
+  }
+};
