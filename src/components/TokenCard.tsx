@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Share2, ExternalLink, Globe } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, ExternalLink, Globe } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -20,6 +20,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
   const [showBuyDrawer, setShowBuyDrawer] = useState(false);
   const [showSellDrawer, setShowSellDrawer] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
   const [comments, setComments] = useState([
     {
       id: "1",
@@ -45,6 +46,15 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
   const handleLike = () => {
     setIsLiked(!isLiked);
     onLike?.(token.id);
+  };
+
+  const handleFavorite = () => {
+    setIsFavorited(!isFavorited);
+    onBookmark?.(token.id);
+    toast({
+      title: isFavorited ? "Removed from favorites" : "Added to favorites",
+      description: isFavorited ? "Token removed from your favorites" : "Token saved to your favorites",
+    });
   };
 
   const handleAddComment = (text: string) => {
@@ -232,7 +242,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* Right Side Actions (TikTok style) */}
-        <div className="absolute right-2 bottom-24 flex flex-col gap-3 z-10">
+        <div className="absolute right-2 bottom-32 flex flex-col gap-3 z-10">
           <button
             onClick={handleLike}
             className="flex flex-col items-center gap-0.5"
@@ -255,11 +265,16 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
             <span className="text-[10px] font-medium text-foreground">{comments.length}</span>
           </button>
 
-          <button className="flex flex-col items-center gap-0.5">
+          <button
+            onClick={handleFavorite}
+            className="flex flex-col items-center gap-0.5"
+          >
             <div className="w-11 h-11 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center">
-              <Share2 className="w-5 h-5 text-foreground" />
+              <Bookmark 
+                className={`w-5 h-5 ${isFavorited ? 'fill-primary text-primary' : 'text-foreground'}`} 
+              />
             </div>
-            <span className="text-[10px] font-medium text-foreground">Share</span>
+            <span className="text-[10px] font-medium text-foreground">Save</span>
           </button>
         </div>
       </div>
