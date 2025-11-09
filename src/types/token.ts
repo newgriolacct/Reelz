@@ -1,4 +1,5 @@
 import { DexPair } from "@/services/dexscreener";
+import { GeckoTerminalPool, GeckoTerminalResponse, getGeckoTerminalChartUrl } from "@/services/geckoterminal";
 
 export interface Token {
   id: string;
@@ -27,6 +28,8 @@ export interface Token {
   twitter?: string;
   telegram?: string;
   discord?: string;
+  buys24h?: number;
+  sells24h?: number;
 }
 
 export const convertDexPairToToken = (pair: DexPair): Token => {
@@ -83,5 +86,60 @@ export const convertDexPairToToken = (pair: DexPair): Token => {
     twitter,
     telegram,
     discord,
+    buys24h: pair.txns.h24.buys,
+    sells24h: pair.txns.h24.sells,
   };
+};
+
+/**
+ * Convert GeckoTerminal pool data to Token format
+ */
+export const convertGeckoTerminalToToken = (
+  pool: GeckoTerminalPool,
+  baseToken: any,
+  response: GeckoTerminalResponse
+): Token => {
+  const attributes = pool.attributes;
+  const baseTokenData = response.included.find(
+    (item: any) => item.id === pool.relationships.base_token.data.id
+  );
+  
+  // Extract network from pool ID (format: "network_pooladdress")
+  const network = pool.id.split('_')[0];
+  
+  // Parse price change percentage
+  const change24h = parseFloat(attributes.price_change_percentage.h24 || '0');
+  
+  // Get DexScreener URL for charts
+  const poolAddress = attributes.address;
+  const dexScreenerUrl = `https://dexscreener.com/${network}/${poolAddress}`;
+  
+  const token: Token = {
+    id: pool.id,
+    symbol: baseTokenData?.attributes?.symbol || baseToken?.symbol || 'UNKNOWN',
+    name: baseTokenData?.attributes?.name || attributes.name,
+    price: parseFloat(attributes.base_token_price_usd || '0'),
+    change24h: change24h,
+    volume24h: parseFloat(attributes.volume_usd.h24 || '0'),
+    marketCap: parseFloat(attributes.market_cap_usd || attributes.fdv_usd || '0'),
+    liquidity: parseFloat(attributes.reserve_in_usd || '0'),
+    avatarUrl: baseTokenData?.attributes?.image_url || 'https://via.placeholder.com/40',
+    description: `Trading on ${network}`,
+    likes: Math.floor(attributes.transactions.h24.buys / 10),
+    comments: Math.floor(attributes.transactions.h24.sells / 20),
+    chain: network.toUpperCase(),
+    isNew: false,
+    tags: [],
+    website: getGeckoTerminalChartUrl(network, poolAddress),
+    twitter: null,
+    telegram: null,
+    discord: null,
+    dexScreenerUrl: dexScreenerUrl,
+    contractAddress: baseTokenData?.attributes?.address || '',
+    sparklineData: [],
+    buys24h: attributes.transactions.h24.buys,
+    sells24h: attributes.transactions.h24.sells,
+  };
+
+  return token;
 };
