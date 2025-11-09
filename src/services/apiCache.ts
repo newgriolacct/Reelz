@@ -1,10 +1,11 @@
 import { DexPair } from './dexscreener';
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes default
 
 interface CacheEntry<T = any> {
   data: T;
   timestamp: number;
+  ttl?: number; // Custom time-to-live
 }
 
 class APICache {
@@ -15,7 +16,9 @@ class APICache {
     if (!entry) return null;
     
     const now = Date.now();
-    if (now - entry.timestamp > CACHE_DURATION) {
+    const cacheDuration = entry.ttl || CACHE_DURATION;
+    
+    if (now - entry.timestamp > cacheDuration) {
       this.cache.delete(key);
       return null;
     }
@@ -23,10 +26,11 @@ class APICache {
     return entry.data as T;
   }
 
-  set<T = any>(key: string, data: T): void {
+  set<T = any>(key: string, data: T, ttl?: number): void {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
+      ttl,
     });
   }
 

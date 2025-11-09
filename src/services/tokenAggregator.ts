@@ -40,82 +40,36 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
 };
 
 /**
- * Fetch tokens for scrolling - Uses DexScreener mixed endpoints with cache
- * INFINITE MODE: When we run out of new tokens, recycle and shuffle existing ones
+ * Fetch tokens for scrolling - Fetches fresh tokens from DexScreener on each call
+ * LAZY LOADING: Fetches new tokens as you scroll, not all at once
+ * CACHE: 1 hour TTL - fresh data when you return later
  */
-let tokenOffset = 0;
-let cachedPairs: Token[] = [];
-let allFetchedTokens: Token[] = [];
-
 export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = false): Promise<Token[]> => {
   const network = chainId || 'solana';
+  const cacheKey = `tokens_dex_${network}_${Date.now()}`;
   
-  // Reset when switching networks
-  if (reset) {
-    tokenOffset = 0;
-    cachedPairs = [];
-    allFetchedTokens = [];
-  }
+  console.log(`🔄 Fetching fresh DexScreener tokens (mcRange: 30k-10M)...`);
   
-  const cacheKey = `tokens_dex_${network}`;
-  
-  console.log(`Fetching DexScreener tokens (offset: ${tokenOffset}, mcRange: 30k-10M)...`);
-  
-  // If we have cached pairs, return the next batch
-  if (cachedPairs.length > tokenOffset) {
-    const batch = cachedPairs.slice(tokenOffset, tokenOffset + 20);
-    if (batch.length > 0) {
-      tokenOffset += 20;
-      return batch;
-    }
-  }
-  
-  // If we've exhausted all tokens, shuffle and recycle for infinite scrolling
-  if (cachedPairs.length > 0 && tokenOffset >= cachedPairs.length) {
-    console.log('♻️ Recycling tokens - shuffling for infinite scroll');
-    const shuffled = [...cachedPairs].sort(() => 0.5 - Math.random());
-    cachedPairs = shuffled;
-    tokenOffset = 0;
-    const batch = shuffled.slice(0, 20);
-    tokenOffset = 20;
-    return batch;
-  }
-  
-  // Fetch new data if cache is empty
   try {
+    // Always fetch fresh tokens from DexScreener
     const pairs = await fetchMixedDexTokens();
     
     if (pairs.length > 0) {
       const converted = pairs.map(pair => convertDexPairToToken(pair));
       
-      // Store all converted pairs
-      cachedPairs = converted;
-      allFetchedTokens = converted;
+      // Cache with 1 hour TTL
+      tokenCache.set(cacheKey, converted, 60 * 60 * 1000);
       
-      // Cache the full dataset
-      tokenCache.set(cacheKey, converted);
-      
-      // Return first batch
+      // Return batch of 20 tokens
       const batch = converted.slice(0, 20);
-      tokenOffset = 20;
+      console.log(`✅ Fetched ${batch.length} fresh tokens`);
       
       return batch;
     }
   } catch (error) {
-    console.error('DexScreener error, checking cache:', error);
+    console.error('DexScreener error:', error);
   }
   
-  // Try cache on failure
-  const cached = tokenCache.get<Token[]>(cacheKey);
-  if (cached && cached.length > 0) {
-    console.log('Using cached tokens');
-    cachedPairs = cached;
-    allFetchedTokens = cached;
-    const batch = cached.slice(tokenOffset, tokenOffset + 20);
-    tokenOffset += 20;
-    return batch;
-  }
-  
-  console.warn('No tokens available');
+  console.warn('No tokens available from DexScreener');
   return [];
 };
