@@ -47,10 +47,14 @@ const Index = () => {
     const loadTokens = async () => {
       try {
         setError(null);
+        setLoading(true);
         
         // Load main feed first
         const randomPairs = await fetchAggregatedRandom(selectedNetwork);
         const convertedRandom = randomPairs.map(convertDexPairToToken);
+        
+        console.log(`Loaded ${convertedRandom.length} tokens for ${selectedNetwork}`);
+        
         setTokens(convertedRandom);
         
         // Reset seen tokens when network changes
@@ -62,15 +66,12 @@ const Index = () => {
         
         setLoading(false);
         
-        // If we got less than 10 tokens, immediately load more
-        if (convertedRandom.length < 10) {
-          loadMoreTokens();
-        }
-        
         // Load trending tokens in background
         fetchAggregatedTrending(selectedNetwork).then(trendingPairs => {
           const convertedTrending = trendingPairs.map(convertDexPairToToken);
           setTrendingTokens(convertedTrending);
+        }).catch(err => {
+          console.error('Failed to load trending:', err);
         });
         
         // Scroll to top when network changes
@@ -78,14 +79,14 @@ const Index = () => {
           scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
         }
       } catch (err) {
+        console.error('Failed to load tokens:', err);
         setError('Failed to load tokens');
-        console.error(err);
         setLoading(false);
       }
     };
 
     loadTokens();
-  }, [selectedNetwork, loadMoreTokens]);
+  }, [selectedNetwork]);
 
   // Track current token on scroll and load more
   useEffect(() => {
