@@ -9,7 +9,7 @@ import {
 } from './geckoterminal';
 import { apiCache } from './apiCache';
 
-const MIN_MARKET_CAP = 30000; // $30k minimum market cap across all networks
+const MIN_MARKET_CAP = 5000; // $5k minimum market cap across all networks
 
 /**
  * Aggregate trending tokens from all APIs with caching
@@ -77,16 +77,11 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair
 };
 
 /**
- * Aggregate random tokens from all APIs for scrolling feed with caching
+ * Aggregate random tokens from all APIs for scrolling feed
+ * Note: No caching for random feed to ensure variety on scroll
  */
 export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]> => {
-  const cacheKey = `random_${chainId || 'all'}`;
-  
-  // Check cache first
-  const cached = apiCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
+  // Don't cache random tokens - we want fresh data each time for infinite scroll
   
   try {
     // Fetch from all sources in parallel
@@ -120,11 +115,8 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
       });
     }
     
-    // Shuffle for variety and limit to 20 for faster initial load
-    const result = allPairs.sort(() => Math.random() - 0.5).slice(0, 20);
-    
-    // Cache the result
-    apiCache.set(cacheKey, result);
+    // Shuffle for variety and return up to 50 tokens
+    const result = allPairs.sort(() => Math.random() - 0.5).slice(0, 50);
     
     return result;
   } catch (error) {
