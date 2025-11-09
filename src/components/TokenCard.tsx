@@ -17,6 +17,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
   const [isLiked, setIsLiked] = useState(token.isLiked || false);
   const [showBuyDrawer, setShowBuyDrawer] = useState(false);
   const [showSellDrawer, setShowSellDrawer] = useState(false);
+  const [chartLoaded, setChartLoaded] = useState(false);
   
   const isPositive = token.change24h >= 0;
 
@@ -120,12 +121,24 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         {/* DexScreener Chart */}
         <div className="relative bg-card overflow-hidden flex-1" style={{ minHeight: '40vh' }}>
           {token.dexScreenerUrl ? (
-            <iframe
-              src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
-              className="w-full h-full border-0"
-              title={`${token.symbol} Chart`}
-              style={{ marginTop: '-40px', height: 'calc(100% + 80px)' }}
-            />
+            <>
+              {!chartLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center bg-secondary animate-pulse">
+                  <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <p className="text-muted-foreground text-sm">Loading chart...</p>
+                  </div>
+                </div>
+              )}
+              <iframe
+                src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
+                className="w-full h-full border-0"
+                title={`${token.symbol} Chart`}
+                style={{ marginTop: '-40px', height: 'calc(100% + 80px)' }}
+                loading="eager"
+                onLoad={() => setChartLoaded(true)}
+              />
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-secondary">
               <p className="text-muted-foreground">Chart not available</p>
