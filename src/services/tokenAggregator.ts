@@ -1,4 +1,5 @@
-import { DexPair } from './dexscreener';
+import { DexPair, fetchSolanaTrending } from './dexscreener';
+import { Token, convertDexPairToToken } from '@/types/token';
 
 // Mock data generator - NO API CALLS
 const generateMockToken = (index: number, chainId?: string): DexPair => {
@@ -48,25 +49,40 @@ const generateMockToken = (index: number, chainId?: string): DexPair => {
 };
 
 /**
- * Return mock trending tokens - NO API CALLS
+ * Fetch trending tokens - Uses real API for Solana, mock for others
  */
-export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair[]> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // Generate 10 trending tokens
-  const tokens: DexPair[] = [];
-  for (let i = 0; i < 10; i++) {
-    tokens.push(generateMockToken(i, chainId));
+export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]> => {
+  try {
+    // Use real API for Solana
+    if (chainId?.toLowerCase() === 'solana') {
+      console.log('Fetching real Solana trending tokens...');
+      const pairs = await fetchSolanaTrending();
+      console.log(`Received ${pairs.length} Solana trending tokens`);
+      return pairs.map(convertDexPairToToken);
+    }
+    
+    // For other networks, return mock data
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const tokens: DexPair[] = [];
+    for (let i = 0; i < 10; i++) {
+      tokens.push(generateMockToken(i, chainId));
+    }
+    return tokens.map(convertDexPairToToken);
+  } catch (error) {
+    console.error('Error fetching trending tokens:', error);
+    // Fallback to mock data on error
+    const tokens: DexPair[] = [];
+    for (let i = 0; i < 10; i++) {
+      tokens.push(generateMockToken(i, chainId));
+    }
+    return tokens.map(convertDexPairToToken);
   }
-  
-  return tokens;
 };
 
 /**
  * Return mock random tokens for scrolling - NO API CALLS
  */
-export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]> => {
+export const fetchAggregatedRandom = async (chainId?: string): Promise<Token[]> => {
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 500));
   
@@ -80,5 +96,5 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
   
   console.log(`Generated ${tokens.length} mock tokens for ${chainId || 'all chains'}`);
   
-  return tokens;
+  return tokens.map(convertDexPairToToken);
 };

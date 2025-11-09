@@ -89,80 +89,23 @@ interface BoostedToken {
 }
 
 /**
- * Fetch ONLY top trending tokens for the trending bar
- * Uses top boosts endpoint to get the most promoted tokens
- * @param chainId - Optional chain filter
+ * Fetch trending Solana tokens using the trending endpoint
+ * Returns real-time trending tokens on Solana
  */
-export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> => {
+export const fetchSolanaTrending = async (): Promise<DexPair[]> => {
   try {
-    // Fetch top boosted tokens for trending
-    const response = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
+    const response = await fetch('https://api.dexscreener.com/latest/dex/trending/solana');
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch trending tokens: ${response.status}`);
+      throw new Error(`Failed to fetch Solana trending tokens: ${response.status}`);
     }
     
-    const boostedTokens: BoostedToken[] = await response.json();
+    const data: DexScreenerResponse = await response.json();
     
-    // STRICTLY filter by chain if specified
-    const tokensToFetch = chainId 
-      ? boostedTokens.filter(token => token.chainId.toLowerCase() === chainId.toLowerCase())
-      : boostedTokens;
-    
-    // Fetch pair data for tokens
-    const allPairs: DexPair[] = [];
-    const seenPairAddresses = new Set<string>();
-    
-    // Process up to 40 tokens to ensure we get at least 5 good pairs
-    for (const boostedToken of tokensToFetch.slice(0, 40)) {
-      try {
-        const response = await fetch(`${API_BASE}/tokens/${boostedToken.tokenAddress}`);
-        
-        if (!response.ok) continue;
-        
-        const data: DexScreenerResponse = await response.json();
-        
-        if (data.pairs && data.pairs.length > 0) {
-          const bestPair = data.pairs
-            .filter(pair => {
-              // Skip duplicates
-              if (seenPairAddresses.has(pair.pairAddress)) return false;
-              
-              // STRICTLY match chain if specified
-              const matchesChain = !chainId || pair.chainId.toLowerCase() === chainId.toLowerCase();
-              if (chainId && !matchesChain) return false;
-              
-              const quoteSymbol = pair.quoteToken.symbol.toUpperCase();
-              const hasGoodQuote = quoteSymbol === 'SOL' || 
-                     quoteSymbol === 'USDC' || 
-                     quoteSymbol === 'USDT' ||
-                     quoteSymbol === 'ETH' ||
-                     quoteSymbol === 'WETH' ||
-                     quoteSymbol === 'BNB' ||
-                     quoteSymbol === 'WBNB' ||
-                     quoteSymbol === 'MATIC' ||
-                     quoteSymbol === 'AVAX';
-              
-              return hasGoodQuote;
-            })
-            .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
-          
-          if (bestPair) {
-            allPairs.push(bestPair);
-            seenPairAddresses.add(bestPair.pairAddress);
-          }
-        }
-      } catch (error) {
-        console.error(`Failed to fetch token ${boostedToken.tokenAddress}:`, error);
-      }
-      
-      // If we don't have enough pairs yet, keep going
-      if (allPairs.length >= 20) break;
-    }
-    
-    return allPairs;
+    // Return the trending pairs, limiting to 20 for performance
+    return data.pairs.slice(0, 20);
   } catch (error) {
-    console.error('Error fetching trending tokens:', error);
+    console.error('Error fetching Solana trending tokens:', error);
     throw error;
   }
 };

@@ -3,7 +3,6 @@ import { BottomNav } from "@/components/BottomNav";
 import { TrendingTokensList } from "@/components/TrendingTokensList";
 import { NetworkSelector } from "@/components/NetworkSelector";
 import { fetchAggregatedTrending, fetchAggregatedRandom } from "@/services/tokenAggregator";
-import { convertDexPairToToken } from "@/types/token";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Token } from "@/types/token";
 
@@ -27,8 +26,7 @@ const Index = () => {
     setIsLoadingMore(true);
     
     try {
-      const pairs = await fetchAggregatedRandom(selectedNetwork);
-      const convertedTokens = pairs.map(convertDexPairToToken);
+      const convertedTokens = await fetchAggregatedRandom(selectedNetwork);
       
       // Filter out tokens we've already seen
       setSeenTokenIds(prev => {
@@ -64,13 +62,10 @@ const Index = () => {
         setLoading(true);
         
         // Load both trending and random in parallel
-        const [randomPairs, trendingPairs] = await Promise.all([
+        const [convertedRandom, convertedTrending] = await Promise.all([
           fetchAggregatedRandom(selectedNetwork),
           fetchAggregatedTrending(selectedNetwork)
         ]);
-        
-        const convertedRandom = randomPairs.map(convertDexPairToToken);
-        const convertedTrending = trendingPairs.map(convertDexPairToToken);
         
         console.log(`Loaded ${convertedRandom.length} tokens for ${selectedNetwork}`);
         
