@@ -27,9 +27,9 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
 
   return (
     <>
-      <div className="h-screen snap-start relative flex flex-col bg-background pt-[100px] md:pt-28 lg:pt-32">
+      <div className="h-screen snap-start relative flex flex-col bg-background pt-[100px] md:pt-28 lg:pt-32 overflow-hidden">
         {/* Token Header */}
-        <div className="px-3 md:px-4 lg:px-6 pt-2 md:pt-4 lg:pt-5 pb-1.5 md:pb-2 lg:pb-3 flex items-center justify-between bg-background">
+        <div className="px-3 md:px-4 lg:px-6 pt-1 md:pt-4 lg:pt-5 pb-1 md:pb-2 lg:pb-3 flex items-center justify-between bg-background flex-shrink-0">
           <div className="flex items-center gap-2 md:gap-3 lg:gap-4 min-w-0 flex-1">
             <img 
               src={token.avatarUrl} 
@@ -116,7 +116,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* DexScreener Chart */}
-        <div className="flex-1 relative bg-card overflow-hidden">
+        <div className="relative bg-card overflow-hidden flex-shrink-0" style={{ height: '35vh' }}>
           {token.dexScreenerUrl ? (
             <iframe
               src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
@@ -132,50 +132,48 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* Bottom - Token Info */}
-        <div className="relative px-3 md:px-4 lg:px-6 pt-3 md:pt-4 lg:pt-5 pb-20 flex flex-col justify-between bg-background" style={{ minHeight: '45vh' }}>
+        <div className="relative px-3 md:px-4 lg:px-6 pt-2 md:pt-4 lg:pt-5 pb-20 flex flex-col gap-2 md:gap-3 lg:gap-4 bg-background flex-shrink-0">
           {/* Price Info */}
           <div>
-            <div className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-0.5 md:mb-1">
+            <div className="text-xl md:text-3xl lg:text-4xl font-bold text-foreground mb-0.5 md:mb-1">
               {formatPrice(token.price)}
             </div>
-            <div className={`text-sm md:text-base lg:text-lg font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
+            <div className={`text-xs md:text-base lg:text-lg font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
               {isPositive ? '+' : ''}{token.change24h.toFixed(2)}% (24h)
             </div>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-2 lg:gap-3">
-            <div className="bg-secondary rounded-lg p-2 md:p-3 lg:p-4">
-              <div className="text-[10px] md:text-xs lg:text-sm text-muted-foreground mb-0.5">Market Cap</div>
-              <div className="text-sm md:text-base lg:text-lg font-bold text-foreground truncate">
+          <div className="grid grid-cols-2 gap-1.5 md:gap-2 lg:gap-3">
+            <div className="bg-secondary rounded-lg p-1.5 md:p-3 lg:p-4">
+              <div className="text-[9px] md:text-xs lg:text-sm text-muted-foreground mb-0.5">Market Cap</div>
+              <div className="text-xs md:text-base lg:text-lg font-bold text-foreground truncate">
                 {formatCurrency(token.marketCap)}
               </div>
             </div>
-            <div className="bg-secondary rounded-lg p-2 md:p-3 lg:p-4">
-              <div className="text-[10px] md:text-xs lg:text-sm text-muted-foreground mb-0.5">Volume 24h</div>
-              <div className="text-sm md:text-base lg:text-lg font-bold text-foreground truncate">
+            <div className="bg-secondary rounded-lg p-1.5 md:p-3 lg:p-4">
+              <div className="text-[9px] md:text-xs lg:text-sm text-muted-foreground mb-0.5">Volume 24h</div>
+              <div className="text-xs md:text-base lg:text-lg font-bold text-foreground truncate">
                 {formatCurrency(token.volume24h)}
               </div>
             </div>
-            <div className="bg-secondary rounded-lg p-2 md:p-3 lg:p-4">
-              <div className="text-[10px] md:text-xs lg:text-sm text-muted-foreground mb-0.5">Liquidity</div>
-              <div className="text-sm md:text-base lg:text-lg font-bold text-foreground truncate">
+            <div className="bg-secondary rounded-lg p-1.5 md:p-3 lg:p-4">
+              <div className="text-[9px] md:text-xs lg:text-sm text-muted-foreground mb-0.5">Liquidity</div>
+              <div className="text-xs md:text-base lg:text-lg font-bold text-foreground truncate">
                 {formatCurrency(token.liquidity)}
               </div>
             </div>
-            <div className="bg-secondary rounded-lg p-2 md:p-3 lg:p-4">
-              <div className="text-[10px] md:text-xs lg:text-sm text-muted-foreground mb-0.5">Chain</div>
-              <div className="text-sm md:text-base lg:text-lg font-bold text-foreground truncate">
+            <div className="bg-secondary rounded-lg p-1.5 md:p-3 lg:p-4">
+              <div className="text-[9px] md:text-xs lg:text-sm text-muted-foreground mb-0.5">Chain</div>
+              <div className="text-xs md:text-base lg:text-lg font-bold text-foreground truncate">
                 {token.chain}
               </div>
             </div>
           </div>
 
           {/* Description */}
-          <div>
-            <div className="text-[11px] md:text-xs lg:text-sm text-muted-foreground leading-relaxed line-clamp-2">
-              {token.description}
-            </div>
+          <div className="text-[10px] md:text-xs lg:text-sm text-muted-foreground leading-relaxed line-clamp-2">
+            {token.description}
           </div>
 
           {/* Action Buttons */}
@@ -183,14 +181,14 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
             <Button 
               onClick={() => setShowBuyDrawer(true)}
               size="lg"
-              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-sm md:text-base lg:text-lg h-11 md:h-12 lg:h-14"
+              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-xs md:text-base lg:text-lg h-9 md:h-12 lg:h-14"
             >
               Buy
             </Button>
             <Button 
               onClick={() => setShowSellDrawer(true)}
               size="lg"
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-sm md:text-base lg:text-lg h-11 md:h-12 lg:h-14"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-xs md:text-base lg:text-lg h-9 md:h-12 lg:h-14"
             >
               Sell
             </Button>

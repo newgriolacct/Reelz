@@ -35,22 +35,33 @@ const Index = () => {
     loadTokens();
   }, []);
 
-  // Track current token on scroll
+  // Track current token on scroll with threshold to prevent accidental switches
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
+    let scrollTimeout: NodeJS.Timeout;
     const handleScroll = () => {
-      const scrollTop = container.scrollTop;
-      const windowHeight = window.innerHeight;
-      const currentIndex = Math.round(scrollTop / windowHeight);
-      if (tokens[currentIndex]) {
-        setCurrentTokenId(tokens[currentIndex].id);
-      }
+      // Clear previous timeout
+      clearTimeout(scrollTimeout);
+      
+      // Wait for scroll to settle before updating
+      scrollTimeout = setTimeout(() => {
+        const scrollTop = container.scrollTop;
+        const windowHeight = window.innerHeight;
+        // Only switch if scrolled past 70% of the card
+        const currentIndex = Math.round(scrollTop / windowHeight);
+        if (tokens[currentIndex]) {
+          setCurrentTokenId(tokens[currentIndex].id);
+        }
+      }, 100);
     };
 
     container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
   }, [tokens]);
 
   const handleTokenClick = (tokenId: string) => {
