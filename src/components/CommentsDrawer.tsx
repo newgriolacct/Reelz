@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { Send, MessageSquarePlus } from "lucide-react";
 
 interface Comment {
   id: string;
@@ -30,12 +30,14 @@ export const CommentsDrawer = ({
   onAddComment,
 }: CommentsDrawerProps) => {
   const [commentText, setCommentText] = useState("");
+  const [isCommenting, setIsCommenting] = useState(false);
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (commentText.trim()) {
       onAddComment(commentText.trim());
       setCommentText("");
+      setIsCommenting(false);
     }
   };
 
@@ -85,36 +87,47 @@ export const CommentsDrawer = ({
 
         {/* Comment Input */}
         <div className="border-t border-border p-3 bg-background flex-shrink-0 safe-bottom">
-          <div className="flex gap-2 items-center">
-            <div className="flex-1 relative">
-              <Textarea
-                placeholder="Add a comment..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                className="min-h-[44px] max-h-[100px] resize-none pr-12"
-                rows={1}
-                autoFocus={false}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+          {!isCommenting ? (
+            <Button
+              onClick={() => setIsCommenting(true)}
+              variant="outline"
+              className="w-full h-11 justify-start gap-2 text-muted-foreground"
+            >
+              <MessageSquarePlus className="w-4 h-4" />
+              Add a comment...
+            </Button>
+          ) : (
+            <div className="flex gap-2 items-center">
+              <div className="flex-1 relative">
+                <Textarea
+                  placeholder="Add a comment..."
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  className="min-h-[44px] max-h-[100px] resize-none pr-12"
+                  rows={1}
+                  autoFocus={true}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  onClick={(e) => {
                     e.preventDefault();
                     handleSubmit(e);
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                size="icon"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleSubmit(e);
-                }}
-                disabled={!commentText.trim()}
-                className="absolute right-1 bottom-1 h-9 w-9"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
+                  }}
+                  disabled={!commentText.trim()}
+                  className="absolute right-1 bottom-1 h-9 w-9"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>
