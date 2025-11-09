@@ -79,13 +79,22 @@ const convertGeckoPoolToDexPair = (
     const baseTokenData = tokens.find(t => t.id === pool.relationships.base_token.data.id);
     const quoteTokenData = tokens.find(t => t.id === pool.relationships.quote_token.data.id);
     
-    if (!baseTokenData || !quoteTokenData) return null;
+    if (!baseTokenData) {
+      console.log(`[GeckoTerminal] Base token not found for pool ${pool.id}`);
+      return null;
+    }
+    if (!quoteTokenData) {
+      console.log(`[GeckoTerminal] Quote token not found for pool ${pool.id}`);
+      return null;
+    }
     
     // Parse market cap from string to number
     const fdv = parseFloat(pool.attributes.fdv_usd || '0');
     const marketCap = pool.attributes.market_cap_usd 
       ? parseFloat(pool.attributes.market_cap_usd) 
       : fdv;
+    
+    console.log(`[GeckoTerminal] Converting ${baseTokenData.attributes.symbol} - MCap: $${marketCap}, FDV: $${fdv}`);
     
     return {
       chainId: chainId,
@@ -129,7 +138,7 @@ const convertGeckoPoolToDexPair = (
       },
     };
   } catch (error) {
-    console.error('Error converting GeckoTerminal pool:', error);
+    console.error('[GeckoTerminal] Error converting pool:', error);
     return null;
   }
 };
