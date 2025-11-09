@@ -1,3 +1,5 @@
+import { DexPair } from "@/services/dexscreener";
+
 export interface Token {
   id: string;
   symbol: string;
@@ -18,4 +20,51 @@ export interface Token {
   comments: number;
   isLiked?: boolean;
   isBookmarked?: boolean;
+  pairAddress?: string;
+  dexScreenerUrl?: string;
 }
+
+export const convertDexPairToToken = (pair: DexPair): Token => {
+  const isNew = pair.pairCreatedAt ? 
+    Date.now() - pair.pairCreatedAt < 24 * 60 * 60 * 1000 : false;
+  
+  const tags: string[] = [];
+  if (isNew) tags.push('New');
+  if (pair.labels?.includes('v2')) tags.push('V2');
+  if (pair.labels?.includes('v3')) tags.push('V3');
+  
+  // Generate sparkline data from price change
+  const priceChange = pair.priceChange.h24;
+  const points = 24;
+  const sparklineData: number[] = [];
+  let value = 100;
+  
+  for (let i = 0; i < points; i++) {
+    const progress = i / points;
+    const randomVariation = (Math.random() - 0.5) * 5;
+    const trendChange = (priceChange / 100) * progress * 100;
+    value = 100 + trendChange + randomVariation;
+    sparklineData.push(Math.max(50, value));
+  }
+
+  return {
+    id: pair.pairAddress,
+    symbol: pair.baseToken.symbol,
+    name: pair.baseToken.name,
+    avatarUrl: pair.info?.imageUrl || `https://api.dicebear.com/7.x/shapes/svg?seed=${pair.baseToken.symbol}&backgroundColor=00d084`,
+    price: parseFloat(pair.priceUsd) || 0,
+    change24h: pair.priceChange.h24 || 0,
+    marketCap: pair.marketCap || pair.fdv || 0,
+    volume24h: pair.volume.h24 || 0,
+    sparklineData,
+    tags,
+    isNew,
+    liquidity: pair.liquidity.usd || 0,
+    chain: pair.chainId.charAt(0).toUpperCase() + pair.chainId.slice(1),
+    description: `Trading on ${pair.dexId}. ${pair.txns.h24.buys + pair.txns.h24.sells} transactions in 24h.`,
+    likes: Math.floor(pair.txns.h24.buys / 10),
+    comments: Math.floor(pair.txns.h24.sells / 20),
+    pairAddress: pair.pairAddress,
+    dexScreenerUrl: pair.url,
+  };
+};

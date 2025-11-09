@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Share2, MoreVertical } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreVertical, ExternalLink } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -50,9 +50,16 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
                 <span className="text-sm text-muted-foreground">{token.name}</span>
               </div>
             </div>
-            <Button variant="ghost" size="icon" className="bg-card/50 backdrop-blur-sm">
-              <MoreVertical className="w-5 h-5" />
-            </Button>
+            {token.dexScreenerUrl && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="bg-card/50 backdrop-blur-sm"
+                onClick={() => window.open(token.dexScreenerUrl, '_blank')}
+              >
+                <ExternalLink className="w-5 h-5" />
+              </Button>
+            )}
           </div>
 
           {/* Live Badge */}
