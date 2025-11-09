@@ -25,7 +25,8 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair
     // Add DexScreener trending
     if (dexTrending.status === 'fulfilled') {
       dexTrending.value.forEach(pair => {
-        if (!seenPairAddresses.has(pair.pairAddress)) {
+        const marketCap = pair.marketCap || pair.fdv || 0;
+        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
           allPairs.push(pair);
           seenPairAddresses.add(pair.pairAddress);
         }
@@ -35,7 +36,8 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair
     // Add GeckoTerminal trending
     if (geckoTrending.status === 'fulfilled') {
       geckoTrending.value.forEach(pair => {
-        if (!seenPairAddresses.has(pair.pairAddress)) {
+        const marketCap = pair.marketCap || pair.fdv || 0;
+        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
           allPairs.push(pair);
           seenPairAddresses.add(pair.pairAddress);
         }
@@ -75,7 +77,8 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
     // Add DexScreener random tokens
     if (dexRandom.status === 'fulfilled') {
       dexRandom.value.forEach(pair => {
-        if (!seenPairAddresses.has(pair.pairAddress)) {
+        const marketCap = pair.marketCap || pair.fdv || 0;
+        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
           allPairs.push(pair);
           seenPairAddresses.add(pair.pairAddress);
         }
@@ -85,7 +88,8 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
     // Add GeckoTerminal new pools
     if (geckoNew.status === 'fulfilled') {
       geckoNew.value.forEach(pair => {
-        if (!seenPairAddresses.has(pair.pairAddress)) {
+        const marketCap = pair.marketCap || pair.fdv || 0;
+        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
           allPairs.push(pair);
           seenPairAddresses.add(pair.pairAddress);
         }
