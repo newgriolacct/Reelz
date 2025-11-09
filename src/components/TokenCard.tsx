@@ -43,7 +43,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
           )}
           
           {/* Floating Token Header */}
-          <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+          <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
             <div className="flex items-center gap-3">
               <img 
                 src={token.avatarUrl} 
@@ -73,7 +73,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
           </div>
 
           {/* Live Badge */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
             <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border">
               <div className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
               <span className="text-xs font-medium text-foreground">LIVE</span>
@@ -148,7 +148,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* Right Side Actions (TikTok style) */}
-        <div className="absolute right-4 bottom-24 flex flex-col gap-4">
+        <div className="absolute right-4 bottom-24 flex flex-col gap-4 z-10">
           <button
             onClick={handleLike}
             className="flex flex-col items-center gap-1"
