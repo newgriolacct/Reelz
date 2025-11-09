@@ -49,6 +49,29 @@ export interface DexScreenerResponse {
 
 const API_BASE = 'https://api.dexscreener.com/latest/dex';
 
+interface TokenProfile {
+  url: string;
+  chainId: string;
+  tokenAddress: string;
+  icon?: string;
+  header?: string;
+  description?: string;
+  links?: Array<{
+    type: string;
+    label: string;
+    url: string;
+  }>;
+}
+
+interface Ad {
+  url: string;
+  chainId: string;
+  tokenAddress: string;
+  icon?: string;
+  header?: string;
+  description?: string;
+}
+
 interface BoostedToken {
   url: string;
   chainId: string;
@@ -66,40 +89,96 @@ interface BoostedToken {
 }
 
 /**
- * Fetch trending tokens using DexScreener's boosted tokens endpoint
- * Shows tokens with the most active boosts across all chains
+ * Fetch tokens from multiple DexScreener endpoints for diversity
+ * Combines: top boosts, latest boosts, ads, and token profiles
  * @param chainId - Optional chain filter (e.g., 'solana', 'bsc', 'ethereum')
  */
 export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> => {
   try {
-    // Step 1: Fetch top boosted tokens
-    const boostResponse = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
+    // Fetch from all endpoints in parallel for speed
+    const [topBoostsRes, latestBoostsRes, adsRes, profilesRes] = await Promise.allSettled([
+      fetch('https://api.dexscreener.com/token-boosts/top/v1'),
+      fetch('https://api.dexscreener.com/token-boosts/latest/v1'),
+      fetch('https://api.dexscreener.com/ads/latest/v1'),
+      fetch('https://api.dexscreener.com/token-profiles/latest/v1'),
+    ]);
     
-    if (!boostResponse.ok) {
-      throw new Error(`Failed to fetch boosted tokens: ${boostResponse.status}`);
+    // Collect all token addresses from all endpoints
+    const allTokenAddresses: Set<string> = new Set();
+    const tokensByChain: Map<string, string[]> = new Map();
+    
+    // Process top boosts
+    if (topBoostsRes.status === 'fulfilled' && topBoostsRes.value.ok) {
+      const data: BoostedToken[] = await topBoostsRes.value.json();
+      data.forEach(token => {
+        allTokenAddresses.add(token.tokenAddress);
+        const chain = token.chainId.toLowerCase();
+        if (!tokensByChain.has(chain)) tokensByChain.set(chain, []);
+        tokensByChain.get(chain)?.push(token.tokenAddress);
+      });
     }
     
-    const boostedTokens: BoostedToken[] = await boostResponse.json();
+    // Process latest boosts
+    if (latestBoostsRes.status === 'fulfilled' && latestBoostsRes.value.ok) {
+      const data: BoostedToken[] = await latestBoostsRes.value.json();
+      data.forEach(token => {
+        allTokenAddresses.add(token.tokenAddress);
+        const chain = token.chainId.toLowerCase();
+        if (!tokensByChain.has(chain)) tokensByChain.set(chain, []);
+        tokensByChain.get(chain)?.push(token.tokenAddress);
+      });
+    }
     
-    // Filter by chain if specified
-    const filteredTokens = chainId 
-      ? boostedTokens.filter(token => token.chainId.toLowerCase() === chainId.toLowerCase())
-      : boostedTokens;
+    // Process ads
+    if (adsRes.status === 'fulfilled' && adsRes.value.ok) {
+      const data: Ad[] = await adsRes.value.json();
+      data.forEach(token => {
+        allTokenAddresses.add(token.tokenAddress);
+        const chain = token.chainId.toLowerCase();
+        if (!tokensByChain.has(chain)) tokensByChain.set(chain, []);
+        tokensByChain.get(chain)?.push(token.tokenAddress);
+      });
+    }
     
-    // If filtering resulted in too few tokens, also include some unfiltered ones
-    const tokensToFetch = filteredTokens.length < 15 && chainId
-      ? [...filteredTokens, ...boostedTokens.filter(t => !filteredTokens.includes(t)).slice(0, 15 - filteredTokens.length)]
-      : filteredTokens;
+    // Process token profiles
+    if (profilesRes.status === 'fulfilled' && profilesRes.value.ok) {
+      const data: TokenProfile[] = await profilesRes.value.json();
+      data.forEach(token => {
+        allTokenAddresses.add(token.tokenAddress);
+        const chain = token.chainId.toLowerCase();
+        if (!tokensByChain.has(chain)) tokensByChain.set(chain, []);
+        tokensByChain.get(chain)?.push(token.tokenAddress);
+      });
+    }
     
-    // Step 2: Fetch pair data for each boosted token
+    // Filter by chain if specified, otherwise get from all chains
+    let tokensToFetch: string[] = [];
+    if (chainId) {
+      const normalizedChain = chainId.toLowerCase();
+      tokensToFetch = tokensByChain.get(normalizedChain) || [];
+      
+      // If not enough tokens for this chain, add some from other chains
+      if (tokensToFetch.length < 30) {
+        const otherTokens = Array.from(allTokenAddresses)
+          .filter(addr => !tokensToFetch.includes(addr))
+          .slice(0, 30 - tokensToFetch.length);
+        tokensToFetch = [...tokensToFetch, ...otherTokens];
+      }
+    } else {
+      tokensToFetch = Array.from(allTokenAddresses).slice(0, 50);
+    }
+    
+    // Remove duplicates and shuffle for variety
+    tokensToFetch = [...new Set(tokensToFetch)];
+    tokensToFetch = tokensToFetch.sort(() => Math.random() - 0.5).slice(0, 50);
+    
+    // Fetch pair data for each token
     const allPairs: DexPair[] = [];
+    const seenPairAddresses = new Set<string>();
     
-    // Take more tokens to ensure we get enough good pairs
-    const topTokens = tokensToFetch.slice(0, 50);
-    
-    for (const boostedToken of topTokens) {
+    for (const tokenAddress of tokensToFetch) {
       try {
-        const response = await fetch(`${API_BASE}/tokens/${boostedToken.tokenAddress}`);
+        const response = await fetch(`${API_BASE}/tokens/${tokenAddress}`);
         
         if (!response.ok) continue;
         
@@ -109,6 +188,12 @@ export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> 
           // Get the best pair for this token (highest liquidity)
           const bestPair = data.pairs
             .filter(pair => {
+              // Skip if we already have this pair
+              if (seenPairAddresses.has(pair.pairAddress)) return false;
+              
+              // Filter by chain if specified
+              if (chainId && pair.chainId.toLowerCase() !== chainId.toLowerCase()) return false;
+              
               const quoteSymbol = pair.quoteToken.symbol.toUpperCase();
               // Prefer pairs with major quote tokens
               return quoteSymbol === 'SOL' || 
@@ -117,20 +202,23 @@ export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> 
                      quoteSymbol === 'ETH' ||
                      quoteSymbol === 'WETH' ||
                      quoteSymbol === 'BNB' ||
-                     quoteSymbol === 'WBNB';
+                     quoteSymbol === 'WBNB' ||
+                     quoteSymbol === 'MATIC' ||
+                     quoteSymbol === 'AVAX';
             })
             .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
           
           if (bestPair) {
             allPairs.push(bestPair);
+            seenPairAddresses.add(bestPair.pairAddress);
           }
         }
       } catch (error) {
-        console.error(`Failed to fetch token ${boostedToken.tokenAddress}:`, error);
+        console.error(`Failed to fetch token ${tokenAddress}:`, error);
       }
       
-      // Stop once we have enough pairs (at least 20)
-      if (allPairs.length >= 20) break;
+      // Stop once we have enough pairs
+      if (allPairs.length >= 25) break;
     }
     
     return allPairs;

@@ -14,6 +14,7 @@ const Index = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentTokenId, setCurrentTokenId] = useState<string>('');
   const [selectedNetwork, setSelectedNetwork] = useState('solana');
+  const [seenTokenIds, setSeenTokenIds] = useState<Set<string>>(new Set());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const loadMoreTokens = async () => {
@@ -23,7 +24,14 @@ const Index = () => {
       setLoadingMore(true);
       const pairs = await fetchTrendingTokens(selectedNetwork);
       const convertedTokens = pairs.map(convertDexPairToToken);
-      setTokens(prev => [...prev, ...convertedTokens]);
+      
+      // Filter out tokens we've already seen
+      const newTokens = convertedTokens.filter(token => !seenTokenIds.has(token.id));
+      
+      if (newTokens.length > 0) {
+        setTokens(prev => [...prev, ...newTokens]);
+        setSeenTokenIds(prev => new Set([...prev, ...newTokens.map(t => t.id)]));
+      }
     } catch (err) {
       console.error('Failed to load more tokens', err);
     } finally {
@@ -43,6 +51,9 @@ const Index = () => {
         const pairs = await fetchTrendingTokens(selectedNetwork);
         const convertedTokens = pairs.map(convertDexPairToToken);
         setTokens(convertedTokens);
+        
+        // Reset seen tokens when network changes
+        setSeenTokenIds(new Set(convertedTokens.map(t => t.id)));
         
         if (convertedTokens.length > 0) {
           setCurrentTokenId(convertedTokens[0].id);
