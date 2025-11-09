@@ -68,8 +68,9 @@ interface BoostedToken {
 /**
  * Fetch trending tokens using DexScreener's boosted tokens endpoint
  * Shows tokens with the most active boosts across all chains
+ * @param chainId - Optional chain filter (e.g., 'solana', 'bsc', 'ethereum')
  */
-export const fetchTrendingTokens = async (): Promise<DexPair[]> => {
+export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> => {
   try {
     // Step 1: Fetch top boosted tokens
     const boostResponse = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
@@ -80,11 +81,16 @@ export const fetchTrendingTokens = async (): Promise<DexPair[]> => {
     
     const boostedTokens: BoostedToken[] = await boostResponse.json();
     
+    // Filter by chain if specified
+    const filteredTokens = chainId 
+      ? boostedTokens.filter(token => token.chainId.toLowerCase() === chainId.toLowerCase())
+      : boostedTokens;
+    
     // Step 2: Fetch pair data for each boosted token
     const allPairs: DexPair[] = [];
     
-    // Take top 20 boosted tokens to ensure we get at least 10 good pairs
-    const topTokens = boostedTokens.slice(0, 20);
+    // Take top 30 boosted tokens to ensure we get at least 10 good pairs after filtering
+    const topTokens = filteredTokens.slice(0, 30);
     
     for (const boostedToken of topTokens) {
       try {

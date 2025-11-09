@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 const SolanaIcon = () => (
   <svg className="w-4 h-4" viewBox="0 0 397.7 311.7" fill="currentColor">
     <path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/>
@@ -45,9 +43,12 @@ const networks = [
   { id: 'polygon', name: 'Polygon', icon: PolygonIcon },
 ];
 
-export const NetworkSelector = () => {
-  const [selectedNetwork, setSelectedNetwork] = useState('solana');
+interface NetworkSelectorProps {
+  selectedNetwork: string;
+  onNetworkChange: (network: string) => void;
+}
 
+export const NetworkSelector = ({ selectedNetwork, onNetworkChange }: NetworkSelectorProps) => {
   return (
     <div className="fixed top-[52px] md:top-16 lg:top-20 left-0 right-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border">
       <div className="flex gap-1 md:gap-1 lg:gap-2 p-1.5 md:p-2 lg:p-2.5">
@@ -56,7 +57,7 @@ export const NetworkSelector = () => {
           return (
             <button
               key={network.id}
-              onClick={() => setSelectedNetwork(network.id)}
+              onClick={() => onNetworkChange(network.id)}
               className={`flex-1 flex items-center justify-center gap-1.5 lg:gap-2 px-2 md:px-3 lg:px-4 py-1.5 md:py-2 lg:py-2.5 rounded-md md:rounded-lg text-xs md:text-sm lg:text-base font-medium whitespace-nowrap transition-all ${
                 selectedNetwork === network.id
                   ? 'bg-primary text-primary-foreground'

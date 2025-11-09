@@ -173,6 +173,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
               src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
               className="w-full h-full border-0 bg-secondary"
               title={`${token.symbol} Chart`}
+              loading="eager"
               style={{ marginTop: '-40px', height: 'calc(100% + 80px)' }}
             />
           ) : (

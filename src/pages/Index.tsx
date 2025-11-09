@@ -13,7 +13,7 @@ const Index = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentTokenId, setCurrentTokenId] = useState<string>('');
-  const [page, setPage] = useState(0);
+  const [selectedNetwork, setSelectedNetwork] = useState('solana');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const loadMoreTokens = async () => {
@@ -21,7 +21,7 @@ const Index = () => {
     
     try {
       setLoadingMore(true);
-      const pairs = await fetchTrendingTokens();
+      const pairs = await fetchTrendingTokens(selectedNetwork);
       const convertedTokens = pairs.map(convertDexPairToToken);
       setTokens(prev => [...prev, ...convertedTokens]);
     } catch (err) {
@@ -35,11 +35,16 @@ const Index = () => {
     const loadTokens = async () => {
       try {
         setLoading(true);
-        const pairs = await fetchTrendingTokens();
+        setError(null);
+        const pairs = await fetchTrendingTokens(selectedNetwork);
         const convertedTokens = pairs.map(convertDexPairToToken);
         setTokens(convertedTokens);
         if (convertedTokens.length > 0) {
           setCurrentTokenId(convertedTokens[0].id);
+        }
+        // Scroll to top when network changes
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
         }
       } catch (err) {
         setError('Failed to load tokens');
@@ -50,7 +55,7 @@ const Index = () => {
     };
 
     loadTokens();
-  }, []);
+  }, [selectedNetwork]);
 
   // Track current token on scroll and load more
   useEffect(() => {
@@ -146,7 +151,10 @@ const Index = () => {
         currentTokenId={currentTokenId}
         onTokenClick={handleTokenClick}
       />
-      <NetworkSelector />
+      <NetworkSelector 
+        selectedNetwork={selectedNetwork}
+        onNetworkChange={setSelectedNetwork}
+      />
       <div
         ref={scrollContainerRef}
         className="h-screen overflow-y-auto snap-y snap-mandatory scrollbar-hide"
