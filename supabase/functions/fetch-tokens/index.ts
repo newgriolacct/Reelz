@@ -53,6 +53,7 @@ serve(async (req) => {
     }
 
     const data = await birdeyeResponse.json();
+    console.log('Birdeye response:', JSON.stringify(data).substring(0, 500));
     console.log(`Successfully fetched ${data.data?.items?.length || 0} trending tokens`);
 
     return new Response(
