@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Share2, ExternalLink } from "lucide-react";
+import { Heart, MessageCircle, Share2, ExternalLink, Globe } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -49,32 +49,15 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
           
           {/* Social and External Links */}
           <div className="flex items-center gap-1">
-            {token.contractAddress && (
+            {token.website && (
               <Button 
                 variant="ghost" 
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => window.open(`https://solscan.io/token/${token.contractAddress}`, '_blank')}
-                title="View on Solscan"
+                onClick={() => window.open(token.website, '_blank')}
+                title="Website"
               >
-                <img 
-                  src="https://solscan.io/favicon.ico" 
-                  alt="Solscan"
-                  className="w-4 h-4"
-                />
-              </Button>
-            )}
-            {token.twitter && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => window.open(`https://twitter.com/${token.twitter}`, '_blank')}
-                title="Twitter"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                </svg>
+                <Globe className="w-4 h-4" />
               </Button>
             )}
             {token.telegram && (
@@ -90,15 +73,32 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
                 </svg>
               </Button>
             )}
-            {token.website && (
+            {token.twitter && (
               <Button 
                 variant="ghost" 
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => window.open(token.website, '_blank')}
-                title="Website"
+                onClick={() => window.open(`https://twitter.com/${token.twitter}`, '_blank')}
+                title="X (Twitter)"
               >
-                <ExternalLink className="w-4 h-4" />
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+              </Button>
+            )}
+            {token.contractAddress && (
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => window.open(`https://solscan.io/token/${token.contractAddress}`, '_blank')}
+                title="View on Solscan"
+              >
+                <img 
+                  src="https://solscan.io/favicon.ico" 
+                  alt="Solscan"
+                  className="w-4 h-4"
+                />
               </Button>
             )}
             {token.dexScreenerUrl && (
@@ -109,7 +109,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
                 onClick={() => window.open(token.dexScreenerUrl, '_blank')}
                 title="View on DexScreener"
               >
-                <ExternalLink className="w-5 h-5" />
+                <ExternalLink className="w-4 h-4" />
               </Button>
             )}
           </div>
