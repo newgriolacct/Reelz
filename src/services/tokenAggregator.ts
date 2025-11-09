@@ -41,9 +41,11 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
 
 /**
  * Fetch tokens for scrolling - Uses DexScreener mixed endpoints with cache
+ * INFINITE MODE: When we run out of new tokens, recycle and shuffle existing ones
  */
 let tokenOffset = 0;
 let cachedPairs: Token[] = [];
+let allFetchedTokens: Token[] = [];
 
 export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = false): Promise<Token[]> => {
   const network = chainId || 'solana';
@@ -52,6 +54,7 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
   if (reset) {
     tokenOffset = 0;
     cachedPairs = [];
+    allFetchedTokens = [];
   }
   
   const cacheKey = `tokens_dex_${network}`;
@@ -67,7 +70,18 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
     }
   }
   
-  // Fetch new data if cache is empty or exhausted
+  // If we've exhausted all tokens, shuffle and recycle for infinite scrolling
+  if (cachedPairs.length > 0 && tokenOffset >= cachedPairs.length) {
+    console.log('♻️ Recycling tokens - shuffling for infinite scroll');
+    const shuffled = [...cachedPairs].sort(() => 0.5 - Math.random());
+    cachedPairs = shuffled;
+    tokenOffset = 0;
+    const batch = shuffled.slice(0, 20);
+    tokenOffset = 20;
+    return batch;
+  }
+  
+  // Fetch new data if cache is empty
   try {
     const pairs = await fetchMixedDexTokens();
     
@@ -76,6 +90,7 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
       
       // Store all converted pairs
       cachedPairs = converted;
+      allFetchedTokens = converted;
       
       // Cache the full dataset
       tokenCache.set(cacheKey, converted);
@@ -95,6 +110,7 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
   if (cached && cached.length > 0) {
     console.log('Using cached tokens');
     cachedPairs = cached;
+    allFetchedTokens = cached;
     const batch = cached.slice(tokenOffset, tokenOffset + 20);
     tokenOffset += 20;
     return batch;

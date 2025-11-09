@@ -28,20 +28,18 @@ const Index = () => {
     try {
       const convertedTokens = await fetchAggregatedRandom(selectedNetwork);
       
-      // Filter out tokens we've already seen
-      setSeenTokenIds(prev => {
-        const newTokens = convertedTokens.filter(token => !prev.has(token.id));
+      // INFINITE SCROLLING: Always add tokens, even if we've seen them
+      // This creates the endless TikTok-style experience
+      if (convertedTokens.length > 0) {
+        setTokens(currentTokens => {
+          const updated = [...currentTokens, ...convertedTokens];
+          tokensRef.current = updated;
+          return updated;
+        });
         
-        if (newTokens.length > 0) {
-          setTokens(currentTokens => {
-            const updated = [...currentTokens, ...newTokens];
-            tokensRef.current = updated;
-            return updated;
-          });
-          return new Set([...prev, ...newTokens.map(t => t.id)]);
-        }
-        return prev;
-      });
+        // Track all seen tokens
+        setSeenTokenIds(prev => new Set([...prev, ...convertedTokens.map(t => t.id)]));
+      }
     } catch (err) {
       console.error('Failed to load more tokens', err);
     } finally {
