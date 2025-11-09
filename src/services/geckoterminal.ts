@@ -178,26 +178,33 @@ export const fetchGeckoTrendingPools = async (chainId?: string): Promise<DexPair
       
       try {
         const url = `${API_BASE}/networks/${geckoChain}/trending_pools?page=1`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+        
         const response = await fetch(url, { 
-          headers: { 'Accept': 'application/json' } 
+          headers: { 'Accept': 'application/json' },
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         
         if (!response.ok) continue;
         
         const data: GeckoResponse = await response.json();
         
         if (data.data) {
-          for (const pool of data.data.slice(0, 10)) {
+          for (const pool of data.data.slice(0, 5)) { // Reduced from 10 to 5
             const pair = convertGeckoPoolToDexPair(pool, data.included || [], chain);
             if (pair) pairs.push(pair);
           }
         }
       } catch (error) {
-        console.error(`Error fetching GeckoTerminal trending for ${chain}:`, error);
+        // Silently continue on timeout or error
+        continue;
       }
       
-      // If we have enough pairs for a specific chain, stop
-      if (chainId && pairs.length >= 10) break;
+      // If we have enough pairs for a specific chain, stop early
+      if (chainId && pairs.length >= 5) break;
     }
     
     return pairs;
@@ -220,23 +227,30 @@ export const fetchGeckoNewPools = async (chainId?: string): Promise<DexPair[]> =
       if (!geckoChain) continue;
       
       try {
-        const response = await fetch(
-          `${API_BASE}/networks/${geckoChain}/new_pools?page=1`,
-          { headers: { 'Accept': 'application/json' } }
-        );
+        const url = `${API_BASE}/networks/${geckoChain}/new_pools?page=1`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+        
+        const response = await fetch(url, { 
+          headers: { 'Accept': 'application/json' },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
         
         if (!response.ok) continue;
         
         const data: GeckoResponse = await response.json();
         
         if (data.data) {
-          for (const pool of data.data.slice(0, 20)) {
+          for (const pool of data.data.slice(0, 10)) { // Reduced from 20 to 10
             const pair = convertGeckoPoolToDexPair(pool, data.included || [], chain);
             if (pair) pairs.push(pair);
           }
         }
       } catch (error) {
-        console.error(`Error fetching GeckoTerminal new pools for ${chain}:`, error);
+        // Silently continue on timeout or error
+        continue;
       }
     }
     
