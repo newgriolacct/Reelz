@@ -76,16 +76,44 @@ const convertGeckoPoolToDexPair = (
   chainId: string
 ): DexPair | null => {
   try {
-    const baseTokenData = tokens.find(t => t.id === pool.relationships.base_token.data.id);
-    const quoteTokenData = tokens.find(t => t.id === pool.relationships.quote_token.data.id);
+    // Try to find tokens in included array first
+    let baseTokenData = tokens.find(t => t.id === pool.relationships.base_token.data.id);
+    let quoteTokenData = tokens.find(t => t.id === pool.relationships.quote_token.data.id);
     
-    if (!baseTokenData) {
-      console.log(`[GeckoTerminal] Base token not found for pool ${pool.id}`);
-      return null;
-    }
-    if (!quoteTokenData) {
-      console.log(`[GeckoTerminal] Quote token not found for pool ${pool.id}`);
-      return null;
+    // If tokens not in included array, extract from pool name
+    // Pool name format is typically "TOKEN1 / TOKEN2" or "TOKEN1 / TOKEN2 0.3%"
+    if (!baseTokenData || !quoteTokenData) {
+      const nameParts = pool.attributes.name.split(' / ');
+      if (nameParts.length >= 2) {
+        const baseSymbol = nameParts[0].trim();
+        const quoteSymbol = nameParts[1].split(' ')[0].trim(); // Remove fee tier if present
+        
+        // Create minimal token data from pool info
+        baseTokenData = {
+          id: pool.relationships.base_token.data.id,
+          type: 'token',
+          attributes: {
+            address: pool.relationships.base_token.data.id.split('_').pop() || '',
+            name: baseSymbol,
+            symbol: baseSymbol,
+            image_url: '',
+          }
+        };
+        
+        quoteTokenData = {
+          id: pool.relationships.quote_token.data.id,
+          type: 'token',
+          attributes: {
+            address: pool.relationships.quote_token.data.id.split('_').pop() || '',
+            name: quoteSymbol,
+            symbol: quoteSymbol,
+            image_url: '',
+          }
+        };
+      } else {
+        console.log(`[GeckoTerminal] Cannot parse pool name: ${pool.attributes.name}`);
+        return null;
+      }
     }
     
     // Parse market cap from string to number
