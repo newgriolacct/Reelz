@@ -94,16 +94,24 @@ const generateMockToken = (index: number, chainId?: string): Token => {
 export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]> => {
   try {
     const network = chainId || 'solana';
-    console.log(`Fetching real ${network} trending tokens...`);
-    // Get top trending tokens with wider market cap range for trending bar
-    const tokens = await fetchBirdeyeTrending(network, 0, 20, 50000, 50000000);
-    return tokens.map(token => convertBirdeyeToToken(token, network));
+    console.log(`Fetching real ${network} trending tokens (100k-5M cap)...`);
+    // Get trending tokens with 100k-5M market cap range for trending bar
+    const tokens = await fetchBirdeyeTrending(network, 0, 50, 100000, 5000000);
+    
+    // Randomly select 5 tokens from the filtered results
+    const shuffled = tokens.sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 5);
+    
+    return selected.map(token => convertBirdeyeToToken(token, network));
   } catch (error) {
     console.error('Error fetching trending tokens:', error);
     // Fallback to mock data on error
     const tokens: Token[] = [];
-    for (let i = 0; i < 10; i++) {
-      tokens.push(generateMockToken(i, chainId));
+    for (let i = 0; i < 5; i++) {
+      const mockToken = generateMockToken(i, chainId);
+      // Override market cap to be in range
+      mockToken.marketCap = Math.floor(Math.random() * 4900000) + 100000;
+      tokens.push(mockToken);
     }
     return tokens;
   }

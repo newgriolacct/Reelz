@@ -64,8 +64,8 @@ export const fetchBirdeyeTrending = async (
     
     const data: BirdeyeResponse = await response.json();
     
-    if (!data.data?.tokens) {
-      console.warn('No data received from Birdeye');
+    if (!data.data?.tokens || data.data.tokens.length === 0) {
+      console.warn('No data received from Birdeye, using cache or returning empty');
       return [];
     }
     

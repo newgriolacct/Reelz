@@ -38,16 +38,20 @@ serve(async (req) => {
         'x-chain': chain,
         'X-API-KEY': BIRDEYE_API_KEY,
       },
+      signal: AbortSignal.timeout(10000), // 10 second timeout
     });
 
     if (!birdeyeResponse.ok) {
       console.error('Birdeye API error:', birdeyeResponse.status, birdeyeResponse.statusText);
       const errorText = await birdeyeResponse.text();
       console.error('Error response:', errorText);
+      
+      // Return empty data structure on rate limit or error
       return new Response(
         JSON.stringify({ 
-          error: `Birdeye API error: ${birdeyeResponse.status}`,
-          data: [] 
+          data: { tokens: [], updateUnixTime: Date.now() / 1000, updateTime: new Date().toISOString(), total: 0 },
+          success: false,
+          error: `Birdeye API error: ${birdeyeResponse.status}`
         }), 
         { 
           status: 200,
