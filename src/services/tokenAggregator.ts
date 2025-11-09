@@ -84,10 +84,10 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
   // Don't cache random tokens - we want fresh data each time for infinite scroll
   
   try {
-    // Fetch from all sources in parallel
-    const [dexRandom, geckoNew] = await Promise.allSettled([
+    // Fetch only from DexScreener for better quality tokens
+    // GeckoTerminal new pools removed - they return too many low cap tokens
+    const [dexRandom] = await Promise.allSettled([
       fetchDexRandom(chainId),
-      fetchGeckoNewPools(chainId),
     ]);
     
     const allPairs: DexPair[] = [];
@@ -96,16 +96,6 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
     // Add DexScreener random tokens - NO market cap filter for feed variety
     if (dexRandom.status === 'fulfilled') {
       dexRandom.value.forEach(pair => {
-        if (!seenPairAddresses.has(pair.pairAddress)) {
-          allPairs.push(pair);
-          seenPairAddresses.add(pair.pairAddress);
-        }
-      });
-    }
-    
-    // Add GeckoTerminal new pools - NO market cap filter for feed variety
-    if (geckoNew.status === 'fulfilled') {
-      geckoNew.value.forEach(pair => {
         if (!seenPairAddresses.has(pair.pairAddress)) {
           allPairs.push(pair);
           seenPairAddresses.add(pair.pairAddress);
