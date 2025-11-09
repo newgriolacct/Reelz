@@ -37,10 +37,6 @@ const PolygonIcon = () => (
 
 const networks = [
   { id: 'solana', name: 'Solana', icon: SolanaIcon },
-  { id: 'bsc', name: 'BSC', icon: BSCIcon },
-  { id: 'ethereum', name: 'Ethereum', icon: EthereumIcon },
-  { id: 'base', name: 'Base', icon: BaseIcon },
-  { id: 'polygon', name: 'Polygon', icon: PolygonIcon },
 ];
 
 interface NetworkSelectorProps {
@@ -49,27 +45,6 @@ interface NetworkSelectorProps {
 }
 
 export const NetworkSelector = ({ selectedNetwork, onNetworkChange }: NetworkSelectorProps) => {
-  return (
-    <div className="fixed top-[52px] md:top-16 lg:top-20 left-0 right-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border">
-      <div className="flex gap-1 md:gap-1 lg:gap-2 p-1.5 md:p-2 lg:p-2.5">
-        {networks.map((network) => {
-          const IconComponent = network.icon;
-          return (
-            <button
-              key={network.id}
-              onClick={() => onNetworkChange(network.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 lg:gap-2 px-2 md:px-3 lg:px-4 py-1.5 md:py-2 lg:py-2.5 rounded-md md:rounded-lg text-xs md:text-sm lg:text-base font-medium whitespace-nowrap transition-all ${
-                selectedNetwork === network.id
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
-              }`}
-            >
-              <IconComponent />
-              <span className="hidden sm:inline">{network.name}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
+  // Only Solana is available - hide the selector
+  return null;
 };
