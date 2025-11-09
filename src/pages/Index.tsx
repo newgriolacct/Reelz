@@ -1,6 +1,7 @@
 import { TokenCard } from "@/components/TokenCard";
 import { BottomNav } from "@/components/BottomNav";
 import { TrendingTokensList } from "@/components/TrendingTokensList";
+import { NetworkSelector } from "@/components/NetworkSelector";
 import { fetchTrendingTokens } from "@/services/dexscreener";
 import { convertDexPairToToken } from "@/types/token";
 import { useEffect, useState, useRef } from "react";
@@ -111,7 +112,8 @@ const Index = () => {
         currentTokenId={currentTokenId}
         onTokenClick={handleTokenClick}
       />
-      <div 
+      <NetworkSelector />
+      <div
         ref={scrollContainerRef}
         className="h-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth scrollbar-hide"
       >
