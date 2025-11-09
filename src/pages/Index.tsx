@@ -26,19 +26,22 @@ const Index = () => {
       const pairs = await fetchAggregatedRandom(selectedNetwork);
       const convertedTokens = pairs.map(convertDexPairToToken);
       
-      // Filter out tokens we've already seen
-      const newTokens = convertedTokens.filter(token => !seenTokenIds.has(token.id));
-      
-      if (newTokens.length > 0) {
-        setTokens(prev => [...prev, ...newTokens]);
-        setSeenTokenIds(prev => new Set([...prev, ...newTokens.map(t => t.id)]));
-      }
+      // Filter out tokens we've already seen using functional state update
+      setSeenTokenIds(prev => {
+        const newTokens = convertedTokens.filter(token => !prev.has(token.id));
+        
+        if (newTokens.length > 0) {
+          setTokens(currentTokens => [...currentTokens, ...newTokens]);
+          return new Set([...prev, ...newTokens.map(t => t.id)]);
+        }
+        return prev;
+      });
     } catch (err) {
       console.error('Failed to load more tokens', err);
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, selectedNetwork, seenTokenIds]);
+  }, [loadingMore, selectedNetwork]);
 
   useEffect(() => {
     const loadTokens = async () => {
