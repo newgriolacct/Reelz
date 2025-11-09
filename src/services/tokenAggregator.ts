@@ -1,93 +1,122 @@
-import { DexPair, fetchSolanaTrending } from './dexscreener';
-import { Token, convertDexPairToToken } from '@/types/token';
+import { Token } from "@/types/token";
+import { BirdeyeToken, fetchBirdeyeTrending } from "./birdeye";
 
-// Mock data generator - NO API CALLS
-const generateMockToken = (index: number, chainId?: string): DexPair => {
+/**
+ * Convert Birdeye token to our Token type
+ */
+const convertBirdeyeToToken = (token: BirdeyeToken, chainId: string): Token => {
+  const priceChange = token.priceChange24hPercent || token.v24hChangePercent || 0;
+  
+  // Generate sparkline data from price change
+  const points = 24;
+  const sparklineData: number[] = [];
+  let value = 100;
+  
+  for (let i = 0; i < points; i++) {
+    const progress = i / points;
+    const randomVariation = (Math.random() - 0.5) * 5;
+    const trendChange = (priceChange / 100) * progress * 100;
+    value = 100 + trendChange + randomVariation;
+    sparklineData.push(Math.max(50, value));
+  }
+
+  return {
+    id: token.address,
+    symbol: token.symbol,
+    name: token.name,
+    avatarUrl: token.logoURI || `https://api.dicebear.com/7.x/shapes/svg?seed=${token.symbol}&backgroundColor=00d084`,
+    price: token.price || 0,
+    change24h: priceChange,
+    marketCap: token.mc || 0,
+    volume24h: token.v24hUSD || 0,
+    sparklineData,
+    tags: [],
+    isNew: false,
+    liquidity: token.liquidity || 0,
+    chain: chainId.charAt(0).toUpperCase() + chainId.slice(1),
+    description: `Trading on ${chainId}. Market cap: $${(token.mc || 0).toLocaleString()}`,
+    likes: Math.floor((token.v24hUSD || 0) / 10000),
+    comments: Math.floor((token.v24hUSD || 0) / 50000),
+    pairAddress: token.address,
+    contractAddress: token.address,
+    website: token.extensions?.website,
+    twitter: token.extensions?.twitter,
+    telegram: token.extensions?.telegram,
+  };
+};
+/**
+ * Mock data generator for fallback
+ */
+const generateMockToken = (index: number, chainId?: string): Token => {
   const chains = ['solana', 'ethereum', 'bsc', 'polygon', 'arbitrum', 'base'];
   const chain = chainId || chains[Math.floor(Math.random() * chains.length)];
   const symbols = ['PEPE', 'DOGE', 'SHIB', 'WIF', 'BONK', 'MEME', 'MOON', 'WOJAK', 'FLOKI', 'ELON'];
   const symbol = symbols[index % symbols.length] + (Math.floor(index / symbols.length) + 1);
   
+  const priceChange = (Math.random() * 200) - 100;
+  const points = 24;
+  const sparklineData: number[] = [];
+  let value = 100;
+  
+  for (let i = 0; i < points; i++) {
+    const progress = i / points;
+    const randomVariation = (Math.random() - 0.5) * 5;
+    const trendChange = (priceChange / 100) * progress * 100;
+    value = 100 + trendChange + randomVariation;
+    sparklineData.push(Math.max(50, value));
+  }
+  
   return {
-    chainId: chain,
-    dexId: 'mock',
-    url: `https://example.com/${symbol}`,
-    pairAddress: `mock_${index}_${Date.now()}`,
-    baseToken: {
-      address: `token_${index}_${Date.now()}`,
-      name: `${symbol} Token`,
-      symbol: symbol,
-    },
-    quoteToken: {
-      address: 'wrapped_native',
-      name: 'Wrapped Native',
-      symbol: 'WNATIVE',
-    },
-    priceNative: `${(Math.random() * 0.001).toFixed(9)}`,
-    priceUsd: `${(Math.random() * 0.1).toFixed(6)}`,
-    txns: {
-      h24: { buys: Math.floor(Math.random() * 1000), sells: Math.floor(Math.random() * 1000) }
-    },
-    volume: {
-      h24: Math.floor(Math.random() * 500000) + 50000,
-    },
-    priceChange: {
-      h24: (Math.random() * 200) - 100,
-    },
-    liquidity: {
-      usd: Math.floor(Math.random() * 100000) + 30000,
-      base: Math.floor(Math.random() * 1000000),
-      quote: Math.floor(Math.random() * 100),
-    },
-    fdv: Math.floor(Math.random() * 500000) + 50000,
+    id: `mock_${index}_${Date.now()}`,
+    symbol: symbol,
+    name: `${symbol} Token`,
+    avatarUrl: `https://api.dicebear.com/7.x/shapes/svg?seed=${symbol}`,
+    price: Math.random() * 0.1,
+    change24h: priceChange,
     marketCap: Math.floor(Math.random() * 500000) + 50000,
-    pairCreatedAt: Date.now() - Math.floor(Math.random() * 86400000),
-    info: {
-      imageUrl: `https://api.dicebear.com/7.x/shapes/svg?seed=${symbol}`,
-    },
+    volume24h: Math.floor(Math.random() * 500000) + 50000,
+    sparklineData,
+    tags: [],
+    isNew: false,
+    liquidity: Math.floor(Math.random() * 100000) + 30000,
+    chain: chain.charAt(0).toUpperCase() + chain.slice(1),
+    description: `Mock token for ${chain}`,
+    likes: Math.floor(Math.random() * 100),
+    comments: Math.floor(Math.random() * 50),
+    pairAddress: `mock_${index}`,
+    contractAddress: `token_${index}`,
   };
 };
 
 /**
- * Fetch trending tokens - Uses real API for Solana, mock for others
+ * Fetch trending tokens - Uses Birdeye API for all networks
  */
 export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]> => {
   try {
-    // Use real API for Solana
-    if (chainId?.toLowerCase() === 'solana') {
-      console.log('Fetching real Solana trending tokens...');
-      const pairs = await fetchSolanaTrending();
-      console.log(`Received ${pairs.length} Solana trending tokens`);
-      return pairs.map(convertDexPairToToken);
-    }
-    
-    // For other networks, return mock data
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const tokens: DexPair[] = [];
-    for (let i = 0; i < 10; i++) {
-      tokens.push(generateMockToken(i, chainId));
-    }
-    return tokens.map(convertDexPairToToken);
+    const network = chainId || 'solana';
+    console.log(`Fetching real ${network} trending tokens...`);
+    const tokens = await fetchBirdeyeTrending(network);
+    return tokens.map(token => convertBirdeyeToToken(token, network));
   } catch (error) {
     console.error('Error fetching trending tokens:', error);
     // Fallback to mock data on error
-    const tokens: DexPair[] = [];
+    const tokens: Token[] = [];
     for (let i = 0; i < 10; i++) {
       tokens.push(generateMockToken(i, chainId));
     }
-    return tokens.map(convertDexPairToToken);
+    return tokens;
   }
 };
 
 /**
- * Return mock random tokens for scrolling - NO API CALLS
+ * Fetch random tokens for scrolling - Uses mock data
  */
 export const fetchAggregatedRandom = async (chainId?: string): Promise<Token[]> => {
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 500));
   
   // Generate 30 random tokens each time
-  const tokens: DexPair[] = [];
+  const tokens: Token[] = [];
   const startIndex = Math.floor(Math.random() * 1000);
   
   for (let i = 0; i < 30; i++) {
@@ -96,5 +125,5 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<Token[]> 
   
   console.log(`Generated ${tokens.length} mock tokens for ${chainId || 'all chains'}`);
   
-  return tokens.map(convertDexPairToToken);
+  return tokens;
 };

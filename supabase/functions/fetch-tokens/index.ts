@@ -13,90 +13,48 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const type = url.searchParams.get('type') || 'profiles';
+    const chain = url.searchParams.get('chain') || 'solana';
     
-    let dexEndpoint = '';
+    const BIRDEYE_API_KEY = Deno.env.get('BIRDEYE_API_KEY');
     
-    // Use different DexScreener endpoints
-    if (type === 'profiles') {
-      dexEndpoint = 'https://api.dexscreener.com/token-profiles/latest/v1';
-    } else if (type === 'boosts') {
-      dexEndpoint = 'https://api.dexscreener.com/token-boosts/latest/v1';
+    if (!BIRDEYE_API_KEY) {
+      console.error('BIRDEYE_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ error: 'API key not configured', data: [] }), 
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
-    console.log('Fetching from DexScreener:', dexEndpoint);
+    console.log('Fetching trending tokens for chain:', chain);
     
-    // Fetch from DexScreener API with proper headers
-    const dexResponse = await fetch(dexEndpoint, {
+    // Fetch from Birdeye API
+    const birdeyeResponse = await fetch('https://public-api.birdeye.so/defi/token_trending', {
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (compatible; TokenAggregator/1.0)',
+        'x-chain': chain,
+        'X-API-KEY': BIRDEYE_API_KEY,
       },
     });
 
-    if (!dexResponse.ok) {
-      console.error('DexScreener API error:', dexResponse.status, dexResponse.statusText);
+    if (!birdeyeResponse.ok) {
+      console.error('Birdeye API error:', birdeyeResponse.status, birdeyeResponse.statusText);
+      const errorText = await birdeyeResponse.text();
+      console.error('Error response:', errorText);
       return new Response(
         JSON.stringify({ 
-          error: `DexScreener API error: ${dexResponse.status}`,
-          pairs: [] // Return empty array to allow app to function
+          error: `Birdeye API error: ${birdeyeResponse.status}`,
+          data: [] 
         }), 
         { 
-          status: 200, // Return 200 to prevent frontend errors
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
     }
 
-    const data = await dexResponse.json();
-    
-    // For token profiles/boosts, we need to fetch pair data
-    if (Array.isArray(data)) {
-      console.log(`Fetched ${data.length} tokens, now getting pair data...`);
-      
-      const pairs = [];
-      
-      // Get pair data for each token (limit to 10 for performance)
-      for (const token of data.slice(0, 10)) {
-        try {
-          const tokenAddress = token.tokenAddress;
-          const pairResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`, {
-            headers: {
-              'Accept': 'application/json',
-              'User-Agent': 'Mozilla/5.0 (compatible; TokenAggregator/1.0)',
-            },
-          });
-          
-          if (pairResponse.ok) {
-            const pairData = await pairResponse.json();
-            if (pairData.pairs && pairData.pairs.length > 0) {
-              // Get the best pair (highest liquidity) for this token
-              const bestPair = pairData.pairs
-                .filter((p: any) => p.chainId === 'solana')
-                .sort((a: any, b: any) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
-              
-              if (bestPair) {
-                pairs.push(bestPair);
-              }
-            }
-          }
-        } catch (err) {
-          console.error('Error fetching pair data:', err);
-        }
-      }
-      
-      console.log(`Successfully fetched ${pairs.length} pairs`);
-      
-      return new Response(
-        JSON.stringify({ pairs }),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-    
-    // If data already has pairs structure, return it
+    const data = await birdeyeResponse.json();
+    console.log(`Successfully fetched ${data.data?.items?.length || 0} trending tokens`);
+
     return new Response(
       JSON.stringify(data),
       { 
@@ -108,9 +66,9 @@ serve(async (req) => {
     console.error('Error in fetch-tokens function:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: errorMessage, pairs: [] }), 
+      JSON.stringify({ error: errorMessage, data: [] }), 
       { 
-        status: 200, // Return 200 to prevent frontend errors
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
