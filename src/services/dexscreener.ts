@@ -86,11 +86,16 @@ export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> 
       ? boostedTokens.filter(token => token.chainId.toLowerCase() === chainId.toLowerCase())
       : boostedTokens;
     
+    // If filtering resulted in too few tokens, also include some unfiltered ones
+    const tokensToFetch = filteredTokens.length < 15 && chainId
+      ? [...filteredTokens, ...boostedTokens.filter(t => !filteredTokens.includes(t)).slice(0, 15 - filteredTokens.length)]
+      : filteredTokens;
+    
     // Step 2: Fetch pair data for each boosted token
     const allPairs: DexPair[] = [];
     
-    // Take top 30 boosted tokens to ensure we get at least 10 good pairs after filtering
-    const topTokens = filteredTokens.slice(0, 30);
+    // Take more tokens to ensure we get enough good pairs
+    const topTokens = tokensToFetch.slice(0, 50);
     
     for (const boostedToken of topTokens) {
       try {
@@ -124,8 +129,8 @@ export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> 
         console.error(`Failed to fetch token ${boostedToken.tokenAddress}:`, error);
       }
       
-      // Stop once we have enough pairs
-      if (allPairs.length >= 10) break;
+      // Stop once we have enough pairs (at least 20)
+      if (allPairs.length >= 20) break;
     }
     
     return allPairs;

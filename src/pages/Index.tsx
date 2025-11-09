@@ -34,14 +34,20 @@ const Index = () => {
   useEffect(() => {
     const loadTokens = async () => {
       try {
-        setLoading(true);
+        // Don't show full loading screen when switching networks, just clear tokens
+        if (tokens.length === 0) {
+          setLoading(true);
+        }
         setError(null);
+        
         const pairs = await fetchTrendingTokens(selectedNetwork);
         const convertedTokens = pairs.map(convertDexPairToToken);
         setTokens(convertedTokens);
+        
         if (convertedTokens.length > 0) {
           setCurrentTokenId(convertedTokens[0].id);
         }
+        
         // Scroll to top when network changes
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
