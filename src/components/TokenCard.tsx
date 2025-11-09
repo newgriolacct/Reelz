@@ -76,7 +76,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
 
   return (
     <>
-      <div className="h-screen snap-start relative flex flex-col bg-background overflow-hidden">
+      <div className="h-screen snap-start relative flex flex-col bg-background">
         {/* Top spacing for trending bar and network selector */}
         <div className="h-[110px] md:h-[120px] lg:h-[140px] flex-shrink-0" />
         
@@ -167,8 +167,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </div>
         </div>
 
-        {/* DexScreener Chart - Fixed height to fit everything */}
-        <div className="relative bg-card overflow-hidden h-[35vh] flex-shrink-0">
+        {/* DexScreener Chart - Flexible height */}
+        <div className="relative bg-card overflow-hidden flex-1 min-h-0">
         {token.dexScreenerUrl ? (
             <iframe
               src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
@@ -184,7 +184,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           )}
         </div>
 
-        {/* Bottom - Token Info - Compact to fit on screen */}
+        {/* Bottom - Token Info */}
         <div className="px-3 py-2 pb-20 flex flex-col gap-1.5 bg-background flex-shrink-0">
           {/* Price Info - Compact */}
           <div className="mb-1">
