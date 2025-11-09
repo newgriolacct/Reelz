@@ -42,7 +42,7 @@ export const CommentsDrawer = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
         side="bottom" 
-        className="h-[85vh] flex flex-col p-0"
+        className="h-[75vh] flex flex-col p-0 pb-safe"
       >
         <SheetHeader className="px-4 py-3 border-b border-border">
           <SheetTitle className="text-center">{comments.length} comments</SheetTitle>
@@ -83,13 +83,14 @@ export const CommentsDrawer = ({
         </div>
 
         {/* Comment Input */}
-        <div className="border-t border-border p-3 bg-background">
+        <div className="border-t border-border p-4 bg-background flex-shrink-0">
           <div className="flex gap-2 items-end">
             <Textarea
               placeholder="Add a comment..."
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              className="min-h-[44px] max-h-[120px] resize-none"
+              className="min-h-[44px] max-h-[100px] resize-none flex-1"
+              rows={1}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
