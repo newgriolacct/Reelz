@@ -2,13 +2,14 @@ import { TokenCard } from "@/components/TokenCard";
 import { BottomNav } from "@/components/BottomNav";
 import { TrendingTokensList } from "@/components/TrendingTokensList";
 import { NetworkSelector } from "@/components/NetworkSelector";
-import { fetchTrendingTokens } from "@/services/dexscreener";
+import { fetchTrendingTokens, fetchRandomTokens } from "@/services/dexscreener";
 import { convertDexPairToToken } from "@/types/token";
 import { useEffect, useState, useRef } from "react";
 import { Token } from "@/types/token";
 
 const Index = () => {
   const [tokens, setTokens] = useState<Token[]>([]);
+  const [trendingTokens, setTrendingTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +23,7 @@ const Index = () => {
     
     try {
       setLoadingMore(true);
-      const pairs = await fetchTrendingTokens(selectedNetwork);
+      const pairs = await fetchRandomTokens(selectedNetwork);
       const convertedTokens = pairs.map(convertDexPairToToken);
       
       // Filter out tokens we've already seen
@@ -42,21 +43,27 @@ const Index = () => {
   useEffect(() => {
     const loadTokens = async () => {
       try {
-        // Don't show full loading screen when switching networks, just clear tokens
+        // Don't show full loading screen when switching networks
         if (tokens.length === 0) {
           setLoading(true);
         }
         setError(null);
         
-        const pairs = await fetchTrendingTokens(selectedNetwork);
-        const convertedTokens = pairs.map(convertDexPairToToken);
-        setTokens(convertedTokens);
+        // Load trending tokens for the top bar
+        const trendingPairs = await fetchTrendingTokens(selectedNetwork);
+        const convertedTrending = trendingPairs.map(convertDexPairToToken);
+        setTrendingTokens(convertedTrending);
+        
+        // Load random tokens for scrolling
+        const randomPairs = await fetchRandomTokens(selectedNetwork);
+        const convertedRandom = randomPairs.map(convertDexPairToToken);
+        setTokens(convertedRandom);
         
         // Reset seen tokens when network changes
-        setSeenTokenIds(new Set(convertedTokens.map(t => t.id)));
+        setSeenTokenIds(new Set(convertedRandom.map(t => t.id)));
         
-        if (convertedTokens.length > 0) {
-          setCurrentTokenId(convertedTokens[0].id);
+        if (convertedRandom.length > 0) {
+          setCurrentTokenId(convertedRandom[0].id);
         }
         
         // Scroll to top when network changes
@@ -113,12 +120,30 @@ const Index = () => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
+    // Check if token is in the scrolling feed
     const tokenIndex = tokens.findIndex(t => t.id === tokenId);
+    
     if (tokenIndex !== -1) {
+      // Token exists in feed, scroll to it
       container.scrollTo({
         top: tokenIndex * window.innerHeight,
         behavior: 'smooth'
       });
+    } else {
+      // Token is from trending bar but not in feed yet
+      // Find it in trending tokens and add it to the top of the feed
+      const trendingToken = trendingTokens.find(t => t.id === tokenId);
+      if (trendingToken) {
+        setTokens(prev => [trendingToken, ...prev]);
+        setSeenTokenIds(prev => new Set([...prev, tokenId]));
+        // Scroll to top after a short delay to let React update
+        setTimeout(() => {
+          container.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        }, 100);
+      }
     }
   };
 
@@ -164,7 +189,7 @@ const Index = () => {
   return (
     <>
       <TrendingTokensList 
-        tokens={tokens}
+        tokens={trendingTokens}
         currentTokenId={currentTokenId}
         onTokenClick={handleTokenClick}
       />

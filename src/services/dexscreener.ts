@@ -89,11 +89,79 @@ interface BoostedToken {
 }
 
 /**
- * Fetch tokens from multiple DexScreener endpoints for diversity
- * Combines: top boosts, latest boosts, ads, and token profiles
- * @param chainId - Optional chain filter (e.g., 'solana', 'bsc', 'ethereum')
+ * Fetch ONLY top trending tokens for the trending bar
+ * Uses top boosts endpoint to get the most promoted tokens
+ * @param chainId - Optional chain filter
  */
 export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> => {
+  try {
+    // Only fetch top boosted tokens for trending
+    const response = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch trending tokens: ${response.status}`);
+    }
+    
+    const boostedTokens: BoostedToken[] = await response.json();
+    
+    // Filter by chain if specified
+    const filteredTokens = chainId 
+      ? boostedTokens.filter(token => token.chainId.toLowerCase() === chainId.toLowerCase())
+      : boostedTokens;
+    
+    // Fetch pair data for top tokens
+    const allPairs: DexPair[] = [];
+    const topTokens = filteredTokens.slice(0, 10); // Only get top 10
+    
+    for (const boostedToken of topTokens) {
+      try {
+        const response = await fetch(`${API_BASE}/tokens/${boostedToken.tokenAddress}`);
+        
+        if (!response.ok) continue;
+        
+        const data: DexScreenerResponse = await response.json();
+        
+        if (data.pairs && data.pairs.length > 0) {
+          const bestPair = data.pairs
+            .filter(pair => {
+              if (chainId && pair.chainId.toLowerCase() !== chainId.toLowerCase()) return false;
+              
+              const quoteSymbol = pair.quoteToken.symbol.toUpperCase();
+              return quoteSymbol === 'SOL' || 
+                     quoteSymbol === 'USDC' || 
+                     quoteSymbol === 'USDT' ||
+                     quoteSymbol === 'ETH' ||
+                     quoteSymbol === 'WETH' ||
+                     quoteSymbol === 'BNB' ||
+                     quoteSymbol === 'WBNB';
+            })
+            .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+          
+          if (bestPair) {
+            allPairs.push(bestPair);
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to fetch token ${boostedToken.tokenAddress}:`, error);
+      }
+      
+      // Get at least 5 for trending bar
+      if (allPairs.length >= 5) break;
+    }
+    
+    return allPairs;
+  } catch (error) {
+    console.error('Error fetching trending tokens:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch random diverse tokens for scrolling feed
+ * Combines multiple endpoints for maximum variety
+ * @param chainId - Optional chain filter
+ */
+export const fetchRandomTokens = async (chainId?: string): Promise<DexPair[]> => {
   try {
     // Fetch from all endpoints in parallel for speed
     const [topBoostsRes, latestBoostsRes, adsRes, profilesRes] = await Promise.allSettled([
