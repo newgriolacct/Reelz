@@ -242,7 +242,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* Right Side Actions (TikTok style) */}
-        <div className="absolute right-2 bottom-32 flex flex-col gap-3 z-10">
+        <div className="absolute right-2 bottom-40 flex flex-col gap-3 z-10">
           <button
             onClick={handleLike}
             className="flex flex-col items-center gap-0.5"

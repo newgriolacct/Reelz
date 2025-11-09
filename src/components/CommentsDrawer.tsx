@@ -31,7 +31,8 @@ export const CommentsDrawer = ({
 }: CommentsDrawerProps) => {
   const [commentText, setCommentText] = useState("");
 
-  const handleSubmit = () => {
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (commentText.trim()) {
       onAddComment(commentText.trim());
       setCommentText("");
@@ -92,16 +93,24 @@ export const CommentsDrawer = ({
                 onChange={(e) => setCommentText(e.target.value)}
                 className="min-h-[44px] max-h-[100px] resize-none pr-12"
                 rows={1}
+                onFocus={(e) => {
+                  // Prevent auto-scroll on focus
+                  e.preventDefault();
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    handleSubmit();
+                    handleSubmit(e);
                   }
                 }}
               />
               <Button
+                type="button"
                 size="icon"
-                onClick={handleSubmit}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }}
                 disabled={!commentText.trim()}
                 className="absolute right-1 bottom-1 h-9 w-9"
               >
