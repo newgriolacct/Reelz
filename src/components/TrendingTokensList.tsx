@@ -25,7 +25,7 @@ export const TrendingTokensList = ({ tokens, currentTokenId, onTokenClick }: Tre
               className={`flex-1 flex flex-col items-center justify-center gap-1 md:gap-1.5 px-1.5 md:px-2 lg:px-3 py-1.5 md:py-2 lg:py-2.5 rounded-md md:rounded-lg transition-all min-w-0 ${
                 isActive 
                   ? 'bg-primary text-primary-foreground' 
-                  : 'bg-secondary hover:bg-secondary/80'
+                  : 'bg-secondary text-secondary-foreground hover:bg-primary/20 hover:text-foreground'
               }`}
             >
               <div className="flex items-center gap-1 md:gap-1.5 w-full justify-center">
