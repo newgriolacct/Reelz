@@ -8,6 +8,8 @@ import {
   fetchGeckoNewPools 
 } from './geckoterminal';
 
+const MIN_MARKET_CAP = 5000; // $5k minimum to show more tokens
+
 /**
  * Aggregate trending tokens from all APIs
  */
@@ -26,7 +28,7 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair
     if (dexTrending.status === 'fulfilled') {
       dexTrending.value.forEach(pair => {
         const marketCap = pair.marketCap || pair.fdv || 0;
-        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
+        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= MIN_MARKET_CAP) {
           allPairs.push(pair);
           seenPairAddresses.add(pair.pairAddress);
         }
@@ -37,7 +39,7 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair
     if (geckoTrending.status === 'fulfilled') {
       geckoTrending.value.forEach(pair => {
         const marketCap = pair.marketCap || pair.fdv || 0;
-        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
+        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= MIN_MARKET_CAP) {
           allPairs.push(pair);
           seenPairAddresses.add(pair.pairAddress);
         }
@@ -78,7 +80,7 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
     if (dexRandom.status === 'fulfilled') {
       dexRandom.value.forEach(pair => {
         const marketCap = pair.marketCap || pair.fdv || 0;
-        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
+        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= MIN_MARKET_CAP) {
           allPairs.push(pair);
           seenPairAddresses.add(pair.pairAddress);
         }
@@ -89,7 +91,7 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
     if (geckoNew.status === 'fulfilled') {
       geckoNew.value.forEach(pair => {
         const marketCap = pair.marketCap || pair.fdv || 0;
-        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
+        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= MIN_MARKET_CAP) {
           allPairs.push(pair);
           seenPairAddresses.add(pair.pairAddress);
         }

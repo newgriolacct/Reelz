@@ -12,6 +12,8 @@ interface GeckoPool {
     quote_token_price_usd: string;
     pool_created_at: string;
     reserve_in_usd: string;
+    fdv_usd?: string;
+    market_cap_usd?: string | null;
     price_change_percentage: {
       h24: string;
     };
@@ -79,6 +81,12 @@ const convertGeckoPoolToDexPair = (
     
     if (!baseTokenData || !quoteTokenData) return null;
     
+    // Parse market cap from string to number
+    const fdv = parseFloat(pool.attributes.fdv_usd || '0');
+    const marketCap = pool.attributes.market_cap_usd 
+      ? parseFloat(pool.attributes.market_cap_usd) 
+      : fdv;
+    
     return {
       chainId: chainId,
       dexId: 'geckoterminal',
@@ -113,6 +121,8 @@ const convertGeckoPoolToDexPair = (
         base: 0,
         quote: 0,
       },
+      fdv: fdv,
+      marketCap: marketCap,
       pairCreatedAt: new Date(pool.attributes.pool_created_at).getTime(),
       info: {
         imageUrl: baseTokenData.attributes.image_url,
