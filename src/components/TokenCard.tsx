@@ -77,7 +77,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
     <>
       <div className="h-screen snap-start relative flex flex-col bg-background overflow-hidden">
         {/* Top spacing for trending bar and network selector */}
-        <div className="h-[115px] md:h-[120px] lg:h-[140px] flex-shrink-0" />
+        <div className="h-[110px] md:h-[120px] lg:h-[140px] flex-shrink-0" />
         
         {/* Token Header */}
         <div className="px-3 py-2 flex items-center justify-between bg-background flex-shrink-0 border-b border-border/50">
@@ -167,7 +167,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* DexScreener Chart */}
-        <div className="relative bg-card overflow-hidden flex-1 min-h-[250px] max-h-[400px]">
+        <div className="relative bg-card overflow-hidden flex-1 min-h-0">
           {token.dexScreenerUrl ? (
             <iframe
               src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
@@ -183,7 +183,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* Bottom - Token Info */}
-        <div className="px-3 pt-2 pb-20 flex flex-col gap-1.5 bg-background flex-shrink-0 mt-auto">
+        <div className="px-3 pt-2 pb-20 flex flex-col gap-1.5 bg-background flex-shrink-0">
           {/* Price Info */}
           <div className="mb-1">
             <div className="text-2xl font-bold text-foreground leading-tight">
