@@ -28,11 +28,11 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
   return (
     <>
       <div className="h-screen snap-start relative flex flex-col bg-background overflow-hidden">
-        {/* Top spacing for trending bar */}
-        <div className="h-[60px] flex-shrink-0" />
+        {/* Top spacing for trending bar and network selector */}
+        <div className="h-[115px] flex-shrink-0" />
         
         {/* Token Header */}
-        <div className="px-3 py-2 flex items-center justify-between bg-background flex-shrink-0">
+        <div className="px-3 py-2 flex items-center justify-between bg-background flex-shrink-0 border-b border-border/50">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <img 
               src={token.avatarUrl} 
@@ -119,7 +119,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* DexScreener Chart */}
-        <div className="relative bg-card overflow-hidden" style={{ height: '35vh' }}>
+        <div className="relative bg-card overflow-hidden flex-shrink-0" style={{ height: '32vh' }}>
           {token.dexScreenerUrl ? (
             <iframe
               src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
@@ -135,10 +135,10 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* Bottom - Token Info */}
-        <div className="flex-1 px-3 pt-2 pb-20 flex flex-col gap-2 bg-background overflow-hidden">
+        <div className="px-3 pt-2 pb-20 flex flex-col gap-1.5 bg-background flex-shrink-0">
           {/* Price Info */}
-          <div>
-            <div className="text-2xl font-bold text-foreground">
+          <div className="mb-1">
+            <div className="text-2xl font-bold text-foreground leading-tight">
               {formatPrice(token.price)}
             </div>
             <div className={`text-sm font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
@@ -147,7 +147,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-2 gap-1.5 mb-1.5">
             <div className="bg-secondary rounded-lg p-2">
               <div className="text-[9px] text-muted-foreground">Market Cap</div>
               <div className="text-xs font-bold text-foreground truncate">
@@ -175,18 +175,18 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
           </div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-2 mt-auto">
+          <div className="grid grid-cols-2 gap-2">
             <Button 
               onClick={() => setShowBuyDrawer(true)}
               size="lg"
-              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-sm h-11"
+              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-sm h-12"
             >
               Buy
             </Button>
             <Button 
               onClick={() => setShowSellDrawer(true)}
               size="lg"
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-sm h-11"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-sm h-12"
             >
               Sell
             </Button>
