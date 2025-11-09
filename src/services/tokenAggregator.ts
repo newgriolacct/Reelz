@@ -9,7 +9,7 @@ import {
 } from './geckoterminal';
 import { apiCache } from './apiCache';
 
-const MIN_MARKET_CAP = 0; // No minimum market cap - show all tokens
+const MIN_MARKET_CAP = 30000; // $30k minimum market cap - filter out low caps
 
 /**
  * Aggregate trending tokens from all APIs with caching
