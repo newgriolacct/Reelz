@@ -132,7 +132,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* Bottom - Token Info */}
-        <div className="relative px-3 md:px-4 lg:px-6 pt-2 md:pt-4 lg:pt-5 pb-20 flex flex-col gap-2 md:gap-3 lg:gap-4 bg-background flex-shrink-0">
+        <div className="relative px-3 md:px-4 lg:px-6 pt-2 md:pt-4 lg:pt-5 pb-[72px] flex flex-col gap-2 md:gap-3 lg:gap-4 bg-background flex-shrink-0">
           {/* Price Info */}
           <div>
             <div className="text-xl md:text-3xl lg:text-4xl font-bold text-foreground mb-0.5 md:mb-1">
