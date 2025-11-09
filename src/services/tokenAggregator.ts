@@ -95,8 +95,13 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
   try {
     const network = chainId || 'solana';
     console.log(`Fetching real ${network} trending tokens (100k-5M cap)...`);
-    // Get trending tokens with 100k-5M market cap range for trending bar
-    const tokens = await fetchBirdeyeTrending(network, 0, 50, 100000, 5000000);
+    // Get trending tokens with 100k-5M market cap range (max 20 per Birdeye API limit)
+    const tokens = await fetchBirdeyeTrending(network, 0, 20, 100000, 5000000);
+    
+    if (tokens.length === 0) {
+      console.warn('No tokens from API, using mock data');
+      throw new Error('No tokens returned');
+    }
     
     // Randomly select 5 tokens from the filtered results
     const shuffled = tokens.sort(() => 0.5 - Math.random());
@@ -104,7 +109,7 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
     
     return selected.map(token => convertBirdeyeToToken(token, network));
   } catch (error) {
-    console.error('Error fetching trending tokens:', error);
+    console.error('Error fetching trending tokens, using mock data:', error);
     // Fallback to mock data on error
     const tokens: Token[] = [];
     for (let i = 0; i < 5; i++) {
@@ -131,19 +136,27 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
     }
     
     console.log(`Fetching real ${network} tokens (offset: ${tokenOffset}, mcRange: 50k-10M)...`);
-    // Filter by market cap: 50k to 10M
+    // Filter by market cap: 50k to 10M (max 20 per Birdeye API limit)
     const tokens = await fetchBirdeyeTrending(network, tokenOffset, 20, 50000, 10000000);
     
+    if (tokens.length === 0) {
+      console.warn('No tokens from API, using mock data');
+      throw new Error('No tokens returned');
+    }
+    
     // Increment offset for next call
-    tokenOffset += 50; // Increment more since we're filtering
+    tokenOffset += 20;
     
     return tokens.map(token => convertBirdeyeToToken(token, network));
   } catch (error) {
-    console.error('Error fetching tokens:', error);
+    console.error('Error fetching tokens, using mock data:', error);
     // Fallback to mock data on error
     const tokens: Token[] = [];
     for (let i = 0; i < 20; i++) {
-      tokens.push(generateMockToken(tokenOffset + i, chainId));
+      const mockToken = generateMockToken(tokenOffset + i, chainId);
+      // Override market cap to be in range
+      mockToken.marketCap = Math.floor(Math.random() * 9950000) + 50000;
+      tokens.push(mockToken);
     }
     tokenOffset += 20;
     return tokens;

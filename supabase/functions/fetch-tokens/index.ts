@@ -15,7 +15,9 @@ serve(async (req) => {
     const url = new URL(req.url);
     const chain = url.searchParams.get('chain') || 'solana';
     const offset = parseInt(url.searchParams.get('offset') || '0');
-    const limit = parseInt(url.searchParams.get('limit') || '50'); // Fetch more to filter
+    const requestedLimit = parseInt(url.searchParams.get('limit') || '20');
+    // Birdeye API only allows max 20 per request
+    const limit = Math.min(requestedLimit, 20);
     const minMc = parseFloat(url.searchParams.get('minMc') || '50000');
     const maxMc = parseFloat(url.searchParams.get('maxMc') || '10000000');
     
