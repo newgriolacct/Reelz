@@ -15,13 +15,16 @@ const Index = () => {
   const [currentTokenId, setCurrentTokenId] = useState<string>('');
   const [selectedNetwork, setSelectedNetwork] = useState('solana');
   const [seenTokenIds, setSeenTokenIds] = useState<Set<string>>(new Set());
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
+  const tokensRef = useRef<Token[]>([]);
 
   const loadMoreTokens = useCallback(async () => {
     if (isLoadingMoreRef.current) return;
     
     isLoadingMoreRef.current = true;
+    setIsLoadingMore(true);
     
     try {
       const pairs = await fetchAggregatedRandom(selectedNetwork);
@@ -32,7 +35,11 @@ const Index = () => {
         const newTokens = convertedTokens.filter(token => !prev.has(token.id));
         
         if (newTokens.length > 0) {
-          setTokens(currentTokens => [...currentTokens, ...newTokens]);
+          setTokens(currentTokens => {
+            const updated = [...currentTokens, ...newTokens];
+            tokensRef.current = updated;
+            return updated;
+          });
           return new Set([...prev, ...newTokens.map(t => t.id)]);
         }
         return prev;
@@ -41,6 +48,7 @@ const Index = () => {
       console.error('Failed to load more tokens', err);
     } finally {
       isLoadingMoreRef.current = false;
+      setIsLoadingMore(false);
     }
   }, [selectedNetwork]);
 
@@ -66,6 +74,7 @@ const Index = () => {
         
         console.log(`Loaded ${convertedRandom.length} tokens for ${selectedNetwork}`);
         
+        tokensRef.current = convertedRandom;
         setTokens(convertedRandom);
         setTrendingTokens(convertedTrending);
         setSeenTokenIds(new Set(convertedRandom.map(t => t.id)));
@@ -93,13 +102,16 @@ const Index = () => {
   // Track current token on scroll and load more
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (!container || tokens.length === 0) return;
+    if (!container) return;
 
     let scrollTimeout: NodeJS.Timeout;
     const handleScroll = () => {
       clearTimeout(scrollTimeout);
       
       scrollTimeout = setTimeout(() => {
+        const currentTokens = tokensRef.current;
+        if (currentTokens.length === 0) return;
+        
         const scrollTop = container.scrollTop;
         const scrollHeight = container.scrollHeight;
         const clientHeight = container.clientHeight;
@@ -107,8 +119,8 @@ const Index = () => {
         
         // Update current token
         const currentIndex = Math.round(scrollTop / windowHeight);
-        if (tokens[currentIndex]) {
-          setCurrentTokenId(tokens[currentIndex].id);
+        if (currentTokens[currentIndex]) {
+          setCurrentTokenId(currentTokens[currentIndex].id);
         }
         
         // Load more when 5 tokens away from bottom - smooth infinite scroll
@@ -117,7 +129,7 @@ const Index = () => {
           console.log('Loading more tokens...');
           loadMoreTokens();
         }
-      }, 100);
+      }, 150);
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
@@ -125,7 +137,7 @@ const Index = () => {
       container.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimeout);
     };
-  }, [tokens, loadMoreTokens]);
+  }, [loadMoreTokens]);
 
   const handleTokenClick = (tokenId: string) => {
     const container = scrollContainerRef.current;
@@ -226,7 +238,7 @@ const Index = () => {
             isEagerLoad={index < 3}
           />
         ))}
-        {isLoadingMoreRef.current && (
+        {isLoadingMore && (
           <div className="h-screen flex items-center justify-center snap-start">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
