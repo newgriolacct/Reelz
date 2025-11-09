@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { Send, X } from "lucide-react";
 
 interface Comment {
   id: string;
@@ -44,8 +44,16 @@ export const CommentsDrawer = ({
         side="bottom" 
         className="h-[75vh] flex flex-col p-0 pb-safe"
       >
-        <SheetHeader className="px-4 py-3 border-b border-border">
+        <SheetHeader className="px-4 py-3 border-b border-border relative">
           <SheetTitle className="text-center">{comments.length} comments</SheetTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-2 top-2 h-8 w-8"
+            onClick={() => onOpenChange(false)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </SheetHeader>
 
         {/* Comments List */}
@@ -83,29 +91,31 @@ export const CommentsDrawer = ({
         </div>
 
         {/* Comment Input */}
-        <div className="border-t border-border p-4 bg-background flex-shrink-0">
-          <div className="flex gap-2 items-end">
-            <Textarea
-              placeholder="Add a comment..."
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              className="min-h-[44px] max-h-[100px] resize-none flex-1"
-              rows={1}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit();
-                }
-              }}
-            />
-            <Button
-              size="icon"
-              onClick={handleSubmit}
-              disabled={!commentText.trim()}
-              className="h-11 w-11 flex-shrink-0"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
+        <div className="border-t border-border p-3 bg-background flex-shrink-0 safe-bottom">
+          <div className="flex gap-2 items-center">
+            <div className="flex-1 relative">
+              <Textarea
+                placeholder="Add a comment..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                className="min-h-[44px] max-h-[100px] resize-none pr-12"
+                rows={1}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+                }}
+              />
+              <Button
+                size="icon"
+                onClick={handleSubmit}
+                disabled={!commentText.trim()}
+                className="absolute right-1 bottom-1 h-9 w-9"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </SheetContent>
