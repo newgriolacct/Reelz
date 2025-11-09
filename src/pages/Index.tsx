@@ -212,14 +212,16 @@ const Index = () => {
   if (tokens.length === 0 && !loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center p-6">
-          <p className="text-muted-foreground mb-2">No tokens available</p>
-          <p className="text-sm text-muted-foreground mb-4">API may be rate limited. Try again in a moment.</p>
+        <div className="text-center p-6 max-w-md">
+          <p className="text-lg font-semibold mb-2">API Rate Limit Reached</p>
+          <p className="text-sm text-muted-foreground mb-4">
+            Birdeye API is temporarily limiting requests. The app will use cached data once available, or try refreshing in a few minutes.
+          </p>
           <button 
             onClick={() => window.location.reload()} 
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
           >
-            Refresh
+            Refresh Now
           </button>
         </div>
       </div>

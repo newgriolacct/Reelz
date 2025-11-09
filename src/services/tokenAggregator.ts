@@ -1,5 +1,6 @@
 import { Token } from "@/types/token";
 import { BirdeyeToken, fetchBirdeyeTrending } from "./birdeye";
+import { tokenCache } from "./apiCache";
 
 /**
  * Convert Birdeye token to our Token type
@@ -89,28 +90,44 @@ const generateMockToken = (index: number, chainId?: string): Token => {
 };
 
 /**
- * Fetch trending tokens - Uses Birdeye API for all networks - NO MOCK DATA
+ * Fetch trending tokens - Uses Birdeye API with cache fallback
  */
 export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]> => {
   const network = chainId || 'solana';
-  console.log(`Fetching real ${network} trending tokens (100k-5M cap)...`);
-  // Get trending tokens with 100k-5M market cap range (max 20 per Birdeye API limit)
-  const tokens = await fetchBirdeyeTrending(network, 0, 20, 100000, 5000000);
+  const cacheKey = `trending_${network}`;
   
-  if (tokens.length === 0) {
-    console.warn('No tokens from API');
-    return [];
+  console.log(`Fetching real ${network} trending tokens (100k-5M cap)...`);
+  
+  try {
+    const tokens = await fetchBirdeyeTrending(network, 0, 20, 100000, 5000000);
+    
+    if (tokens.length > 0) {
+      // Randomly select 5 tokens from the filtered results
+      const shuffled = tokens.sort(() => 0.5 - Math.random());
+      const selected = shuffled.slice(0, 5);
+      const converted = selected.map(token => convertBirdeyeToToken(token, network));
+      
+      // Cache successful response
+      tokenCache.set(cacheKey, converted);
+      return converted;
+    }
+  } catch (error) {
+    console.error('API error, checking cache:', error);
   }
   
-  // Randomly select 5 tokens from the filtered results
-  const shuffled = tokens.sort(() => 0.5 - Math.random());
-  const selected = shuffled.slice(0, 5);
+  // Try cache on failure
+  const cached = tokenCache.get<Token[]>(cacheKey);
+  if (cached) {
+    console.log('Using cached trending tokens');
+    return cached;
+  }
   
-  return selected.map(token => convertBirdeyeToToken(token, network));
+  console.warn('No trending tokens available');
+  return [];
 };
 
 /**
- * Fetch random tokens for scrolling - Uses real Birdeye data ONLY - NO MOCK DATA
+ * Fetch random tokens for scrolling - Uses real Birdeye data with cache fallback
  */
 let tokenOffset = 0;
 export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = false): Promise<Token[]> => {
@@ -121,17 +138,36 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
     tokenOffset = 0;
   }
   
-  console.log(`Fetching real ${network} tokens (offset: ${tokenOffset}, mcRange: 50k-10M)...`);
-  // Filter by market cap: 50k to 10M (max 20 per Birdeye API limit)
-  const tokens = await fetchBirdeyeTrending(network, tokenOffset, 20, 50000, 10000000);
+  const cacheKey = `tokens_${network}_${tokenOffset}`;
   
-  if (tokens.length === 0) {
-    console.warn('No tokens from API');
-    return [];
+  console.log(`Fetching real ${network} tokens (offset: ${tokenOffset}, mcRange: 50k-10M)...`);
+  
+  try {
+    const tokens = await fetchBirdeyeTrending(network, tokenOffset, 20, 50000, 10000000);
+    
+    if (tokens.length > 0) {
+      const converted = tokens.map(token => convertBirdeyeToToken(token, network));
+      
+      // Cache successful response
+      tokenCache.set(cacheKey, converted);
+      
+      // Increment offset for next call
+      tokenOffset += 20;
+      
+      return converted;
+    }
+  } catch (error) {
+    console.error('API error, checking cache:', error);
   }
   
-  // Increment offset for next call
-  tokenOffset += 20;
+  // Try cache on failure
+  const cached = tokenCache.get<Token[]>(cacheKey);
+  if (cached) {
+    console.log('Using cached tokens');
+    tokenOffset += 20;
+    return cached;
+  }
   
-  return tokens.map(token => convertBirdeyeToToken(token, network));
+  console.warn('No tokens available');
+  return [];
 };

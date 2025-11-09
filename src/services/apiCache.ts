@@ -1,16 +1,16 @@
 import { DexPair } from './dexscreener';
 
-const CACHE_DURATION = 60 * 1000; // 1 minute - faster refresh
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-interface CacheEntry {
-  data: DexPair[];
+interface CacheEntry<T = any> {
+  data: T;
   timestamp: number;
 }
 
 class APICache {
   private cache: Map<string, CacheEntry> = new Map();
 
-  get(key: string): DexPair[] | null {
+  get<T = DexPair[]>(key: string): T | null {
     const entry = this.cache.get(key);
     if (!entry) return null;
     
@@ -20,10 +20,10 @@ class APICache {
       return null;
     }
     
-    return entry.data;
+    return entry.data as T;
   }
 
-  set(key: string, data: DexPair[]): void {
+  set<T = any>(key: string, data: T): void {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
@@ -36,3 +36,4 @@ class APICache {
 }
 
 export const apiCache = new APICache();
+export const tokenCache = apiCache; // Alias for token caching
