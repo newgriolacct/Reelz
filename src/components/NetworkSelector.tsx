@@ -49,8 +49,8 @@ export const NetworkSelector = () => {
   const [selectedNetwork, setSelectedNetwork] = useState('solana');
 
   return (
-    <div className="fixed top-[52px] md:top-16 lg:top-[72px] left-0 right-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border">
-      <div className="flex gap-1 md:gap-1 lg:gap-2 p-1.5 md:p-2 lg:p-2">
+    <div className="fixed top-[52px] md:top-16 lg:top-20 left-0 right-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border">
+      <div className="flex gap-1 md:gap-1 lg:gap-2 p-1.5 md:p-2 lg:p-2.5">
         {networks.map((network) => {
           const IconComponent = network.icon;
           return (
