@@ -13,9 +13,10 @@ interface TokenCardProps {
   onLike?: (tokenId: string) => void;
   onComment?: (tokenId: string) => void;
   onBookmark?: (tokenId: string) => void;
+  isEagerLoad?: boolean;
 }
 
-export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardProps) => {
+export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = false }: TokenCardProps) => {
   const [isLiked, setIsLiked] = useState(token.isLiked || false);
   const [showBuyDrawer, setShowBuyDrawer] = useState(false);
   const [showSellDrawer, setShowSellDrawer] = useState(false);
@@ -173,7 +174,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
               src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
               className="w-full h-full border-0 bg-secondary"
               title={`${token.symbol} Chart`}
-              loading="eager"
+              loading={isEagerLoad ? "eager" : "lazy"}
               style={{ marginTop: '-40px', height: 'calc(100% + 80px)' }}
             />
           ) : (

@@ -1,6 +1,6 @@
 import { DexPair } from './dexscreener';
 
-const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+const CACHE_DURATION = 60 * 1000; // 1 minute - faster refresh
 
 interface CacheEntry {
   data: DexPair[];

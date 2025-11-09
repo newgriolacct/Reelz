@@ -47,17 +47,26 @@ const Index = () => {
     const loadTokens = async () => {
       try {
         setError(null);
+        
+        // INSTANT: Clear old tokens immediately when network changes
+        setTokens([]);
+        setTrendingTokens([]);
+        setSeenTokenIds(new Set());
         setLoading(true);
         
-        // Load main feed first
-        const randomPairs = await fetchAggregatedRandom(selectedNetwork);
+        // Load both trending and random in parallel
+        const [randomPairs, trendingPairs] = await Promise.all([
+          fetchAggregatedRandom(selectedNetwork),
+          fetchAggregatedTrending(selectedNetwork)
+        ]);
+        
         const convertedRandom = randomPairs.map(convertDexPairToToken);
+        const convertedTrending = trendingPairs.map(convertDexPairToToken);
         
         console.log(`Loaded ${convertedRandom.length} tokens for ${selectedNetwork}`);
         
         setTokens(convertedRandom);
-        
-        // Reset seen tokens when network changes
+        setTrendingTokens(convertedTrending);
         setSeenTokenIds(new Set(convertedRandom.map(t => t.id)));
         
         if (convertedRandom.length > 0) {
@@ -66,17 +75,9 @@ const Index = () => {
         
         setLoading(false);
         
-        // Load trending tokens in background
-        fetchAggregatedTrending(selectedNetwork).then(trendingPairs => {
-          const convertedTrending = trendingPairs.map(convertDexPairToToken);
-          setTrendingTokens(convertedTrending);
-        }).catch(err => {
-          console.error('Failed to load trending:', err);
-        });
-        
         // Scroll to top when network changes
         if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+          scrollContainerRef.current.scrollTo({ top: 0, behavior: 'auto' });
         }
       } catch (err) {
         console.error('Failed to load tokens:', err);
@@ -212,13 +213,14 @@ const Index = () => {
         className="h-screen overflow-y-auto snap-y snap-mandatory scrollbar-hide"
         style={{ scrollBehavior: 'smooth' }}
       >
-        {tokens.map((token) => (
+        {tokens.map((token, index) => (
           <TokenCard
             key={token.id}
             token={token}
             onLike={handleLike}
             onComment={handleComment}
             onBookmark={handleBookmark}
+            isEagerLoad={index < 3}
           />
         ))}
         {loadingMore && (
