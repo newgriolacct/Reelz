@@ -2,7 +2,7 @@ import { TokenCard } from "@/components/TokenCard";
 import { BottomNav } from "@/components/BottomNav";
 import { TrendingTokensList } from "@/components/TrendingTokensList";
 import { NetworkSelector } from "@/components/NetworkSelector";
-import { fetchTrendingTokens, fetchRandomTokens } from "@/services/dexscreener";
+import { fetchAggregatedTrending, fetchAggregatedRandom } from "@/services/tokenAggregator";
 import { convertDexPairToToken } from "@/types/token";
 import { useEffect, useState, useRef } from "react";
 import { Token } from "@/types/token";
@@ -23,7 +23,7 @@ const Index = () => {
     
     try {
       setLoadingMore(true);
-      const pairs = await fetchRandomTokens(selectedNetwork);
+      const pairs = await fetchAggregatedRandom(selectedNetwork);
       const convertedTokens = pairs.map(convertDexPairToToken);
       
       // Filter out tokens we've already seen
@@ -50,12 +50,12 @@ const Index = () => {
         setError(null);
         
         // Load trending tokens for the top bar
-        const trendingPairs = await fetchTrendingTokens(selectedNetwork);
+        const trendingPairs = await fetchAggregatedTrending(selectedNetwork);
         const convertedTrending = trendingPairs.map(convertDexPairToToken);
         setTrendingTokens(convertedTrending);
         
         // Load random tokens for scrolling
-        const randomPairs = await fetchRandomTokens(selectedNetwork);
+        const randomPairs = await fetchAggregatedRandom(selectedNetwork);
         const convertedRandom = randomPairs.map(convertDexPairToToken);
         setTokens(convertedRandom);
         
