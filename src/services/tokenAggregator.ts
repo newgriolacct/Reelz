@@ -84,11 +84,11 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
   // Don't cache random tokens - we want fresh data each time for infinite scroll
   
   try {
-    // Get at least 50+ tokens for a full feed
+    // Get as many tokens as possible, minimum 20
     const allPairs: DexPair[] = [];
     const seenPairAddresses = new Set<string>();
     let attempts = 0;
-    const maxAttempts = 5; // Increased to get more tokens
+    const maxAttempts = 5;
     
     while (allPairs.length < 50 && attempts < maxAttempts) {
       attempts++;
@@ -124,9 +124,12 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
       } else {
         console.warn('GeckoTerminal new pools failed:', geckoNew.reason);
       }
+      
+      // If we have at least 20 tokens, that's good enough - don't wait for 50
+      if (allPairs.length >= 20) break;
     }
     
-    console.log(`Collected ${allPairs.length} tokens above $30k market cap`);
+    console.log(`Collected ${allPairs.length} tokens above $30k market cap for ${chainId || 'all chains'}`);
     
     // Shuffle and return
     const result = allPairs.sort(() => Math.random() - 0.5);
