@@ -9,7 +9,7 @@ import {
 } from './geckoterminal';
 import { apiCache } from './apiCache';
 
-const MIN_MARKET_CAP = 5000; // $5k minimum market cap across all networks
+const MIN_MARKET_CAP = 0; // No minimum market cap - show all tokens
 
 /**
  * Aggregate trending tokens from all APIs with caching
@@ -64,7 +64,7 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair
         const volumeB = b.volume?.h24 || 0;
         return (liquidityB + volumeB) - (liquidityA + volumeA);
       })
-      .slice(0, 10); // Reduced from 20 to 10 for faster loading
+      .slice(0, 15); // Reduced to 15 for faster loading
     
     // Cache the result
     apiCache.set(cacheKey, result);

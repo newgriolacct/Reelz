@@ -46,18 +46,9 @@ const Index = () => {
   useEffect(() => {
     const loadTokens = async () => {
       try {
-        // Don't show full loading screen when switching networks
-        if (tokens.length === 0) {
-          setLoading(true);
-        }
         setError(null);
         
-        // Load trending tokens for the top bar
-        const trendingPairs = await fetchAggregatedTrending(selectedNetwork);
-        const convertedTrending = trendingPairs.map(convertDexPairToToken);
-        setTrendingTokens(convertedTrending);
-        
-        // Load random tokens for scrolling
+        // Load only main feed first for faster initial display
         const randomPairs = await fetchAggregatedRandom(selectedNetwork);
         const convertedRandom = randomPairs.map(convertDexPairToToken);
         setTokens(convertedRandom);
@@ -69,6 +60,14 @@ const Index = () => {
           setCurrentTokenId(convertedRandom[0].id);
         }
         
+        setLoading(false);
+        
+        // Load trending tokens in background after main feed is ready
+        fetchAggregatedTrending(selectedNetwork).then(trendingPairs => {
+          const convertedTrending = trendingPairs.map(convertDexPairToToken);
+          setTrendingTokens(convertedTrending);
+        });
+        
         // Scroll to top when network changes
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
@@ -76,7 +75,6 @@ const Index = () => {
       } catch (err) {
         setError('Failed to load tokens');
         console.error(err);
-      } finally {
         setLoading(false);
       }
     };
@@ -167,7 +165,7 @@ const Index = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading trending tokens...</p>
+          <p className="text-muted-foreground">Loading tokens...</p>
         </div>
       </div>
     );
