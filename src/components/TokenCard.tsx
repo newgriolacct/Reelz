@@ -28,8 +28,37 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
   return (
     <>
       <div className="h-screen snap-start relative flex flex-col bg-background">
-        {/* Top Half - DexScreener Chart (50%) */}
-        <div className="h-1/2 relative bg-card overflow-hidden">
+        {/* Token Header */}
+        <div className="px-4 pt-4 pb-2 flex items-center justify-between bg-background">
+          <div className="flex items-center gap-3">
+            <img 
+              src={token.avatarUrl} 
+              alt={token.symbol}
+              className="w-12 h-12 rounded-full border-2 border-primary shadow-lg"
+            />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-foreground text-lg">{token.symbol}</span>
+                {token.isNew && (
+                  <Badge className="bg-primary text-primary-foreground text-xs">New</Badge>
+                )}
+              </div>
+              <span className="text-sm text-muted-foreground">{token.name}</span>
+            </div>
+          </div>
+          {token.dexScreenerUrl && (
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => window.open(token.dexScreenerUrl, '_blank')}
+            >
+              <ExternalLink className="w-5 h-5" />
+            </Button>
+          )}
+        </div>
+
+        {/* DexScreener Chart */}
+        <div className="flex-1 relative bg-card overflow-hidden">
           {token.dexScreenerUrl ? (
             <iframe
               src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
@@ -42,36 +71,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
             </div>
           )}
           
-          {/* Floating Token Header */}
-          <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-            <div className="flex items-center gap-3">
-              <img 
-                src={token.avatarUrl} 
-                alt={token.symbol}
-                className="w-12 h-12 rounded-full border-2 border-primary shadow-lg"
-              />
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-foreground text-lg">{token.symbol}</span>
-                  {token.isNew && (
-                    <Badge className="bg-primary text-primary-foreground text-xs">New</Badge>
-                  )}
-                </div>
-                <span className="text-sm text-muted-foreground">{token.name}</span>
-              </div>
-            </div>
-            {token.dexScreenerUrl && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="bg-card/50 backdrop-blur-sm"
-                onClick={() => window.open(token.dexScreenerUrl, '_blank')}
-              >
-                <ExternalLink className="w-5 h-5" />
-              </Button>
-            )}
-          </div>
-
           {/* Live Badge */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
             <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border">
@@ -81,8 +80,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
           </div>
         </div>
 
-        {/* Bottom Half - Token Info (50%) */}
-        <div className="h-1/2 relative px-4 pt-4 pb-20 flex flex-col justify-between">
+        {/* Bottom - Token Info */}
+        <div className="relative px-4 pt-4 pb-20 flex flex-col justify-between bg-background" style={{ minHeight: '45vh' }}>
           {/* Price Info */}
           <div>
             <div className="text-3xl font-bold text-foreground mb-1">
