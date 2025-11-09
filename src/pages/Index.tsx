@@ -19,29 +19,35 @@ const Index = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const loadMoreTokens = useCallback(async () => {
-    if (loadingMore) return;
-    
-    try {
-      setLoadingMore(true);
-      const pairs = await fetchAggregatedRandom(selectedNetwork);
-      const convertedTokens = pairs.map(convertDexPairToToken);
+    setLoadingMore(prev => {
+      if (prev) return prev; // Already loading
       
-      // Filter out tokens we've already seen using functional state update
-      setSeenTokenIds(prev => {
-        const newTokens = convertedTokens.filter(token => !prev.has(token.id));
-        
-        if (newTokens.length > 0) {
-          setTokens(currentTokens => [...currentTokens, ...newTokens]);
-          return new Set([...prev, ...newTokens.map(t => t.id)]);
-        }
-        return prev;
-      });
-    } catch (err) {
-      console.error('Failed to load more tokens', err);
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [loadingMore, selectedNetwork]);
+      // Start loading
+      fetchAggregatedRandom(selectedNetwork)
+        .then(pairs => {
+          const convertedTokens = pairs.map(convertDexPairToToken);
+          
+          // Filter out tokens we've already seen
+          setSeenTokenIds(prev => {
+            const newTokens = convertedTokens.filter(token => !prev.has(token.id));
+            
+            if (newTokens.length > 0) {
+              setTokens(currentTokens => [...currentTokens, ...newTokens]);
+              return new Set([...prev, ...newTokens.map(t => t.id)]);
+            }
+            return prev;
+          });
+        })
+        .catch(err => {
+          console.error('Failed to load more tokens', err);
+        })
+        .finally(() => {
+          setLoadingMore(false);
+        });
+      
+      return true; // Set loading to true
+    });
+  }, [selectedNetwork]);
 
   useEffect(() => {
     const loadTokens = async () => {
@@ -111,7 +117,7 @@ const Index = () => {
         }
         
         // Load more when near bottom
-        if (scrollHeight - scrollTop - clientHeight < windowHeight * 2 && !loadingMore) {
+        if (scrollHeight - scrollTop - clientHeight < windowHeight * 2) {
           loadMoreTokens();
         }
       }, 100);
@@ -122,7 +128,7 @@ const Index = () => {
       container.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimeout);
     };
-  }, [tokens, loadingMore]); // Removed loadMoreTokens from dependencies to prevent loop
+  }, [tokens, loadMoreTokens]);
 
   const handleTokenClick = (tokenId: string) => {
     const container = scrollContainerRef.current;
