@@ -84,16 +84,16 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
   // Don't cache random tokens - we want fresh data each time for infinite scroll
   
   try {
-    // Fetch only from DexScreener for better quality tokens
-    // GeckoTerminal new pools removed - they return too many low cap tokens
-    const [dexRandom] = await Promise.allSettled([
+    // Fetch from both sources - DexScreener + GeckoTerminal for reliability
+    const [dexRandom, geckoNew] = await Promise.allSettled([
       fetchDexRandom(chainId),
+      fetchGeckoNewPools(chainId),
     ]);
     
     const allPairs: DexPair[] = [];
     const seenPairAddresses = new Set<string>();
     
-    // Add DexScreener random tokens - NO market cap filter for feed variety
+    // Add DexScreener random tokens
     if (dexRandom.status === 'fulfilled') {
       dexRandom.value.forEach(pair => {
         if (!seenPairAddresses.has(pair.pairAddress)) {
@@ -101,7 +101,24 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
           seenPairAddresses.add(pair.pairAddress);
         }
       });
+    } else {
+      console.warn('DexScreener random tokens failed:', dexRandom.reason);
     }
+    
+    // Add GeckoTerminal new pools - filter by $30k+ market cap here
+    if (geckoNew.status === 'fulfilled') {
+      geckoNew.value.forEach(pair => {
+        const marketCap = pair.marketCap || pair.fdv || 0;
+        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
+          allPairs.push(pair);
+          seenPairAddresses.add(pair.pairAddress);
+        }
+      });
+    } else {
+      console.warn('GeckoTerminal new pools failed:', geckoNew.reason);
+    }
+    
+    console.log(`Total pairs collected: ${allPairs.length}`);
     
     // Shuffle for variety and return up to 100 tokens
     const result = allPairs.sort(() => Math.random() - 0.5).slice(0, 100);
