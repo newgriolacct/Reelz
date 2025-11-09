@@ -49,15 +49,15 @@ export const NetworkSelector = () => {
   const [selectedNetwork, setSelectedNetwork] = useState('solana');
 
   return (
-    <div className="fixed top-16 left-0 right-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border">
-      <div className="flex gap-1 p-2 overflow-x-auto scrollbar-hide">
+    <div className="fixed top-[52px] left-0 right-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border">
+      <div className="flex gap-1 p-1.5 overflow-x-auto scrollbar-hide">
         {networks.map((network) => {
           const IconComponent = network.icon;
           return (
             <button
               key={network.id}
               onClick={() => setSelectedNetwork(network.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
                 selectedNetwork === network.id
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
