@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Bookmark, TrendingUp, TrendingDown } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreVertical } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -15,7 +15,6 @@ interface TokenCardProps {
 
 export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardProps) => {
   const [isLiked, setIsLiked] = useState(token.isLiked || false);
-  const [isBookmarked, setIsBookmarked] = useState(token.isBookmarked || false);
   const [showBuyDrawer, setShowBuyDrawer] = useState(false);
   const [showSellDrawer, setShowSellDrawer] = useState(false);
   
@@ -26,124 +25,141 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
     onLike?.(token.id);
   };
 
-  const handleBookmark = () => {
-    setIsBookmarked(!isBookmarked);
-    onBookmark?.(token.id);
-  };
-
   return (
     <>
-      <div className="h-screen snap-start flex items-center justify-center px-4 py-6">
-        <div className="w-full max-w-md bg-card rounded-2xl border border-border overflow-hidden shadow-2xl">
-          {/* Header */}
-          <div className="p-4 border-b border-border flex items-center justify-between">
+      <div className="h-screen snap-start relative flex flex-col bg-background">
+        {/* Top Half - Chart (50%) */}
+        <div className="h-1/2 relative bg-gradient-to-b from-card to-background">
+          <MiniChart data={token.sparklineData} isPositive={isPositive} isLive={true} />
+          
+          {/* Floating Token Header */}
+          <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img 
                 src={token.avatarUrl} 
                 alt={token.symbol}
-                className="w-12 h-12 rounded-full border-2 border-primary"
+                className="w-12 h-12 rounded-full border-2 border-primary shadow-lg"
               />
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-foreground text-lg">{token.symbol}</span>
-                  {token.tags.map(tag => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
+                  {token.isNew && (
+                    <Badge className="bg-primary text-primary-foreground text-xs">New</Badge>
+                  )}
                 </div>
                 <span className="text-sm text-muted-foreground">{token.name}</span>
               </div>
             </div>
+            <Button variant="ghost" size="icon" className="bg-card/50 backdrop-blur-sm">
+              <MoreVertical className="w-5 h-5" />
+            </Button>
           </div>
 
-          {/* Main Content */}
-          <div className="p-4 space-y-4">
-            {/* Price & Chart */}
-            <div className="flex gap-4">
-              <div className="flex-1 space-y-2">
-                <div>
-                  <div className="text-3xl font-bold text-foreground">
-                    ${token.price.toFixed(6)}
-                  </div>
-                  <div className={`flex items-center gap-1 text-sm font-medium ${
-                    isPositive ? 'text-positive' : 'text-negative'
-                  }`}>
-                    {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                    {isPositive ? '+' : ''}{token.change24h.toFixed(2)}%
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <div className="text-muted-foreground">Market Cap</div>
-                    <div className="text-foreground font-medium">
-                      ${(token.marketCap / 1000000).toFixed(2)}M
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Volume 24h</div>
-                    <div className="text-foreground font-medium">
-                      ${(token.volume24h / 1000).toFixed(0)}K
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="w-40">
-                <MiniChart data={token.sparklineData} isPositive={isPositive} />
+          {/* Live Badge */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2">
+            <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border">
+              <div className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+              <span className="text-xs font-medium text-foreground">LIVE</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Half - Token Info (50%) */}
+        <div className="h-1/2 relative px-4 pt-6 pb-20 overflow-y-auto">
+          {/* Price Info */}
+          <div className="mb-6">
+            <div className="text-4xl font-bold text-foreground mb-2">
+              ${token.price.toFixed(6)}
+            </div>
+            <div className={`text-lg font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
+              {isPositive ? '+' : ''}{token.change24h.toFixed(2)}% (24h)
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-secondary rounded-lg p-4">
+              <div className="text-xs text-muted-foreground mb-1">Market Cap</div>
+              <div className="text-lg font-bold text-foreground">
+                ${(token.marketCap / 1000000).toFixed(2)}M
               </div>
             </div>
+            <div className="bg-secondary rounded-lg p-4">
+              <div className="text-xs text-muted-foreground mb-1">Volume 24h</div>
+              <div className="text-lg font-bold text-foreground">
+                ${(token.volume24h / 1000).toFixed(0)}K
+              </div>
+            </div>
+            <div className="bg-secondary rounded-lg p-4">
+              <div className="text-xs text-muted-foreground mb-1">Liquidity</div>
+              <div className="text-lg font-bold text-foreground">
+                ${(token.liquidity / 1000).toFixed(0)}K
+              </div>
+            </div>
+            <div className="bg-secondary rounded-lg p-4">
+              <div className="text-xs text-muted-foreground mb-1">Chain</div>
+              <div className="text-lg font-bold text-foreground">
+                {token.chain}
+              </div>
+            </div>
+          </div>
 
-            {/* Description */}
-            <div className="text-sm text-muted-foreground line-clamp-2">
+          {/* Description */}
+          <div className="mb-6">
+            <div className="text-sm text-muted-foreground leading-relaxed">
               {token.description}
             </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-2">
-              <Button 
-                onClick={() => setShowBuyDrawer(true)}
-                className="bg-success hover:bg-success/90 text-success-foreground font-medium"
-              >
-                Buy
-              </Button>
-              <Button 
-                onClick={() => setShowSellDrawer(true)}
-                variant="outline"
-                className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              >
-                Sell
-              </Button>
-            </div>
-
-            {/* Social Actions */}
-            <div className="flex items-center justify-around pt-2 border-t border-border">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2"
-                onClick={handleLike}
-              >
-                <Heart className={`w-5 h-5 ${isLiked ? 'fill-destructive text-destructive' : ''}`} />
-                <span className="text-sm">{token.likes + (isLiked ? 1 : 0)}</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2"
-                onClick={() => onComment?.(token.id)}
-              >
-                <MessageCircle className="w-5 h-5" />
-                <span className="text-sm">{token.comments}</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBookmark}
-              >
-                <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-primary text-primary' : ''}`} />
-              </Button>
-            </div>
           </div>
+
+          {/* Action Buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            <Button 
+              onClick={() => setShowBuyDrawer(true)}
+              size="lg"
+              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-lg h-14"
+            >
+              Buy
+            </Button>
+            <Button 
+              onClick={() => setShowSellDrawer(true)}
+              size="lg"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-lg h-14"
+            >
+              Sell
+            </Button>
+          </div>
+        </div>
+
+        {/* Right Side Actions (TikTok style) */}
+        <div className="absolute right-4 bottom-24 flex flex-col gap-4">
+          <button
+            onClick={handleLike}
+            className="flex flex-col items-center gap-1"
+          >
+            <div className="w-12 h-12 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center">
+              <Heart 
+                className={`w-6 h-6 ${isLiked ? 'fill-destructive text-destructive' : 'text-foreground'}`} 
+              />
+            </div>
+            <span className="text-xs font-medium text-foreground">{token.likes + (isLiked ? 1 : 0)}</span>
+          </button>
+
+          <button
+            onClick={() => onComment?.(token.id)}
+            className="flex flex-col items-center gap-1"
+          >
+            <div className="w-12 h-12 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center">
+              <MessageCircle className="w-6 h-6 text-foreground" />
+            </div>
+            <span className="text-xs font-medium text-foreground">{token.comments}</span>
+          </button>
+
+          <button className="flex flex-col items-center gap-1">
+            <div className="w-12 h-12 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center">
+              <Share2 className="w-6 h-6 text-foreground" />
+            </div>
+            <span className="text-xs font-medium text-foreground">Share</span>
+          </button>
         </div>
       </div>
 

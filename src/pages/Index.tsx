@@ -1,4 +1,5 @@
 import { TokenCard } from "@/components/TokenCard";
+import { BottomNav } from "@/components/BottomNav";
 import { mockTokens } from "@/data/mockTokens";
 
 const Index = () => {
@@ -15,17 +16,20 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background overflow-y-auto snap-y snap-mandatory">
-      {mockTokens.map((token) => (
-        <TokenCard
-          key={token.id}
-          token={token}
-          onLike={handleLike}
-          onComment={handleComment}
-          onBookmark={handleBookmark}
-        />
-      ))}
-    </div>
+    <>
+      <div className="min-h-screen bg-background overflow-y-auto snap-y snap-mandatory">
+        {mockTokens.map((token) => (
+          <TokenCard
+            key={token.id}
+            token={token}
+            onLike={handleLike}
+            onComment={handleComment}
+            onBookmark={handleBookmark}
+          />
+        ))}
+      </div>
+      <BottomNav />
+    </>
   );
 };
 
