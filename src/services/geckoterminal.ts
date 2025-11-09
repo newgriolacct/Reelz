@@ -142,37 +142,56 @@ export const fetchGeckoTrendingPools = async (chainId?: string): Promise<DexPair
     const pairs: DexPair[] = [];
     const chains = chainId ? [chainId] : Object.keys(CHAIN_MAPPING);
     
+    console.log(`[GeckoTerminal] Fetching trending for chains:`, chains);
+    
     for (const chain of chains) {
       const geckoChain = CHAIN_MAPPING[chain];
-      if (!geckoChain) continue;
+      if (!geckoChain) {
+        console.log(`[GeckoTerminal] No mapping for chain: ${chain}`);
+        continue;
+      }
       
       try {
-        const response = await fetch(
-          `${API_BASE}/networks/${geckoChain}/trending_pools?page=1`,
-          { headers: { 'Accept': 'application/json' } }
-        );
+        const url = `${API_BASE}/networks/${geckoChain}/trending_pools?page=1`;
+        console.log(`[GeckoTerminal] Fetching: ${url}`);
         
-        if (!response.ok) continue;
+        const response = await fetch(url, { 
+          headers: { 'Accept': 'application/json' } 
+        });
+        
+        console.log(`[GeckoTerminal] Response status for ${chain}:`, response.status);
+        
+        if (!response.ok) {
+          console.log(`[GeckoTerminal] Failed for ${chain}: ${response.status}`);
+          continue;
+        }
         
         const data: GeckoResponse = await response.json();
+        console.log(`[GeckoTerminal] ${chain} returned ${data.data?.length || 0} pools`);
         
         if (data.data && data.included) {
           for (const pool of data.data.slice(0, 10)) {
             const pair = convertGeckoPoolToDexPair(pool, data.included, chain);
-            if (pair) pairs.push(pair);
+            if (pair) {
+              console.log(`[GeckoTerminal] Added ${pair.baseToken.symbol} - MCap: $${pair.marketCap || pair.fdv || 0}`);
+              pairs.push(pair);
+            } else {
+              console.log(`[GeckoTerminal] Failed to convert pool for ${chain}`);
+            }
           }
         }
       } catch (error) {
-        console.error(`Error fetching GeckoTerminal trending for ${chain}:`, error);
+        console.error(`[GeckoTerminal] Error fetching trending for ${chain}:`, error);
       }
       
       // If we have enough pairs for a specific chain, stop
       if (chainId && pairs.length >= 10) break;
     }
     
+    console.log(`[GeckoTerminal] Total trending pairs: ${pairs.length}`);
     return pairs;
   } catch (error) {
-    console.error('Error fetching GeckoTerminal trending:', error);
+    console.error('[GeckoTerminal] Error in fetchGeckoTrendingPools:', error);
     return [];
   }
 };
