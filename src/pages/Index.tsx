@@ -12,7 +12,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentTokenId, setCurrentTokenId] = useState<string>('');
-  const [selectedNetwork, setSelectedNetwork] = useState('solana'); // Locked to Solana only
+  const [selectedNetwork, setSelectedNetwork] = useState('solana');
   const [seenTokenIds, setSeenTokenIds] = useState<Set<string>>(new Set());
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
