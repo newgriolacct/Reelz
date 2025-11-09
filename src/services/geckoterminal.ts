@@ -121,7 +121,7 @@ const convertGeckoPoolToDexPair = (
     return {
       chainId: chainId,
       dexId: 'geckoterminal',
-      url: `https://www.geckoterminal.com/${CHAIN_MAPPING[chainId]}/pools/${pool.attributes.address}`,
+      url: `https://dexscreener.com/${chainId}/${pool.attributes.address}`,
       pairAddress: pool.attributes.address,
       baseToken: {
         address: baseTokenData.attributes.address,
