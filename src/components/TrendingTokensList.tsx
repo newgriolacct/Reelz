@@ -42,7 +42,11 @@ export const TrendingTokensList = ({ tokens, currentTokenId, onTokenClick }: Tre
                 ) : (
                   <TrendingDown className="w-2 h-2 md:w-2.5 md:h-2.5 text-destructive flex-shrink-0" />
                 )}
-                <span className={`text-[9px] md:text-[10px] lg:text-xs font-medium whitespace-nowrap ${isPositive ? 'text-success' : 'text-destructive'}`}>
+                <span className={`text-[9px] md:text-[10px] lg:text-xs font-medium whitespace-nowrap ${
+                  isActive 
+                    ? 'text-black dark:text-white' 
+                    : isPositive ? 'text-success' : 'text-destructive'
+                }`}>
                   {isPositive ? '+' : ''}{Math.abs(token.change24h).toFixed(1)}%
                 </span>
               </div>
