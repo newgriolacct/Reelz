@@ -95,7 +95,8 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
   try {
     const network = chainId || 'solana';
     console.log(`Fetching real ${network} trending tokens...`);
-    const tokens = await fetchBirdeyeTrending(network);
+    // Get top trending tokens with wider market cap range for trending bar
+    const tokens = await fetchBirdeyeTrending(network, 0, 20, 50000, 50000000);
     return tokens.map(token => convertBirdeyeToToken(token, network));
   } catch (error) {
     console.error('Error fetching trending tokens:', error);
@@ -109,7 +110,7 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
 };
 
 /**
- * Fetch random tokens for scrolling - Uses real Birdeye data
+ * Fetch random tokens for scrolling - Uses real Birdeye data with market cap filter
  */
 let tokenOffset = 0;
 export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = false): Promise<Token[]> => {
@@ -121,11 +122,12 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
       tokenOffset = 0;
     }
     
-    console.log(`Fetching real ${network} tokens (offset: ${tokenOffset})...`);
-    const tokens = await fetchBirdeyeTrending(network, tokenOffset, 20);
+    console.log(`Fetching real ${network} tokens (offset: ${tokenOffset}, mcRange: 50k-10M)...`);
+    // Filter by market cap: 50k to 10M
+    const tokens = await fetchBirdeyeTrending(network, tokenOffset, 20, 50000, 10000000);
     
     // Increment offset for next call
-    tokenOffset += 20;
+    tokenOffset += 50; // Increment more since we're filtering
     
     return tokens.map(token => convertBirdeyeToToken(token, network));
   } catch (error) {

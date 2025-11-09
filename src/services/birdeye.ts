@@ -42,12 +42,18 @@ const CHAIN_MAP: Record<string, string> = {
 /**
  * Fetch trending tokens from Birdeye API via backend
  */
-export const fetchBirdeyeTrending = async (network: string, offset: number = 0, limit: number = 20): Promise<BirdeyeToken[]> => {
+export const fetchBirdeyeTrending = async (
+  network: string, 
+  offset: number = 0, 
+  limit: number = 20,
+  minMc: number = 50000,
+  maxMc: number = 10000000
+): Promise<BirdeyeToken[]> => {
   try {
     const chain = CHAIN_MAP[network.toLowerCase()] || 'solana';
-    const backendUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-tokens?chain=${chain}&offset=${offset}&limit=${limit}`;
+    const backendUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-tokens?chain=${chain}&offset=${offset}&limit=${limit}&minMc=${minMc}&maxMc=${maxMc}`;
     
-    console.log(`Fetching ${chain} tokens via Birdeye (offset: ${offset}, limit: ${limit})...`);
+    console.log(`Fetching ${chain} tokens via Birdeye (offset: ${offset}, mcRange: ${minMc}-${maxMc})...`);
     const response = await fetch(backendUrl);
     
     if (!response.ok) {

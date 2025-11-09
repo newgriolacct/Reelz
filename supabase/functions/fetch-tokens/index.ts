@@ -15,7 +15,9 @@ serve(async (req) => {
     const url = new URL(req.url);
     const chain = url.searchParams.get('chain') || 'solana';
     const offset = parseInt(url.searchParams.get('offset') || '0');
-    const limit = parseInt(url.searchParams.get('limit') || '20');
+    const limit = parseInt(url.searchParams.get('limit') || '50'); // Fetch more to filter
+    const minMc = parseFloat(url.searchParams.get('minMc') || '50000');
+    const maxMc = parseFloat(url.searchParams.get('maxMc') || '10000000');
     
     const BIRDEYE_API_KEY = Deno.env.get('BIRDEYE_API_KEY');
     
@@ -27,9 +29,9 @@ serve(async (req) => {
       );
     }
     
-    console.log(`Fetching tokens for chain: ${chain}, offset: ${offset}, limit: ${limit}`);
+    console.log(`Fetching tokens for chain: ${chain}, offset: ${offset}, limit: ${limit}, mcRange: ${minMc}-${maxMc}`);
     
-    // Fetch from Birdeye API
+    // Fetch from Birdeye API - get more tokens to filter by market cap
     const birdeyeResponse = await fetch(`https://public-api.birdeye.so/defi/token_trending?offset=${offset}&limit=${limit}`, {
       headers: {
         'Accept': 'application/json',
@@ -56,10 +58,27 @@ serve(async (req) => {
 
     const data = await birdeyeResponse.json();
     console.log('Birdeye response:', JSON.stringify(data).substring(0, 500));
-    console.log(`Successfully fetched ${data.data?.tokens?.length || 0} trending tokens`);
+    
+    // Filter tokens by market cap range
+    let tokens = data.data?.tokens || [];
+    const filteredTokens = tokens.filter((token: any) => {
+      const mc = token.marketcap || 0;
+      return mc >= minMc && mc <= maxMc;
+    });
+    
+    console.log(`Filtered ${filteredTokens.length} tokens from ${tokens.length} (mcRange: ${minMc}-${maxMc})`);
+    
+    // Return filtered data with same structure
+    const filteredData = {
+      ...data,
+      data: {
+        ...data.data,
+        tokens: filteredTokens.slice(0, 20) // Return 20 tokens in the range
+      }
+    };
 
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify(filteredData),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
