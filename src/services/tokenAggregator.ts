@@ -1,142 +1,84 @@
 import { DexPair } from './dexscreener';
-import { 
-  fetchTrendingTokens as fetchDexTrending,
-  fetchRandomTokens as fetchDexRandom 
-} from './dexscreener';
-import { 
-  fetchGeckoTrendingPools,
-  fetchGeckoNewPools 
-} from './geckoterminal';
-import { apiCache } from './apiCache';
 
-const MIN_MARKET_CAP = 30000; // $30k minimum market cap - filter out low caps
-
-/**
- * Aggregate trending tokens from all APIs with caching
- */
-export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair[]> => {
-  const cacheKey = `trending_${chainId || 'all'}`;
+// Mock data generator - NO API CALLS
+const generateMockToken = (index: number, chainId?: string): DexPair => {
+  const chains = ['solana', 'ethereum', 'bsc', 'polygon', 'arbitrum', 'base'];
+  const chain = chainId || chains[Math.floor(Math.random() * chains.length)];
+  const symbols = ['PEPE', 'DOGE', 'SHIB', 'WIF', 'BONK', 'MEME', 'MOON', 'WOJAK', 'FLOKI', 'ELON'];
+  const symbol = symbols[index % symbols.length] + (Math.floor(index / symbols.length) + 1);
   
-  // Check cache first
-  const cached = apiCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-  
-  try {
-    // Fetch from all sources in parallel
-    const [dexTrending, geckoTrending] = await Promise.allSettled([
-      fetchDexTrending(chainId),
-      fetchGeckoTrendingPools(chainId),
-    ]);
-    
-    const allPairs: DexPair[] = [];
-    const seenPairAddresses = new Set<string>();
-    
-    // Add DexScreener trending - use MIN_MARKET_CAP filter for trending
-    if (dexTrending.status === 'fulfilled') {
-      dexTrending.value.forEach(pair => {
-        const marketCap = pair.marketCap || pair.fdv || 0;
-        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= MIN_MARKET_CAP) {
-          allPairs.push(pair);
-          seenPairAddresses.add(pair.pairAddress);
-        }
-      });
-    }
-    
-    // Add GeckoTerminal trending - use MIN_MARKET_CAP filter for trending
-    if (geckoTrending.status === 'fulfilled') {
-      geckoTrending.value.forEach(pair => {
-        const marketCap = pair.marketCap || pair.fdv || 0;
-        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= MIN_MARKET_CAP) {
-          allPairs.push(pair);
-          seenPairAddresses.add(pair.pairAddress);
-        }
-      });
-    }
-    
-    // Sort by liquidity and volume
-    const result = allPairs
-      .sort((a, b) => {
-        const liquidityA = a.liquidity?.usd || 0;
-        const liquidityB = b.liquidity?.usd || 0;
-        const volumeA = a.volume?.h24 || 0;
-        const volumeB = b.volume?.h24 || 0;
-        return (liquidityB + volumeB) - (liquidityA + volumeA);
-      })
-      .slice(0, 10); // Reduced to 10 trending for speed
-    
-    // Cache the result
-    apiCache.set(cacheKey, result);
-    
-    return result;
-  } catch (error) {
-    console.error('Error aggregating trending tokens:', error);
-    return [];
-  }
+  return {
+    chainId: chain,
+    dexId: 'mock',
+    url: `https://example.com/${symbol}`,
+    pairAddress: `mock_${index}_${Date.now()}`,
+    baseToken: {
+      address: `token_${index}_${Date.now()}`,
+      name: `${symbol} Token`,
+      symbol: symbol,
+    },
+    quoteToken: {
+      address: 'wrapped_native',
+      name: 'Wrapped Native',
+      symbol: 'WNATIVE',
+    },
+    priceNative: `${(Math.random() * 0.001).toFixed(9)}`,
+    priceUsd: `${(Math.random() * 0.1).toFixed(6)}`,
+    txns: {
+      h24: { buys: Math.floor(Math.random() * 1000), sells: Math.floor(Math.random() * 1000) }
+    },
+    volume: {
+      h24: Math.floor(Math.random() * 500000) + 50000,
+    },
+    priceChange: {
+      h24: (Math.random() * 200) - 100,
+    },
+    liquidity: {
+      usd: Math.floor(Math.random() * 100000) + 30000,
+      base: Math.floor(Math.random() * 1000000),
+      quote: Math.floor(Math.random() * 100),
+    },
+    fdv: Math.floor(Math.random() * 500000) + 50000,
+    marketCap: Math.floor(Math.random() * 500000) + 50000,
+    pairCreatedAt: Date.now() - Math.floor(Math.random() * 86400000),
+    info: {
+      imageUrl: `https://api.dicebear.com/7.x/shapes/svg?seed=${symbol}`,
+    },
+  };
 };
 
 /**
- * Aggregate random tokens from all APIs for scrolling feed
- * Ensures all tokens have at least $30k market cap
+ * Return mock trending tokens - NO API CALLS
+ */
+export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair[]> => {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 300));
+  
+  // Generate 10 trending tokens
+  const tokens: DexPair[] = [];
+  for (let i = 0; i < 10; i++) {
+    tokens.push(generateMockToken(i, chainId));
+  }
+  
+  return tokens;
+};
+
+/**
+ * Return mock random tokens for scrolling - NO API CALLS
  */
 export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]> => {
-  // Don't cache random tokens - we want fresh data each time for infinite scroll
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 500));
   
-  try {
-    // Get as many tokens as possible, minimum 20
-    const allPairs: DexPair[] = [];
-    const seenPairAddresses = new Set<string>();
-    let attempts = 0;
-    const maxAttempts = 5;
-    
-    while (allPairs.length < 50 && attempts < maxAttempts) {
-      attempts++;
-      
-      // Fetch from both sources - DexScreener + GeckoTerminal for reliability
-      const [dexRandom, geckoNew] = await Promise.allSettled([
-        fetchDexRandom(chainId),
-        fetchGeckoNewPools(chainId),
-      ]);
-      
-      // Add DexScreener random tokens - FILTER by $30k+ market cap
-      if (dexRandom.status === 'fulfilled') {
-        dexRandom.value.forEach(pair => {
-          const marketCap = pair.marketCap || pair.fdv || 0;
-          if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
-            allPairs.push(pair);
-            seenPairAddresses.add(pair.pairAddress);
-          }
-        });
-      } else {
-        console.warn('DexScreener random tokens failed:', dexRandom.reason);
-      }
-      
-      // Add GeckoTerminal new pools - FILTER by $30k+ market cap
-      if (geckoNew.status === 'fulfilled') {
-        geckoNew.value.forEach(pair => {
-          const marketCap = pair.marketCap || pair.fdv || 0;
-          if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= 30000) {
-            allPairs.push(pair);
-            seenPairAddresses.add(pair.pairAddress);
-          }
-        });
-      } else {
-        console.warn('GeckoTerminal new pools failed:', geckoNew.reason);
-      }
-      
-      // If we have at least 20 tokens, that's good enough - don't wait for 50
-      if (allPairs.length >= 20) break;
-    }
-    
-    console.log(`Collected ${allPairs.length} tokens above $30k market cap for ${chainId || 'all chains'}`);
-    
-    // Shuffle and return
-    const result = allPairs.sort(() => Math.random() - 0.5);
-    
-    return result;
-  } catch (error) {
-    console.error('Error aggregating random tokens:', error);
-    return [];
+  // Generate 30 random tokens each time
+  const tokens: DexPair[] = [];
+  const startIndex = Math.floor(Math.random() * 1000);
+  
+  for (let i = 0; i < 30; i++) {
+    tokens.push(generateMockToken(startIndex + i, chainId));
   }
+  
+  console.log(`Generated ${tokens.length} mock tokens for ${chainId || 'all chains'}`);
+  
+  return tokens;
 };
