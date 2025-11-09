@@ -273,6 +273,7 @@ export const getDexScreenerUrl = (chainId: string, pairAddress: string): string 
 /**
  * Fetch from multiple DexScreener endpoints and mix results
  * Filters by Solana chain and market cap 30k-10M
+ * Optimized for speed - limits token fetching
  */
 export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
   const endpoints = [
@@ -284,10 +285,13 @@ export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
   ];
 
   try {
-    // Fetch from all endpoints in parallel
+    // Fetch from all endpoints in parallel with 5s timeout
     const responses = await Promise.allSettled(
       endpoints.map(url => 
-        fetch(url).then(res => res.ok ? res.json() : null)
+        Promise.race([
+          fetch(url).then(res => res.ok ? res.json() : null),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+        ])
       )
     );
 
@@ -306,16 +310,20 @@ export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
 
     console.log(`Collected ${tokenAddresses.size} unique Solana token addresses`);
 
-    // Fetch pair data for each token
-    const allPairs: DexPair[] = [];
-    const seenPairAddresses = new Set<string>();
-    const tokenArray = Array.from(tokenAddresses).slice(0, 100); // Limit to 100 tokens
+    // LIMIT to only 30 tokens to fetch - much faster
+    const tokenArray = Array.from(tokenAddresses).slice(0, 30);
     
-    for (const tokenAddress of tokenArray) {
+    // Fetch pair data for each token with timeout
+    const pairPromises = tokenArray.map(async (tokenAddress) => {
       try {
-        const response = await fetch(`${API_BASE}/tokens/${tokenAddress}`);
+        const response = await Promise.race([
+          fetch(`${API_BASE}/tokens/${tokenAddress}`),
+          new Promise<Response>((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 3000)
+          )
+        ]);
         
-        if (!response.ok) continue;
+        if (!response.ok) return null;
         
         const data: DexScreenerResponse = await response.json();
         
@@ -323,7 +331,6 @@ export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
           // Get best pair for this token
           const bestPair = data.pairs
             .filter(pair => {
-              if (seenPairAddresses.has(pair.pairAddress)) return false;
               if (pair.chainId.toLowerCase() !== 'solana') return false;
               
               const marketCap = pair.marketCap || pair.fdv || 0;
@@ -334,23 +341,32 @@ export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
             })
             .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
           
-          if (bestPair) {
-            allPairs.push(bestPair);
-            seenPairAddresses.add(bestPair.pairAddress);
-          }
+          return bestPair || null;
         }
+        return null;
       } catch (error) {
-        // Silent fail for individual tokens
+        return null;
       }
-      
-      // Stop once we have 60 pairs
-      if (allPairs.length >= 60) break;
-    }
+    });
+
+    // Fetch all in parallel
+    const results = await Promise.allSettled(pairPromises);
+    
+    const allPairs: DexPair[] = results
+      .filter((r): r is PromiseFulfilledResult<DexPair> => 
+        r.status === 'fulfilled' && r.value !== null
+      )
+      .map(r => r.value);
+
+    // Remove duplicates by pair address
+    const uniquePairs = Array.from(
+      new Map(allPairs.map(pair => [pair.pairAddress, pair])).values()
+    );
 
     // Shuffle for variety
-    const shuffled = allPairs.sort(() => 0.5 - Math.random());
+    const shuffled = uniquePairs.sort(() => 0.5 - Math.random());
     
-    console.log(`Fetched ${allPairs.length} Solana pairs in 30k-10M market cap range`);
+    console.log(`Fetched ${shuffled.length} Solana pairs in 30k-10M market cap range`);
     
     return shuffled;
   } catch (error) {
