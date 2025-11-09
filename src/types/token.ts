@@ -22,6 +22,11 @@ export interface Token {
   isBookmarked?: boolean;
   pairAddress?: string;
   dexScreenerUrl?: string;
+  contractAddress?: string;
+  website?: string;
+  twitter?: string;
+  telegram?: string;
+  discord?: string;
 }
 
 export const convertDexPairToToken = (pair: DexPair): Token => {
@@ -47,6 +52,13 @@ export const convertDexPairToToken = (pair: DexPair): Token => {
     sparklineData.push(Math.max(50, value));
   }
 
+  // Extract social media links
+  const socials = pair.info?.socials || [];
+  const twitter = socials.find(s => s.platform === 'twitter')?.handle;
+  const telegram = socials.find(s => s.platform === 'telegram')?.handle;
+  const discord = socials.find(s => s.platform === 'discord')?.handle;
+  const website = pair.info?.websites?.[0]?.url;
+
   return {
     id: pair.pairAddress,
     symbol: pair.baseToken.symbol,
@@ -66,5 +78,10 @@ export const convertDexPairToToken = (pair: DexPair): Token => {
     comments: Math.floor(pair.txns.h24.sells / 20),
     pairAddress: pair.pairAddress,
     dexScreenerUrl: pair.url,
+    contractAddress: pair.baseToken.address,
+    website,
+    twitter,
+    telegram,
+    discord,
   };
 };

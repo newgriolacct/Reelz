@@ -1,14 +1,17 @@
 import { TokenCard } from "@/components/TokenCard";
 import { BottomNav } from "@/components/BottomNav";
+import { TrendingTokensList } from "@/components/TrendingTokensList";
 import { fetchTrendingTokens } from "@/services/dexscreener";
 import { convertDexPairToToken } from "@/types/token";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Token } from "@/types/token";
 
 const Index = () => {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentTokenId, setCurrentTokenId] = useState<string>('');
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadTokens = async () => {
@@ -17,6 +20,9 @@ const Index = () => {
         const pairs = await fetchTrendingTokens();
         const convertedTokens = pairs.map(convertDexPairToToken);
         setTokens(convertedTokens);
+        if (convertedTokens.length > 0) {
+          setCurrentTokenId(convertedTokens[0].id);
+        }
       } catch (err) {
         setError('Failed to load tokens');
         console.error(err);
@@ -27,6 +33,37 @@ const Index = () => {
 
     loadTokens();
   }, []);
+
+  // Track current token on scroll
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const scrollTop = container.scrollTop;
+      const windowHeight = window.innerHeight;
+      const currentIndex = Math.round(scrollTop / windowHeight);
+      if (tokens[currentIndex]) {
+        setCurrentTokenId(tokens[currentIndex].id);
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [tokens]);
+
+  const handleTokenClick = (tokenId: string) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const tokenIndex = tokens.findIndex(t => t.id === tokenId);
+    if (tokenIndex !== -1) {
+      container.scrollTo({
+        top: tokenIndex * window.innerHeight,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   const handleLike = (tokenId: string) => {
     console.log("Liked token:", tokenId);
@@ -69,7 +106,16 @@ const Index = () => {
 
   return (
     <>
-      <div className="h-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth scrollbar-hide">
+      <TrendingTokensList 
+        tokens={tokens}
+        currentTokenId={currentTokenId}
+        onTokenClick={handleTokenClick}
+      />
+      <div 
+        ref={scrollContainerRef}
+        className="h-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth scrollbar-hide"
+        style={{ paddingTop: '64px' }}
+      >
         {tokens.map((token) => (
           <TokenCard
             key={token.id}
