@@ -8,7 +8,7 @@ import {
   fetchGeckoNewPools 
 } from './geckoterminal';
 
-const MIN_MARKET_CAP = 1000; // $1k minimum to show more tokens across all chains
+const MIN_MARKET_CAP = 30000; // $30k minimum market cap across all networks
 
 /**
  * Aggregate trending tokens from all APIs
