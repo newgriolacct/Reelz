@@ -63,7 +63,7 @@ const Index = () => {
         
         // Load both trending and random in parallel
         const [convertedRandom, convertedTrending] = await Promise.all([
-          fetchAggregatedRandom(selectedNetwork),
+          fetchAggregatedRandom(selectedNetwork, true), // Reset offset when network changes
           fetchAggregatedTrending(selectedNetwork)
         ]);
         

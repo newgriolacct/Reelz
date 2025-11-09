@@ -109,21 +109,33 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
 };
 
 /**
- * Fetch random tokens for scrolling - Uses mock data
+ * Fetch random tokens for scrolling - Uses real Birdeye data
  */
-export const fetchAggregatedRandom = async (chainId?: string): Promise<Token[]> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Generate 30 random tokens each time
-  const tokens: Token[] = [];
-  const startIndex = Math.floor(Math.random() * 1000);
-  
-  for (let i = 0; i < 30; i++) {
-    tokens.push(generateMockToken(startIndex + i, chainId));
+let tokenOffset = 0;
+export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = false): Promise<Token[]> => {
+  try {
+    const network = chainId || 'solana';
+    
+    // Reset offset when switching networks
+    if (reset) {
+      tokenOffset = 0;
+    }
+    
+    console.log(`Fetching real ${network} tokens (offset: ${tokenOffset})...`);
+    const tokens = await fetchBirdeyeTrending(network, tokenOffset, 20);
+    
+    // Increment offset for next call
+    tokenOffset += 20;
+    
+    return tokens.map(token => convertBirdeyeToToken(token, network));
+  } catch (error) {
+    console.error('Error fetching tokens:', error);
+    // Fallback to mock data on error
+    const tokens: Token[] = [];
+    for (let i = 0; i < 20; i++) {
+      tokens.push(generateMockToken(tokenOffset + i, chainId));
+    }
+    tokenOffset += 20;
+    return tokens;
   }
-  
-  console.log(`Generated ${tokens.length} mock tokens for ${chainId || 'all chains'}`);
-  
-  return tokens;
 };

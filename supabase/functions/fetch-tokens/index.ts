@@ -14,6 +14,8 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const chain = url.searchParams.get('chain') || 'solana';
+    const offset = parseInt(url.searchParams.get('offset') || '0');
+    const limit = parseInt(url.searchParams.get('limit') || '20');
     
     const BIRDEYE_API_KEY = Deno.env.get('BIRDEYE_API_KEY');
     
@@ -25,10 +27,10 @@ serve(async (req) => {
       );
     }
     
-    console.log('Fetching trending tokens for chain:', chain);
+    console.log(`Fetching tokens for chain: ${chain}, offset: ${offset}, limit: ${limit}`);
     
     // Fetch from Birdeye API
-    const birdeyeResponse = await fetch('https://public-api.birdeye.so/defi/token_trending', {
+    const birdeyeResponse = await fetch(`https://public-api.birdeye.so/defi/token_trending?offset=${offset}&limit=${limit}`, {
       headers: {
         'Accept': 'application/json',
         'x-chain': chain,
