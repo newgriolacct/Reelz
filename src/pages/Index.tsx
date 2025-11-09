@@ -121,7 +121,7 @@ const Index = () => {
       container.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimeout);
     };
-  }, [tokens, loadingMore, loadMoreTokens]);
+  }, [tokens, loadingMore]); // Removed loadMoreTokens from dependencies to prevent loop
 
   const handleTokenClick = (tokenId: string) => {
     const container = scrollContainerRef.current;
