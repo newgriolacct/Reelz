@@ -113,7 +113,19 @@ export const convertGeckoTerminalToToken = (
   
   // Get DexScreener URL for charts
   const poolAddress = attributes.address;
-  const dexScreenerUrl = `https://dexscreener.com/${network}/${poolAddress}`;
+  // Map network names to DexScreener chain IDs
+  const networkMap: Record<string, string> = {
+    'solana': 'solana',
+    'bsc': 'bsc',
+    'ethereum': 'ethereum',
+    'polygon': 'polygon',
+    'arbitrum': 'arbitrum',
+    'base': 'base',
+    'optimism': 'optimism',
+    'avalanche': 'avalanche',
+  };
+  const chainId = networkMap[network.toLowerCase()] || network;
+  const dexScreenerUrl = `https://dexscreener.com/${chainId}/${poolAddress}`;
   
   // Check if pool was recently created (within 7 days)
   const createdAt = new Date(attributes.pool_created_at);
