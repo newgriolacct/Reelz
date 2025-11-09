@@ -11,42 +11,37 @@ const Index = () => {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [trendingTokens, setTrendingTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentTokenId, setCurrentTokenId] = useState<string>('');
   const [selectedNetwork, setSelectedNetwork] = useState('solana');
   const [seenTokenIds, setSeenTokenIds] = useState<Set<string>>(new Set());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isLoadingMoreRef = useRef(false);
 
   const loadMoreTokens = useCallback(async () => {
-    setLoadingMore(prev => {
-      if (prev) return prev; // Already loading
+    if (isLoadingMoreRef.current) return;
+    
+    isLoadingMoreRef.current = true;
+    
+    try {
+      const pairs = await fetchAggregatedRandom(selectedNetwork);
+      const convertedTokens = pairs.map(convertDexPairToToken);
       
-      // Start loading
-      fetchAggregatedRandom(selectedNetwork)
-        .then(pairs => {
-          const convertedTokens = pairs.map(convertDexPairToToken);
-          
-          // Filter out tokens we've already seen
-          setSeenTokenIds(prev => {
-            const newTokens = convertedTokens.filter(token => !prev.has(token.id));
-            
-            if (newTokens.length > 0) {
-              setTokens(currentTokens => [...currentTokens, ...newTokens]);
-              return new Set([...prev, ...newTokens.map(t => t.id)]);
-            }
-            return prev;
-          });
-        })
-        .catch(err => {
-          console.error('Failed to load more tokens', err);
-        })
-        .finally(() => {
-          setLoadingMore(false);
-        });
-      
-      return true; // Set loading to true
-    });
+      // Filter out tokens we've already seen
+      setSeenTokenIds(prev => {
+        const newTokens = convertedTokens.filter(token => !prev.has(token.id));
+        
+        if (newTokens.length > 0) {
+          setTokens(currentTokens => [...currentTokens, ...newTokens]);
+          return new Set([...prev, ...newTokens.map(t => t.id)]);
+        }
+        return prev;
+      });
+    } catch (err) {
+      console.error('Failed to load more tokens', err);
+    } finally {
+      isLoadingMoreRef.current = false;
+    }
   }, [selectedNetwork]);
 
   useEffect(() => {
@@ -98,7 +93,7 @@ const Index = () => {
   // Track current token on scroll and load more
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (!container) return;
+    if (!container || tokens.length === 0) return;
 
     let scrollTimeout: NodeJS.Timeout;
     const handleScroll = () => {
@@ -116,14 +111,14 @@ const Index = () => {
           setCurrentTokenId(tokens[currentIndex].id);
         }
         
-        // Load more when near bottom
-        if (scrollHeight - scrollTop - clientHeight < windowHeight * 2) {
+        // Load more when near bottom (3 screens away) - less aggressive
+        if (scrollHeight - scrollTop - clientHeight < windowHeight * 3 && !isLoadingMoreRef.current) {
           loadMoreTokens();
         }
-      }, 100);
+      }, 150);
     };
 
-    container.addEventListener('scroll', handleScroll);
+    container.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       container.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimeout);
@@ -229,7 +224,7 @@ const Index = () => {
             isEagerLoad={index < 3}
           />
         ))}
-        {loadingMore && (
+        {isLoadingMoreRef.current && (
           <div className="h-screen flex items-center justify-center snap-start">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
