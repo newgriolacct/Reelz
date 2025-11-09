@@ -193,7 +193,7 @@ export const fetchGeckoTrendingPools = async (chainId?: string): Promise<DexPair
         const data: GeckoResponse = await response.json();
         
         if (data.data) {
-          for (const pool of data.data.slice(0, 5)) { // Reduced from 10 to 5
+          for (const pool of data.data.slice(0, 15)) { // Increased from 5 to 15
             const pair = convertGeckoPoolToDexPair(pool, data.included || [], chain);
             if (pair) pairs.push(pair);
           }
@@ -243,7 +243,7 @@ export const fetchGeckoNewPools = async (chainId?: string): Promise<DexPair[]> =
         const data: GeckoResponse = await response.json();
         
         if (data.data) {
-          for (const pool of data.data.slice(0, 10)) { // Reduced from 20 to 10
+          for (const pool of data.data.slice(0, 30)) { // Increased from 10 to 30
             const pair = convertGeckoPoolToDexPair(pool, data.included || [], chain);
             if (pair) pairs.push(pair);
           }

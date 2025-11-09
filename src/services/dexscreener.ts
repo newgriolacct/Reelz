@@ -157,7 +157,7 @@ export const fetchTrendingTokens = async (chainId?: string): Promise<DexPair[]> 
       }
       
       // Stop once we have enough tokens
-      if (allPairs.length >= 20) break;
+      if (allPairs.length >= 30) break;
     }
     
     return allPairs;
@@ -291,7 +291,7 @@ export const fetchRandomTokens = async (chainId?: string): Promise<DexPair[]> =>
       }
       
       // Stop once we have enough pairs
-      if (allPairs.length >= 50) break;
+      if (allPairs.length >= 80) break;
     }
     
     return allPairs;
