@@ -3,12 +3,12 @@ export interface BirdeyeToken {
   decimals: number;
   liquidity: number;
   logoURI?: string;
-  mc: number;
+  marketcap: number;
   name: string;
   symbol: string;
-  v24hUSD: number;
-  v24hChangePercent: number;
-  priceChange24hPercent?: number;
+  volume24hUSD: number;
+  volume24hChangePercent: number;
+  price24hChangePercent?: number;
   price?: number;
   extensions?: {
     website?: string;
@@ -18,9 +18,9 @@ export interface BirdeyeToken {
 }
 
 export interface BirdeyeResponse {
-  success: boolean;
+  success?: boolean;
   data: {
-    items: BirdeyeToken[];
+    tokens: BirdeyeToken[];
     updateUnixTime: number;
     updateTime: string;
   };
@@ -58,13 +58,13 @@ export const fetchBirdeyeTrending = async (network: string): Promise<BirdeyeToke
     
     const data: BirdeyeResponse = await response.json();
     
-    if (!data.success || !data.data?.items) {
+    if (!data.data?.tokens) {
       console.warn('No data received from Birdeye');
       return [];
     }
     
-    console.log(`Received ${data.data.items.length} trending ${chain} tokens`);
-    return data.data.items.slice(0, 20);
+    console.log(`Received ${data.data.tokens.length} trending ${chain} tokens`);
+    return data.data.tokens.slice(0, 20);
   } catch (error) {
     console.error('Error fetching Birdeye trending tokens:', error);
     throw error;

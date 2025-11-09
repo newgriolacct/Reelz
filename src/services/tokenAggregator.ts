@@ -5,7 +5,7 @@ import { BirdeyeToken, fetchBirdeyeTrending } from "./birdeye";
  * Convert Birdeye token to our Token type
  */
 const convertBirdeyeToToken = (token: BirdeyeToken, chainId: string): Token => {
-  const priceChange = token.priceChange24hPercent || token.v24hChangePercent || 0;
+  const priceChange = token.price24hChangePercent || token.volume24hChangePercent || 0;
   
   // Generate sparkline data from price change
   const points = 24;
@@ -27,16 +27,16 @@ const convertBirdeyeToToken = (token: BirdeyeToken, chainId: string): Token => {
     avatarUrl: token.logoURI || `https://api.dicebear.com/7.x/shapes/svg?seed=${token.symbol}&backgroundColor=00d084`,
     price: token.price || 0,
     change24h: priceChange,
-    marketCap: token.mc || 0,
-    volume24h: token.v24hUSD || 0,
+    marketCap: token.marketcap || 0,
+    volume24h: token.volume24hUSD || 0,
     sparklineData,
     tags: [],
     isNew: false,
     liquidity: token.liquidity || 0,
     chain: chainId.charAt(0).toUpperCase() + chainId.slice(1),
-    description: `Trading on ${chainId}. Market cap: $${(token.mc || 0).toLocaleString()}`,
-    likes: Math.floor((token.v24hUSD || 0) / 10000),
-    comments: Math.floor((token.v24hUSD || 0) / 50000),
+    description: `Trading on ${chainId}. Market cap: $${(token.marketcap || 0).toLocaleString()}`,
+    likes: Math.floor((token.volume24hUSD || 0) / 10000),
+    comments: Math.floor((token.volume24hUSD || 0) / 50000),
     pairAddress: token.address,
     contractAddress: token.address,
     website: token.extensions?.website,
