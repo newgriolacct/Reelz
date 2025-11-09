@@ -167,7 +167,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* DexScreener Chart */}
-        <div className="relative bg-card overflow-hidden flex-shrink-0" style={{ height: '32vh' }}>
+        <div className="relative bg-card overflow-hidden flex-1 min-h-[250px] max-h-[400px]">
           {token.dexScreenerUrl ? (
             <iframe
               src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
@@ -183,7 +183,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         </div>
 
         {/* Bottom - Token Info */}
-        <div className="px-3 pt-2 pb-20 flex flex-col gap-1.5 bg-background flex-shrink-0">
+        <div className="px-3 pt-2 pb-20 flex flex-col gap-1.5 bg-background flex-shrink-0 mt-auto">
           {/* Price Info */}
           <div className="mb-1">
             <div className="text-2xl font-bold text-foreground leading-tight">
