@@ -79,8 +79,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
         {/* Top spacing for trending bar and network selector */}
         <div className="h-[110px] md:h-[120px] lg:h-[140px] flex-shrink-0" />
         
-        {/* Token Header */}
-        <div className="px-3 py-2 flex items-center justify-between bg-background flex-shrink-0 border-b border-border/50">
+        {/* Token Header - Compact */}
+        <div className="px-3 py-1 flex items-center justify-between bg-background flex-shrink-0 border-b border-border/50">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <img 
               src={token.avatarUrl} 
@@ -166,8 +166,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
           </div>
         </div>
 
-        {/* DexScreener Chart */}
-        <div className="relative bg-card overflow-hidden flex-1 min-h-0">
+        {/* DexScreener Chart - Compact */}
+        <div className="relative bg-card overflow-hidden" style={{ height: '35vh' }}>
           {token.dexScreenerUrl ? (
             <iframe
               src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
@@ -178,64 +178,64 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-secondary">
-              <p className="text-muted-foreground">Chart not available</p>
+              <p className="text-muted-foreground text-sm">Chart not available</p>
             </div>
           )}
         </div>
 
-        {/* Bottom - Token Info */}
-        <div className="px-3 pt-2 pb-20 flex flex-col gap-1.5 bg-background flex-shrink-0">
-          {/* Price Info */}
-          <div className="mb-1">
-            <div className="text-2xl font-bold text-foreground leading-tight">
+        {/* Bottom - Token Info - Compact */}
+        <div className="px-3 py-2 flex flex-col gap-1 bg-background flex-shrink-0" style={{ paddingBottom: '70px' }}>
+          {/* Price Info - Compact */}
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-xl font-bold text-foreground">
               {formatPrice(token.price)}
             </div>
             <div className={`text-sm font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
-              {isPositive ? '+' : ''}{token.change24h.toFixed(2)}% (24h)
+              {isPositive ? '+' : ''}{token.change24h.toFixed(2)}%
             </div>
           </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-1.5 mb-1.5">
-            <div className="bg-secondary rounded-lg p-2">
-              <div className="text-[9px] text-muted-foreground">Market Cap</div>
-              <div className="text-xs font-bold text-foreground truncate">
+          {/* Stats Grid - Compact */}
+          <div className="grid grid-cols-4 gap-1 mb-1">
+            <div className="bg-secondary rounded p-1">
+              <div className="text-[8px] text-muted-foreground">MCap</div>
+              <div className="text-[10px] font-bold text-foreground truncate">
                 {formatCurrency(token.marketCap)}
               </div>
             </div>
-            <div className="bg-secondary rounded-lg p-2">
-              <div className="text-[9px] text-muted-foreground">Volume 24h</div>
-              <div className="text-xs font-bold text-foreground truncate">
+            <div className="bg-secondary rounded p-1">
+              <div className="text-[8px] text-muted-foreground">Vol</div>
+              <div className="text-[10px] font-bold text-foreground truncate">
                 {formatCurrency(token.volume24h)}
               </div>
             </div>
-            <div className="bg-secondary rounded-lg p-2">
-              <div className="text-[9px] text-muted-foreground">Liquidity</div>
-              <div className="text-xs font-bold text-foreground truncate">
+            <div className="bg-secondary rounded p-1">
+              <div className="text-[8px] text-muted-foreground">Liq</div>
+              <div className="text-[10px] font-bold text-foreground truncate">
                 {formatCurrency(token.liquidity)}
               </div>
             </div>
-            <div className="bg-secondary rounded-lg p-2">
-              <div className="text-[9px] text-muted-foreground">Chain</div>
-              <div className="text-xs font-bold text-foreground truncate">
+            <div className="bg-secondary rounded p-1">
+              <div className="text-[8px] text-muted-foreground">Chain</div>
+              <div className="text-[10px] font-bold text-foreground truncate">
                 {token.chain}
               </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Action Buttons - Compact */}
+          <div className="grid grid-cols-2 gap-1.5">
             <Button 
               onClick={() => setShowBuyDrawer(true)}
-              size="lg"
-              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-sm h-12"
+              size="sm"
+              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-sm h-9"
             >
               Buy
             </Button>
             <Button 
               onClick={() => setShowSellDrawer(true)}
-              size="lg"
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-sm h-12"
+              size="sm"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-sm h-9"
             >
               Sell
             </Button>
