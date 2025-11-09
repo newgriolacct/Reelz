@@ -96,10 +96,11 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
   const network = chainId || 'solana';
   const cacheKey = `trending_${network}`;
   
-  console.log(`Fetching real ${network} trending tokens (100k-5M cap)...`);
+  console.log(`Fetching real ${network} trending tokens (50k-10M cap)...`);
   
   try {
-    const tokens = await fetchBirdeyeTrending(network, 0, 20, 100000, 5000000);
+    // Use same range as main feed for better results
+    const tokens = await fetchBirdeyeTrending(network, 0, 20, 50000, 10000000);
     
     if (tokens.length > 0) {
       // Randomly select 5 tokens from the filtered results
