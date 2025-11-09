@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useState } from "react";
-import { Send, X } from "lucide-react";
+import { Send } from "lucide-react";
 
 interface Comment {
   id: string;
@@ -44,16 +44,8 @@ export const CommentsDrawer = ({
         side="bottom" 
         className="h-[75vh] flex flex-col p-0 pb-safe"
       >
-        <SheetHeader className="px-4 py-3 border-b border-border relative">
+        <SheetHeader className="px-4 py-3 border-b border-border">
           <SheetTitle className="text-center">{comments.length} comments</SheetTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-2 top-2 h-8 w-8"
-            onClick={() => onOpenChange(false)}
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </SheetHeader>
 
         {/* Comments List */}
