@@ -100,7 +100,7 @@ export const convertGeckoTerminalToToken = (
   response: GeckoTerminalResponse
 ): Token => {
   const attributes = pool.attributes;
-  const baseTokenData = response.included.find(
+  const baseTokenData = response.included?.find(
     (item: any) => item.id === pool.relationships.base_token.data.id
   );
   
