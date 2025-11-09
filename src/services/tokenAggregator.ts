@@ -84,13 +84,13 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
   // Don't cache random tokens - we want fresh data each time for infinite scroll
   
   try {
-    // Faster: Get at least 15 tokens quickly (reduced from 30)
+    // Get at least 50+ tokens for a full feed
     const allPairs: DexPair[] = [];
     const seenPairAddresses = new Set<string>();
     let attempts = 0;
-    const maxAttempts = 2; // Reduced from 3 for speed
+    const maxAttempts = 5; // Increased to get more tokens
     
-    while (allPairs.length < 15 && attempts < maxAttempts) {
+    while (allPairs.length < 50 && attempts < maxAttempts) {
       attempts++;
       
       // Fetch from both sources - DexScreener + GeckoTerminal for reliability

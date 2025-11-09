@@ -111,11 +111,13 @@ const Index = () => {
           setCurrentTokenId(tokens[currentIndex].id);
         }
         
-        // Load more when near bottom (3 screens away) - less aggressive
-        if (scrollHeight - scrollTop - clientHeight < windowHeight * 3 && !isLoadingMoreRef.current) {
+        // Load more when 5 tokens away from bottom - smooth infinite scroll
+        const tokensFromBottom = (scrollHeight - scrollTop - clientHeight) / windowHeight;
+        if (tokensFromBottom < 5 && !isLoadingMoreRef.current) {
+          console.log('Loading more tokens...');
           loadMoreTokens();
         }
-      }, 150);
+      }, 100);
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
