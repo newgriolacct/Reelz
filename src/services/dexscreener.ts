@@ -89,18 +89,24 @@ interface BoostedToken {
 }
 
 /**
- * Fetch trending Solana tokens using the trending endpoint
+ * Fetch trending Solana tokens using the backend proxy
  * Returns real-time trending tokens on Solana
  */
 export const fetchSolanaTrending = async (): Promise<DexPair[]> => {
   try {
-    const response = await fetch('https://api.dexscreener.com/latest/dex/trending/solana');
+    const endpoint = 'https://api.dexscreener.com/latest/dex/trending/solana';
+    const backendUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-tokens?endpoint=${encodeURIComponent(endpoint)}`;
+    
+    console.log('Fetching Solana trending via backend...');
+    const response = await fetch(backendUrl);
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch Solana trending tokens: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Failed to fetch Solana trending tokens: ${response.status} - ${errorData.error || 'Unknown error'}`);
     }
     
     const data: DexScreenerResponse = await response.json();
+    console.log(`Received ${data.pairs?.length || 0} trending Solana tokens`);
     
     // Return the trending pairs, limiting to 20 for performance
     return data.pairs.slice(0, 20);
