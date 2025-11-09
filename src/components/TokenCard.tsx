@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { useState } from "react";
 import { QuickTradeDrawer } from "./QuickTradeDrawer";
+import { formatPrice, formatCurrency } from "@/lib/formatters";
 
 interface TokenCardProps {
   token: Token;
@@ -85,7 +86,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
           {/* Price Info */}
           <div>
             <div className="text-3xl font-bold text-foreground mb-1">
-              ${token.price.toFixed(6)}
+              {formatPrice(token.price)}
             </div>
             <div className={`text-base font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
               {isPositive ? '+' : ''}{token.change24h.toFixed(2)}% (24h)
@@ -97,19 +98,19 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
             <div className="bg-secondary rounded-lg p-3">
               <div className="text-xs text-muted-foreground mb-0.5">Market Cap</div>
               <div className="text-base font-bold text-foreground">
-                ${(token.marketCap / 1000000).toFixed(2)}M
+                {formatCurrency(token.marketCap)}
               </div>
             </div>
             <div className="bg-secondary rounded-lg p-3">
               <div className="text-xs text-muted-foreground mb-0.5">Volume 24h</div>
               <div className="text-base font-bold text-foreground">
-                ${(token.volume24h / 1000).toFixed(0)}K
+                {formatCurrency(token.volume24h)}
               </div>
             </div>
             <div className="bg-secondary rounded-lg p-3">
               <div className="text-xs text-muted-foreground mb-0.5">Liquidity</div>
               <div className="text-base font-bold text-foreground">
-                ${(token.liquidity / 1000).toFixed(0)}K
+                {formatCurrency(token.liquidity)}
               </div>
             </div>
             <div className="bg-secondary rounded-lg p-3">
