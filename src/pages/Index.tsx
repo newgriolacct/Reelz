@@ -48,7 +48,7 @@ const Index = () => {
       try {
         setError(null);
         
-        // Load only main feed first for faster initial display
+        // Load main feed first
         const randomPairs = await fetchAggregatedRandom(selectedNetwork);
         const convertedRandom = randomPairs.map(convertDexPairToToken);
         setTokens(convertedRandom);
@@ -62,7 +62,12 @@ const Index = () => {
         
         setLoading(false);
         
-        // Load trending tokens in background after main feed is ready
+        // If we got less than 10 tokens, immediately load more
+        if (convertedRandom.length < 10) {
+          loadMoreTokens();
+        }
+        
+        // Load trending tokens in background
         fetchAggregatedTrending(selectedNetwork).then(trendingPairs => {
           const convertedTrending = trendingPairs.map(convertDexPairToToken);
           setTrendingTokens(convertedTrending);
@@ -80,7 +85,7 @@ const Index = () => {
     };
 
     loadTokens();
-  }, [selectedNetwork]);
+  }, [selectedNetwork, loadMoreTokens]);
 
   // Track current token on scroll and load more
   useEffect(() => {

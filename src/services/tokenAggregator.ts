@@ -33,7 +33,7 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair
     const allPairs: DexPair[] = [];
     const seenPairAddresses = new Set<string>();
     
-    // Add DexScreener trending
+    // Add DexScreener trending - use MIN_MARKET_CAP filter for trending
     if (dexTrending.status === 'fulfilled') {
       dexTrending.value.forEach(pair => {
         const marketCap = pair.marketCap || pair.fdv || 0;
@@ -44,7 +44,7 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<DexPair
       });
     }
     
-    // Add GeckoTerminal trending
+    // Add GeckoTerminal trending - use MIN_MARKET_CAP filter for trending
     if (geckoTrending.status === 'fulfilled') {
       geckoTrending.value.forEach(pair => {
         const marketCap = pair.marketCap || pair.fdv || 0;
@@ -93,22 +93,20 @@ export const fetchAggregatedRandom = async (chainId?: string): Promise<DexPair[]
     const allPairs: DexPair[] = [];
     const seenPairAddresses = new Set<string>();
     
-    // Add DexScreener random tokens
+    // Add DexScreener random tokens - NO market cap filter for feed variety
     if (dexRandom.status === 'fulfilled') {
       dexRandom.value.forEach(pair => {
-        const marketCap = pair.marketCap || pair.fdv || 0;
-        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= MIN_MARKET_CAP) {
+        if (!seenPairAddresses.has(pair.pairAddress)) {
           allPairs.push(pair);
           seenPairAddresses.add(pair.pairAddress);
         }
       });
     }
     
-    // Add GeckoTerminal new pools
+    // Add GeckoTerminal new pools - NO market cap filter for feed variety
     if (geckoNew.status === 'fulfilled') {
       geckoNew.value.forEach(pair => {
-        const marketCap = pair.marketCap || pair.fdv || 0;
-        if (!seenPairAddresses.has(pair.pairAddress) && marketCap >= MIN_MARKET_CAP) {
+        if (!seenPairAddresses.has(pair.pairAddress)) {
           allPairs.push(pair);
           seenPairAddresses.add(pair.pairAddress);
         }
