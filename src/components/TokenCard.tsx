@@ -64,20 +64,13 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark }: TokenCardPro
               src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
               className="w-full h-full border-0"
               title={`${token.symbol} Chart`}
+              style={{ marginTop: '-40px', height: 'calc(100% + 80px)' }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-secondary">
               <p className="text-muted-foreground">Chart not available</p>
             </div>
           )}
-          
-          {/* Live Badge */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-            <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border">
-              <div className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-              <span className="text-xs font-medium text-foreground">LIVE</span>
-            </div>
-          </div>
         </div>
 
         {/* Bottom - Token Info */}
