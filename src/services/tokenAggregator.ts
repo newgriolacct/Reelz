@@ -41,11 +41,12 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
 
 /**
  * Fetch tokens for scrolling - INFINITE SCROLLING like TikTok
- * LAZY LOADING: Fetches fresh tokens as you scroll
- * RECYCLING: When API returns nothing, shuffles and reuses existing tokens
- * CACHE: 1 hour TTL - fresh data when you return later
+ * NO POOL CAP: Grows indefinitely for maximum variety
+ * RECYCLING: Only after 200+ tokens or when API fails
+ * API SAFE: Respects rate limits with timeouts
  */
 let tokenPool: Token[] = [];
+let tokenIndex = 0; // Track position in pool
 
 export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = false): Promise<Token[]> => {
   const network = chainId || 'solana';
@@ -53,9 +54,20 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
   // Reset pool when network changes
   if (reset) {
     tokenPool = [];
+    tokenIndex = 0;
   }
   
-  console.log(`🔄 Fetching fresh DexScreener tokens (pool: ${tokenPool.length})...`);
+  console.log(`🔄 Fetching tokens (pool: ${tokenPool.length}, shown: ${tokenIndex})...`);
+  
+  // If we have fresh unseen tokens in pool, use those first
+  if (tokenIndex < tokenPool.length) {
+    const batch = tokenPool.slice(tokenIndex, tokenIndex + 20);
+    if (batch.length === 20) {
+      tokenIndex += 20;
+      console.log(`✅ Using ${batch.length} tokens from pool (${tokenPool.length - tokenIndex} remaining)`);
+      return batch;
+    }
+  }
   
   try {
     // Try to fetch fresh tokens from DexScreener
@@ -64,35 +76,39 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
     if (pairs.length > 0) {
       const converted = pairs.map(pair => convertDexPairToToken(pair));
       
-      // ALWAYS ADD new tokens to pool (don't filter duplicates)
-      // This allows fresh data and more variety
+      // NO CAP: Add all new tokens to pool
       tokenPool = [...tokenPool, ...converted];
-      
-      // Keep pool size reasonable (max 100 tokens)
-      if (tokenPool.length > 100) {
-        tokenPool = tokenPool.slice(-100);
-      }
       
       // Cache the pool with 1 hour TTL
       const cacheKey = `token_pool_${network}`;
       tokenCache.set(cacheKey, tokenPool, 60 * 60 * 1000);
       
-      // Shuffle and return batch of 20 tokens
-      const shuffled = [...converted].sort(() => 0.5 - Math.random());
-      const batch = shuffled.slice(0, 20);
-      console.log(`✅ Fetched ${batch.length} fresh tokens (pool now: ${tokenPool.length})`);
+      // Return next batch from the new tokens
+      const batch = tokenPool.slice(tokenIndex, tokenIndex + 20);
+      tokenIndex += 20;
+      
+      console.log(`✅ Fetched ${converted.length} fresh tokens | Pool: ${tokenPool.length} | Shown: ${tokenIndex}`);
       
       return batch;
     }
   } catch (error) {
-    console.error('DexScreener error, using recycled tokens:', error);
+    console.error('DexScreener error:', error);
   }
   
-  // RECYCLING: If API fails or returns nothing, shuffle from pool
+  // RECYCLING: Only if we've shown 200+ tokens OR no pool at all
   if (tokenPool.length > 0) {
-    console.log('♻️ Recycling tokens from pool - infinite scroll mode');
-    const shuffled = [...tokenPool].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, 20);
+    if (tokenIndex >= 200) {
+      console.log('♻️ Recycling: Shown 200+ tokens, reshuffling pool...');
+      tokenPool = [...tokenPool].sort(() => 0.5 - Math.random());
+      tokenIndex = 0;
+    }
+    
+    // Return next batch (recycled or fresh)
+    const batch = tokenPool.slice(tokenIndex, tokenIndex + 20);
+    tokenIndex += 20;
+    
+    console.log(`📦 Returning ${batch.length} tokens (recycled: ${tokenIndex > tokenPool.length})`);
+    return batch;
   }
   
   // Try to restore from cache if pool is empty
@@ -101,10 +117,12 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
   if (cached && cached.length > 0) {
     console.log('📦 Restoring token pool from cache');
     tokenPool = cached;
-    const shuffled = [...tokenPool].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, 20);
+    tokenIndex = 0;
+    const batch = tokenPool.slice(0, 20);
+    tokenIndex = 20;
+    return batch;
   }
   
-  console.warn('No tokens available - pool is empty');
+  console.warn('No tokens available');
   return [];
 };
