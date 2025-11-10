@@ -196,30 +196,32 @@ export default function Wallet() {
           ) : (
             <>
               {/* Balance Card */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <Card className="p-6 md:col-span-2">
-                  <p className="text-sm text-muted-foreground mb-2">Total Portfolio</p>
-                  {loading ? (
-                    <Skeleton className="h-10 w-40" />
-                  ) : (
-                    <h2 className="text-4xl font-bold text-foreground">
-                      ${totalValue.toFixed(2)}
-                    </h2>
-                  )}
-                </Card>
-                
-                <Card className="p-6">
-                  <p className="text-sm text-muted-foreground mb-2">SOL Balance</p>
-                  {loading ? (
-                    <Skeleton className="h-10 w-32" />
-                  ) : (
-                    <div className="flex items-baseline gap-2">
-                      <p className="text-3xl font-bold text-foreground">{solBalance.toFixed(4)}</p>
-                      <p className="text-sm text-muted-foreground">SOL</p>
-                    </div>
-                  )}
-                </Card>
-              </div>
+              <Card className="p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Total Portfolio</p>
+                    {loading ? (
+                      <Skeleton className="h-8 w-32" />
+                    ) : (
+                      <h2 className="text-2xl font-bold text-foreground">
+                        ${totalValue.toFixed(2)}
+                      </h2>
+                    )}
+                  </div>
+                  
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground mb-1">SOL Balance</p>
+                    {loading ? (
+                      <Skeleton className="h-8 w-24" />
+                    ) : (
+                      <div className="flex items-baseline gap-1.5">
+                        <p className="text-2xl font-bold text-foreground">{solBalance.toFixed(4)}</p>
+                        <p className="text-xs text-muted-foreground">SOL</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
 
               {/* Token Holdings */}
               <div>
@@ -233,46 +235,50 @@ export default function Wallet() {
                 </div>
                 
                 {loading ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {[1, 2, 3].map((i) => (
-                      <Card key={i} className="p-3">
+                      <Card key={i} className="p-4">
                         <div className="flex items-center gap-3">
-                          <Skeleton className="w-10 h-10 rounded-full" />
-                          <Skeleton className="h-5 w-24" />
-                          <div className="ml-auto flex gap-2">
-                            <Skeleton className="h-8 w-16" />
-                            <Skeleton className="h-8 w-16" />
+                          <Skeleton className="w-11 h-11 rounded-full" />
+                          <div className="flex-1">
+                            <Skeleton className="h-4 w-16 mb-2" />
+                            <Skeleton className="h-3 w-24" />
+                          </div>
+                          <Skeleton className="h-4 w-20" />
+                          <div className="flex gap-2">
+                            <Skeleton className="h-9 w-16" />
+                            <Skeleton className="h-9 w-16" />
                           </div>
                         </div>
                       </Card>
                     ))}
                   </div>
                 ) : tokenHoldings.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {tokenHoldings.map((token) => (
                       <Card 
                         key={token.mint} 
-                        className="p-4 hover:bg-secondary/20 transition-colors"
+                        className="p-4 hover:bg-accent/5 transition-all border-border/40"
                       >
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                           <img 
                             src={token.image} 
                             alt={token.symbol}
-                            className="w-12 h-12 rounded-full"
+                            className="w-11 h-11 rounded-full ring-2 ring-border/20"
                             onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/40?text=' + token.symbol.charAt(0);
+                              e.currentTarget.src = 'https://via.placeholder.com/44?text=' + token.symbol.charAt(0);
                             }}
                           />
                           
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-lg text-foreground">{token.symbol}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {token.balance.toLocaleString(undefined, { maximumFractionDigits: 2 })} tokens
+                            <h4 className="font-bold text-base text-foreground mb-0.5">{token.symbol}</h4>
+                            <p className="text-xs text-muted-foreground">
+                              {token.balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                             </p>
                           </div>
                           
-                          <div className="text-right mr-4">
-                            <p className="text-lg font-bold text-foreground">
+                          <div className="text-right mr-2">
+                            <p className="text-base font-bold text-foreground">
                               ${token.value.toFixed(2)}
                             </p>
                           </div>
@@ -280,7 +286,7 @@ export default function Wallet() {
                           <div className="flex gap-2">
                             <Button
                               size="sm"
-                              className="h-9 px-4 bg-primary hover:bg-primary/90"
+                              className="h-9 px-4 bg-primary hover:bg-primary/90 text-primary-foreground"
                               onClick={() => {
                                 setSelectedToken(token);
                                 setTradeAction('buy');
