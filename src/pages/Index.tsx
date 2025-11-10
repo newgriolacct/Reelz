@@ -103,8 +103,18 @@ const Index = () => {
   // Track current token on scroll and load more - AGGRESSIVE INFINITE SCROLL
   useEffect(() => {
     const container = scrollContainerRef.current;
-    console.log('🎯 Scroll effect mounted, container:', container ? 'EXISTS' : 'NULL');
-    if (!container) return;
+    console.log('🎯 Scroll effect running, container:', container ? 'EXISTS' : 'NULL');
+    console.log('🎯 Tokens length:', tokens.length);
+    
+    if (!container) {
+      console.log('⚠️ Container not ready yet');
+      return;
+    }
+    
+    if (tokens.length === 0) {
+      console.log('⚠️ No tokens loaded yet');
+      return;
+    }
 
     const handleScroll = () => {
       const currentTokens = tokensRef.current;
@@ -134,20 +144,21 @@ const Index = () => {
       }
     };
 
-    console.log('📍 Adding scroll listener');
+    console.log('📍 Adding scroll listener to container');
     container.addEventListener('scroll', handleScroll, { passive: true });
     
-    // Also trigger on mount if needed
-    setTimeout(() => {
-      console.log('⏰ Initial scroll check');
+    // Trigger initial check after a small delay to ensure layout is ready
+    const initialCheckTimer = setTimeout(() => {
+      console.log('⏰ Running initial scroll check');
       handleScroll();
-    }, 500);
+    }, 100);
     
     return () => {
       console.log('🧹 Removing scroll listener');
       container.removeEventListener('scroll', handleScroll);
+      clearTimeout(initialCheckTimer);
     };
-  }, [selectedNetwork]);
+  }, [tokens.length, selectedNetwork]);
 
   const handleTokenClick = (tokenId: string) => {
     const container = scrollContainerRef.current;
