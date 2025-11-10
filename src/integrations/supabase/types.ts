@@ -35,6 +35,85 @@ export type Database = {
         }
         Relationships: []
       }
+      token_comments: {
+        Row: {
+          comment: string
+          created_at: string
+          id: string
+          profile_id: string
+          token_id: string
+          updated_at: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          id?: string
+          profile_id: string
+          token_id: string
+          updated_at?: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          id?: string
+          profile_id?: string
+          token_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_comments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      token_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          token_chain: string
+          token_id: string
+          token_image: string | null
+          token_name: string
+          token_price: number | null
+          token_symbol: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          token_chain: string
+          token_id: string
+          token_image?: string | null
+          token_name: string
+          token_price?: number | null
+          token_symbol: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          token_chain?: string
+          token_id?: string
+          token_image?: string | null
+          token_name?: string
+          token_price?: number | null
+          token_symbol?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_favorites_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

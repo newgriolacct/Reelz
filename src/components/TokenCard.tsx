@@ -8,6 +8,8 @@ import { CommentsDrawer } from "./CommentsDrawer";
 import { formatPrice, formatCurrency } from "@/lib/formatters";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "./ui/skeleton";
+import { useTokenFavorites } from "@/hooks/useTokenFavorites";
+import { useTokenComments } from "@/hooks/useTokenComments";
 
 interface TokenCardProps {
   token: Token;
@@ -18,32 +20,17 @@ interface TokenCardProps {
 }
 
 export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = false }: TokenCardProps) => {
-  const [isLiked, setIsLiked] = useState(token.isLiked || false);
   const [showBuyDrawer, setShowBuyDrawer] = useState(false);
   const [showSellDrawer, setShowSellDrawer] = useState(false);
   const [showComments, setShowComments] = useState(false);
-  const [isFavorited, setIsFavorited] = useState(false);
   const [shouldLoadChart, setShouldLoadChart] = useState(isEagerLoad);
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const [comments, setComments] = useState([
-    {
-      id: "1",
-      userName: "CryptoTrader",
-      userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=1",
-      text: "This token is going to the moon! 🚀",
-      timestamp: "2h ago",
-      likes: 12,
-    },
-    {
-      id: "2",
-      userName: "TokenHunter",
-      userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=2",
-      text: "Great fundamentals and solid team behind this project",
-      timestamp: "5h ago",
-      likes: 8,
-    },
-  ]);
   const { toast } = useToast();
+  
+  const { isFavorited, addFavorite, removeFavorite } = useTokenFavorites();
+  const { comments } = useTokenComments(token.id);
+  
+  const isTokenFavorited = isFavorited(token.id);
   
   const isPositive = token.change24h >= 0;
 
@@ -70,34 +57,31 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
     return () => observer.disconnect();
   }, [shouldLoadChart]);
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    onLike?.(token.id);
-  };
-
-  const handleFavorite = () => {
-    setIsFavorited(!isFavorited);
-    onBookmark?.(token.id);
-    toast({
-      title: isFavorited ? "Removed from favorites" : "Added to favorites",
-      description: isFavorited ? "Token removed from your favorites" : "Token saved to your favorites",
-    });
-  };
-
-  const handleAddComment = (text: string) => {
-    const newComment = {
-      id: Date.now().toString(),
-      userName: "You",
-      userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=you",
-      text,
-      timestamp: "Just now",
-      likes: 0,
-    };
-    setComments([newComment, ...comments]);
-    toast({
-      title: "Comment posted!",
-      description: "Your comment has been added.",
-    });
+  const handleFavorite = async () => {
+    if (isTokenFavorited) {
+      const success = await removeFavorite(token.id);
+      if (success) {
+        toast({
+          title: "Removed from favorites",
+          description: "Token removed from your favorites",
+        });
+      }
+    } else {
+      const success = await addFavorite({
+        id: token.id,
+        symbol: token.symbol,
+        name: token.name,
+        chain: token.chain,
+        avatarUrl: token.avatarUrl,
+        price: token.price,
+      });
+      if (success) {
+        toast({
+          title: "Added to favorites",
+          description: "Token saved to your favorites",
+        });
+      }
+    }
   };
 
   return (
@@ -280,18 +264,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
         {/* Right Side Actions (TikTok style) */}
         <div className="absolute right-2 bottom-40 flex flex-col gap-3 z-10">
           <button
-            onClick={handleLike}
-            className="flex flex-col items-center gap-0.5"
-          >
-            <div className="w-11 h-11 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center">
-              <Heart 
-                className={`w-5 h-5 ${isLiked ? 'fill-destructive text-destructive' : 'text-foreground'}`} 
-              />
-            </div>
-            <span className="text-[10px] font-medium text-foreground">{token.likes + (isLiked ? 1 : 0)}</span>
-          </button>
-
-          <button
             onClick={() => setShowComments(true)}
             className="flex flex-col items-center gap-0.5"
           >
@@ -307,7 +279,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           >
             <div className="w-11 h-11 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center">
               <Bookmark 
-                className={`w-5 h-5 ${isFavorited ? 'fill-primary text-primary' : 'text-foreground'}`} 
+                className={`w-5 h-5 ${isTokenFavorited ? 'fill-primary text-primary' : 'text-foreground'}`} 
               />
             </div>
             <span className="text-[10px] font-medium text-foreground">Save</span>
@@ -330,9 +302,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
       <CommentsDrawer
         open={showComments}
         onOpenChange={setShowComments}
+        tokenId={token.id}
         tokenSymbol={token.symbol}
-        comments={comments}
-        onAddComment={handleAddComment}
       />
     </>
   );

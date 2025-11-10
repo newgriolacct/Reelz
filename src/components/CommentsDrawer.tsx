@@ -4,41 +4,39 @@ import { Textarea } from "./ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useState } from "react";
 import { Send, MessageSquarePlus } from "lucide-react";
-
-interface Comment {
-  id: string;
-  userName: string;
-  userAvatar?: string;
-  text: string;
-  timestamp: string;
-  likes: number;
-}
+import { useTokenComments } from "@/hooks/useTokenComments";
+import { formatDistanceToNow } from "date-fns";
 
 interface CommentsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  tokenId: string;
   tokenSymbol: string;
-  comments: Comment[];
-  onAddComment: (text: string) => void;
 }
 
 export const CommentsDrawer = ({
   open,
   onOpenChange,
+  tokenId,
   tokenSymbol,
-  comments,
-  onAddComment,
 }: CommentsDrawerProps) => {
   const [commentText, setCommentText] = useState("");
   const [isCommenting, setIsCommenting] = useState(false);
+  const { comments, addComment, loading } = useTokenComments(tokenId);
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (commentText.trim()) {
-      onAddComment(commentText.trim());
-      setCommentText("");
-      setIsCommenting(false);
+      const success = await addComment(commentText.trim());
+      if (success) {
+        setCommentText("");
+        setIsCommenting(false);
+      }
     }
+  };
+
+  const formatWalletAddress = (address: string) => {
+    return `${address.slice(0, 4)}...${address.slice(-4)}`;
   };
 
   return (
@@ -53,7 +51,11 @@ export const CommentsDrawer = ({
 
         {/* Comments List */}
         <div className="flex-1 overflow-y-auto px-4 py-2">
-          {comments.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-muted-foreground text-sm">Loading comments...</p>
+            </div>
+          ) : comments.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <p className="text-muted-foreground text-sm">No comments yet</p>
               <p className="text-muted-foreground text-xs mt-1">Be the first to comment!</p>
@@ -63,20 +65,21 @@ export const CommentsDrawer = ({
               {comments.map((comment) => (
                 <div key={comment.id} className="flex gap-3">
                   <Avatar className="w-8 h-8 flex-shrink-0">
-                    <AvatarImage src={comment.userAvatar} />
-                    <AvatarFallback>{comment.userName[0]}</AvatarFallback>
+                    <AvatarFallback>
+                      {comment.wallet_address ? comment.wallet_address.slice(0, 2).toUpperCase() : '??'}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
                       <span className="font-semibold text-sm text-foreground">
-                        {comment.userName}
+                        {comment.wallet_address ? formatWalletAddress(comment.wallet_address) : 'Anonymous'}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {comment.timestamp}
+                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                       </span>
                     </div>
                     <p className="text-sm text-foreground mt-0.5 break-words">
-                      {comment.text}
+                      {comment.comment}
                     </p>
                   </div>
                 </div>
