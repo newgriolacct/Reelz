@@ -35,7 +35,7 @@ export const useTokenFavorites = () => {
         .from('profiles')
         .select('id')
         .eq('wallet_address', walletAddress)
-        .single();
+        .maybeSingle();
 
       if (!profile) {
         setFavorites([]);
@@ -83,14 +83,14 @@ export const useTokenFavorites = () => {
         .from('profiles')
         .select('id')
         .eq('wallet_address', walletAddress)
-        .single();
+        .maybeSingle();
 
       if (!profile) {
         const { data: newProfile, error: profileError } = await supabase
           .from('profiles')
           .insert([{ wallet_address: walletAddress }])
           .select()
-          .single();
+          .maybeSingle();
         
         if (profileError) throw profileError;
         profile = newProfile;
@@ -134,7 +134,7 @@ export const useTokenFavorites = () => {
         .from('profiles')
         .select('id')
         .eq('wallet_address', walletAddress)
-        .single();
+        .maybeSingle();
 
       if (!profile) return false;
 

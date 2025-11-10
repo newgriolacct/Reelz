@@ -29,7 +29,7 @@ export const useTokenLikes = (tokenId: string) => {
           .from('profiles')
           .select('id')
           .eq('wallet_address', walletAddress)
-          .single();
+          .maybeSingle();
 
         if (profile) {
           const { data: userLike } = await supabase
@@ -37,7 +37,7 @@ export const useTokenLikes = (tokenId: string) => {
             .select('id')
             .eq('profile_id', profile.id)
             .eq('token_id', tokenId)
-            .single();
+            .maybeSingle();
 
           setIsLiked(!!userLike);
         }
@@ -66,14 +66,14 @@ export const useTokenLikes = (tokenId: string) => {
         .from('profiles')
         .select('id')
         .eq('wallet_address', walletAddress)
-        .single();
+        .maybeSingle();
 
       if (!profile) {
         const { data: newProfile, error: profileError } = await supabase
           .from('profiles')
           .insert([{ wallet_address: walletAddress }])
           .select()
-          .single();
+          .maybeSingle();
         
         if (profileError) throw profileError;
         profile = newProfile;
