@@ -116,10 +116,15 @@ const Index = () => {
           setCurrentTokenId(currentTokens[currentIndex].id);
         }
         
-        // Load more when 5 tokens away from bottom - smooth infinite scroll
+        // Load more when 2 tokens away from bottom - aggressive infinite scroll
         const tokensFromBottom = (scrollHeight - scrollTop - clientHeight) / windowHeight;
-        if (tokensFromBottom < 5 && !isLoadingMoreRef.current) {
-          console.log('Loading more tokens...');
+        const scrollProgress = ((scrollTop + clientHeight) / scrollHeight) * 100;
+        
+        console.log(`Scroll: ${scrollProgress.toFixed(1)}% | Tokens from bottom: ${tokensFromBottom.toFixed(1)} | Total tokens: ${currentTokens.length}`);
+        
+        // Trigger when 80% scrolled OR within 2 tokens of bottom
+        if ((scrollProgress > 80 || tokensFromBottom < 2) && !isLoadingMoreRef.current) {
+          console.log('🔄 Triggering load more tokens...');
           loadMoreTokens();
         }
       }, 150);
