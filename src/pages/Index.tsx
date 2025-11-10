@@ -100,7 +100,7 @@ const Index = () => {
     loadTokens();
   }, [selectedNetwork]);
 
-  // Track current token on scroll and load more - AGGRESSIVE INFINITE SCROLL
+  // Track current token on scroll and load more - THROTTLED FOR PERFORMANCE
   useEffect(() => {
     const container = scrollContainerRef.current;
     console.log('🎯 Scroll effect running, container:', container ? 'EXISTS' : 'NULL');
@@ -116,38 +116,53 @@ const Index = () => {
       return;
     }
 
+    let scrollTimeout: NodeJS.Timeout;
+    let lastScrollTime = 0;
+    const THROTTLE_MS = 300; // Throttle to reduce lag
+
     const handleScroll = () => {
-      const currentTokens = tokensRef.current;
-      if (currentTokens.length === 0) return;
+      const now = Date.now();
       
-      const scrollTop = container.scrollTop;
-      const scrollHeight = container.scrollHeight;
-      const clientHeight = container.clientHeight;
-      const windowHeight = window.innerHeight;
-      
-      // Update current token
-      const currentIndex = Math.round(scrollTop / windowHeight);
-      if (currentTokens[currentIndex]) {
-        setCurrentTokenId(currentTokens[currentIndex].id);
+      // Throttle scroll events for performance
+      if (now - lastScrollTime < THROTTLE_MS) {
+        return;
       }
+      lastScrollTime = now;
       
-      // SUPER AGGRESSIVE: Load when scrolled past 70% OR within 3 tokens
-      const tokensFromBottom = (scrollHeight - scrollTop - clientHeight) / windowHeight;
-      const scrollProgress = ((scrollTop + clientHeight) / scrollHeight) * 100;
-      
-      console.log(`📊 Scroll: ${scrollProgress.toFixed(0)}% | Distance: ${tokensFromBottom.toFixed(1)} tokens | Total: ${currentTokens.length} | Loading: ${isLoadingMoreRef.current}`);
-      
-      // Trigger early and often
-      if ((scrollProgress > 70 || tokensFromBottom < 3) && !isLoadingMoreRef.current) {
-        console.log('🚀 LOADING MORE TOKENS NOW!');
-        loadMoreTokens();
-      }
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        const currentTokens = tokensRef.current;
+        if (currentTokens.length === 0) return;
+        
+        const scrollTop = container.scrollTop;
+        const scrollHeight = container.scrollHeight;
+        const clientHeight = container.clientHeight;
+        const windowHeight = window.innerHeight;
+        
+        // Update current token
+        const currentIndex = Math.round(scrollTop / windowHeight);
+        if (currentTokens[currentIndex]) {
+          setCurrentTokenId(currentTokens[currentIndex].id);
+        }
+        
+        // Load when scrolled past 75% OR within 4 tokens of bottom
+        const tokensFromBottom = (scrollHeight - scrollTop - clientHeight) / windowHeight;
+        const scrollProgress = ((scrollTop + clientHeight) / scrollHeight) * 100;
+        
+        console.log(`📊 Scroll: ${scrollProgress.toFixed(0)}% | Distance: ${tokensFromBottom.toFixed(1)} tokens | Total: ${currentTokens.length}`);
+        
+        // Trigger load
+        if ((scrollProgress > 75 || tokensFromBottom < 4) && !isLoadingMoreRef.current) {
+          console.log('🚀 Loading more tokens...');
+          loadMoreTokens();
+        }
+      }, 100);
     };
 
-    console.log('📍 Adding scroll listener to container');
+    console.log('📍 Adding throttled scroll listener');
     container.addEventListener('scroll', handleScroll, { passive: true });
     
-    // Trigger initial check after a small delay to ensure layout is ready
+    // Initial check
     const initialCheckTimer = setTimeout(() => {
       console.log('⏰ Running initial scroll check');
       handleScroll();
@@ -156,6 +171,7 @@ const Index = () => {
     return () => {
       console.log('🧹 Removing scroll listener');
       container.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
       clearTimeout(initialCheckTimer);
     };
   }, [tokens.length, selectedNetwork]);
