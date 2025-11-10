@@ -1,11 +1,13 @@
 import { Heart } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { AppLayout } from "@/components/AppLayout";
 import { Card } from "@/components/ui/card";
 
 export default function Favorites() {
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="max-w-2xl mx-auto px-4 py-6">
+    <AppLayout showTrendingBar>
+      <div className="min-h-screen bg-background pb-24 pt-20">
+        <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-foreground mb-2">Favorites</h1>
@@ -22,8 +24,9 @@ export default function Favorites() {
             Start adding tokens to your favorites to see them here
           </p>
         </Card>
+        </div>
+        <BottomNav />
       </div>
-      <BottomNav />
-    </div>
+    </AppLayout>
   );
 }

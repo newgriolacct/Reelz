@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { BottomNav } from "@/components/BottomNav";
+import { AppLayout } from "@/components/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -9,8 +10,9 @@ export default function Discover() {
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="max-w-2xl mx-auto px-4 py-6">
+    <AppLayout showTrendingBar>
+      <div className="min-h-screen bg-background pb-24 pt-20">
+        <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-foreground mb-2">Discover</h1>
@@ -58,8 +60,9 @@ export default function Discover() {
             </div>
           </div>
         )}
+        </div>
+        <BottomNav />
       </div>
-      <BottomNav />
-    </div>
+    </AppLayout>
   );
 }
