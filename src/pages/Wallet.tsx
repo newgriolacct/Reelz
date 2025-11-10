@@ -157,27 +157,29 @@ export default function Wallet() {
       <div className="min-h-screen bg-background pb-24 pt-20">
         <div className="max-w-3xl mx-auto px-4 py-6">
           {/* Header */}
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Wallet</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {connected ? publicKey?.toString().slice(0, 4) + '...' + publicKey?.toString().slice(-4) : 'Not connected'}
-              </p>
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-bold text-foreground">Wallet</h1>
+              <div className="flex gap-2">
+                {connected && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={fetchWalletData}
+                    disabled={loading}
+                    className="h-10 w-10"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  </Button>
+                )}
+                <WalletMultiButton className="!bg-primary hover:!bg-primary/90 !h-10 !text-sm" />
+              </div>
             </div>
-            <div className="flex gap-2">
-              {connected && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={fetchWalletData}
-                  disabled={loading}
-                  className="h-9 w-9"
-                >
-                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                </Button>
-              )}
-              <WalletMultiButton className="!bg-primary hover:!bg-primary/90 !h-9 !text-sm" />
-            </div>
+            {connected && (
+              <div className="text-xs font-mono text-muted-foreground bg-secondary/30 rounded-lg px-3 py-2 inline-block">
+                {publicKey?.toString().slice(0, 8)}...{publicKey?.toString().slice(-8)}
+              </div>
+            )}
           </div>
 
           {!connected ? (
@@ -194,44 +196,30 @@ export default function Wallet() {
           ) : (
             <>
               {/* Balance Card */}
-              <Card className="p-6 mb-6 bg-card">
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">
-                    Total Value
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <Card className="p-6 md:col-span-2">
+                  <p className="text-sm text-muted-foreground mb-2">Total Portfolio</p>
                   {loading ? (
-                    <Skeleton className="h-12 w-48 mx-auto mb-4" />
+                    <Skeleton className="h-10 w-40" />
                   ) : (
-                    <h2 className="text-4xl font-bold text-foreground mb-4">
+                    <h2 className="text-4xl font-bold text-foreground">
                       ${totalValue.toFixed(2)}
                     </h2>
                   )}
-                  
-                  <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-                    <div className="p-3 bg-secondary/50 rounded-lg">
-                      {loading ? (
-                        <Skeleton className="h-5 w-20 mx-auto" />
-                      ) : (
-                        <>
-                          <p className="text-xs text-muted-foreground mb-1">SOL</p>
-                          <p className="text-lg font-bold text-foreground">{solBalance.toFixed(4)}</p>
-                        </>
-                      )}
+                </Card>
+                
+                <Card className="p-6">
+                  <p className="text-sm text-muted-foreground mb-2">SOL Balance</p>
+                  {loading ? (
+                    <Skeleton className="h-10 w-32" />
+                  ) : (
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-3xl font-bold text-foreground">{solBalance.toFixed(4)}</p>
+                      <p className="text-sm text-muted-foreground">SOL</p>
                     </div>
-                    
-                    <div className="p-3 bg-secondary/50 rounded-lg">
-                      {loading ? (
-                        <Skeleton className="h-5 w-20 mx-auto" />
-                      ) : (
-                        <>
-                          <p className="text-xs text-muted-foreground mb-1">Tokens</p>
-                          <p className="text-lg font-bold text-foreground">{tokenHoldings.length}</p>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Card>
+                  )}
+                </Card>
+              </div>
 
               {/* Token Holdings */}
               <div>
@@ -261,70 +249,60 @@ export default function Wallet() {
                   </div>
                 ) : tokenHoldings.length > 0 ? (
                   <div className="space-y-2">
-                    {tokenHoldings.map((token) => {
-                      const priceChange = Math.random() * 20 - 10;
-                      const isPositive = priceChange >= 0;
-                      
-                      return (
-                        <Card 
-                          key={token.mint} 
-                          className="p-3 hover:bg-secondary/30 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <img 
-                              src={token.image} 
-                              alt={token.symbol}
-                              className="w-10 h-10 rounded-full"
-                              onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/40?text=' + token.symbol.charAt(0);
-                              }}
-                            />
-                            
-                            <div className="flex-1">
-                              <div className="flex items-baseline gap-2">
-                                <h4 className="font-bold text-foreground">{token.symbol}</h4>
-                                <span className="text-xs text-muted-foreground">
-                                  {token.balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                                </span>
-                              </div>
-                              <p className="text-sm font-semibold text-foreground">
-                                ${token.value.toFixed(2)}
-                              </p>
-                            </div>
-                            
-                            <div className={`text-xs font-semibold px-2 py-1 rounded ${
-                              isPositive ? 'text-success' : 'text-destructive'
-                            }`}>
-                              {isPositive ? '+' : ''}{priceChange.toFixed(1)}%
-                            </div>
-                            
-                            <div className="flex gap-1">
-                              <Button
-                                size="sm"
-                                className="h-8 px-3 bg-success hover:bg-success/90 text-success-foreground"
-                                onClick={() => {
-                                  setSelectedToken(token);
-                                  setTradeAction('buy');
-                                }}
-                              >
-                                Buy
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 px-3 border-destructive/40 text-destructive hover:bg-destructive/10"
-                                onClick={() => {
-                                  setSelectedToken(token);
-                                  setTradeAction('sell');
-                                }}
-                              >
-                                Sell
-                              </Button>
-                            </div>
+                    {tokenHoldings.map((token) => (
+                      <Card 
+                        key={token.mint} 
+                        className="p-4 hover:bg-secondary/20 transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <img 
+                            src={token.image} 
+                            alt={token.symbol}
+                            className="w-12 h-12 rounded-full"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/40?text=' + token.symbol.charAt(0);
+                            }}
+                          />
+                          
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-lg text-foreground">{token.symbol}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {token.balance.toLocaleString(undefined, { maximumFractionDigits: 2 })} tokens
+                            </p>
                           </div>
-                        </Card>
-                      );
-                    })}
+                          
+                          <div className="text-right mr-4">
+                            <p className="text-lg font-bold text-foreground">
+                              ${token.value.toFixed(2)}
+                            </p>
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              className="h-9 px-4 bg-primary hover:bg-primary/90"
+                              onClick={() => {
+                                setSelectedToken(token);
+                                setTradeAction('buy');
+                              }}
+                            >
+                              Buy
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-9 px-4"
+                              onClick={() => {
+                                setSelectedToken(token);
+                                setTradeAction('sell');
+                              }}
+                            >
+                              Sell
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
                 ) : (
                   <Card className="p-8 text-center bg-secondary/20">
