@@ -42,52 +42,66 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
 /**
  * Fetch tokens for scrolling - INFINITE SCROLLING like TikTok
  * NO POOL CAP: Grows indefinitely for maximum variety
- * RECYCLING: Only after 200+ tokens or when API fails
- * API SAFE: Respects rate limits with timeouts
+ * TRULY UNIQUE: Filters out duplicate token IDs
+ * RECYCLING: Only after 200+ unique tokens shown
  */
 let tokenPool: Token[] = [];
-let tokenIndex = 0; // Track position in pool
+let tokenIndex = 0;
+const seenTokenIds = new Set<string>();
 
 export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = false): Promise<Token[]> => {
   const network = chainId || 'solana';
   
-  // Reset pool when network changes
   if (reset) {
     tokenPool = [];
     tokenIndex = 0;
+    seenTokenIds.clear();
   }
   
-  console.log(`🔄 Fetching tokens (pool: ${tokenPool.length}, shown: ${tokenIndex})...`);
+  console.log(`🔄 Pool: ${tokenPool.length} | Shown: ${tokenIndex} | Unique IDs: ${seenTokenIds.size}`);
   
   // If we have fresh unseen tokens in pool, use those first
   if (tokenIndex < tokenPool.length) {
     const batch = tokenPool.slice(tokenIndex, tokenIndex + 20);
     if (batch.length === 20) {
       tokenIndex += 20;
-      console.log(`✅ Using ${batch.length} tokens from pool (${tokenPool.length - tokenIndex} remaining)`);
+      console.log(`✅ Using ${batch.length} from pool (${tokenPool.length - tokenIndex} remaining)`);
       return batch;
     }
   }
   
   try {
-    // Try to fetch fresh tokens from DexScreener
+    // Fetch fresh tokens from DexScreener
     const pairs = await fetchMixedDexTokens();
     
     if (pairs.length > 0) {
       const converted = pairs.map(pair => convertDexPairToToken(pair));
       
-      // NO CAP: Add all new tokens to pool
-      tokenPool = [...tokenPool, ...converted];
+      // FILTER OUT DUPLICATES: Only add tokens we haven't seen
+      const newTokens = converted.filter(token => {
+        if (seenTokenIds.has(token.id)) {
+          return false; // Skip duplicates
+        }
+        seenTokenIds.add(token.id);
+        return true;
+      });
       
-      // Cache the pool with 1 hour TTL
+      if (newTokens.length > 0) {
+        // Add only NEW unique tokens to pool
+        tokenPool = [...tokenPool, ...newTokens];
+        
+        console.log(`✅ Added ${newTokens.length} NEW tokens (filtered ${converted.length - newTokens.length} dupes) | Pool: ${tokenPool.length}`);
+      } else {
+        console.log(`⚠️ All ${converted.length} tokens were duplicates`);
+      }
+      
+      // Cache the pool
       const cacheKey = `token_pool_${network}`;
       tokenCache.set(cacheKey, tokenPool, 60 * 60 * 1000);
       
-      // Return next batch from the new tokens
+      // Return next batch
       const batch = tokenPool.slice(tokenIndex, tokenIndex + 20);
       tokenIndex += 20;
-      
-      console.log(`✅ Fetched ${converted.length} fresh tokens | Pool: ${tokenPool.length} | Shown: ${tokenIndex}`);
       
       return batch;
     }
@@ -95,34 +109,30 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
     console.error('DexScreener error:', error);
   }
   
-  // RECYCLING: Only if we've shown 200+ tokens OR no pool at all
+  // RECYCLING: Only after showing 200+ unique tokens
   if (tokenPool.length > 0) {
     if (tokenIndex >= 200) {
-      console.log('♻️ Recycling: Shown 200+ tokens, reshuffling pool...');
+      console.log('♻️ Shown 200+ tokens, reshuffling...');
       tokenPool = [...tokenPool].sort(() => 0.5 - Math.random());
       tokenIndex = 0;
     }
     
-    // Return next batch (recycled or fresh)
     const batch = tokenPool.slice(tokenIndex, tokenIndex + 20);
     tokenIndex += 20;
     
-    console.log(`📦 Returning ${batch.length} tokens (recycled: ${tokenIndex > tokenPool.length})`);
+    console.log(`📦 Returning ${batch.length} tokens | Recycling: ${tokenIndex > tokenPool.length}`);
     return batch;
   }
   
-  // Try to restore from cache if pool is empty
+  // Restore from cache
   const cacheKey = `token_pool_${network}`;
   const cached = tokenCache.get<Token[]>(cacheKey);
-  if (cached && cached.length > 0) {
-    console.log('📦 Restoring token pool from cache');
+  if (cached?.length) {
     tokenPool = cached;
     tokenIndex = 0;
-    const batch = tokenPool.slice(0, 20);
-    tokenIndex = 20;
-    return batch;
+    cached.forEach(t => seenTokenIds.add(t.id));
+    return tokenPool.slice(0, 20);
   }
   
-  console.warn('No tokens available');
   return [];
 };
