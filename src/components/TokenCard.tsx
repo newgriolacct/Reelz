@@ -29,10 +29,17 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const { toast } = useToast();
   
   const { isFavorited, addFavorite, removeFavorite } = useTokenFavorites();
-  const { comments } = useTokenComments(token.id);
+  const { comments, refetch: refetchComments } = useTokenComments(token.id);
   const { likeCount, isLiked, toggleLike } = useTokenLikes(token.id);
   
   const isTokenFavorited = isFavorited(token.id);
+  
+  // Update comments when drawer closes to refresh count
+  useEffect(() => {
+    if (!showComments) {
+      refetchComments();
+    }
+  }, [showComments, refetchComments]);
   
   const isPositive = token.change24h >= 0;
 
