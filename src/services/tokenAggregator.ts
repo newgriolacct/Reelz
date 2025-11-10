@@ -40,36 +40,65 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
 };
 
 /**
- * Fetch tokens for scrolling - Fetches fresh tokens from DexScreener on each call
- * LAZY LOADING: Fetches new tokens as you scroll, not all at once
+ * Fetch tokens for scrolling - INFINITE SCROLLING like TikTok
+ * LAZY LOADING: Fetches fresh tokens as you scroll
+ * RECYCLING: When API returns nothing, shuffles and reuses existing tokens
  * CACHE: 1 hour TTL - fresh data when you return later
  */
+let tokenPool: Token[] = [];
+
 export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = false): Promise<Token[]> => {
   const network = chainId || 'solana';
-  const cacheKey = `tokens_dex_${network}_${Date.now()}`;
   
-  console.log(`🔄 Fetching fresh DexScreener tokens (mcRange: 30k-10M)...`);
+  // Reset pool when network changes
+  if (reset) {
+    tokenPool = [];
+  }
+  
+  console.log(`🔄 Fetching fresh DexScreener tokens (pool: ${tokenPool.length})...`);
   
   try {
-    // Always fetch fresh tokens from DexScreener
+    // Try to fetch fresh tokens from DexScreener
     const pairs = await fetchMixedDexTokens();
     
     if (pairs.length > 0) {
       const converted = pairs.map(pair => convertDexPairToToken(pair));
       
-      // Cache with 1 hour TTL
-      tokenCache.set(cacheKey, converted, 60 * 60 * 1000);
+      // Add new tokens to pool (avoid exact duplicates)
+      const newTokens = converted.filter(t => !tokenPool.some(p => p.id === t.id));
+      tokenPool = [...tokenPool, ...newTokens];
+      
+      // Cache the pool with 1 hour TTL
+      const cacheKey = `token_pool_${network}`;
+      tokenCache.set(cacheKey, tokenPool, 60 * 60 * 1000);
       
       // Return batch of 20 tokens
       const batch = converted.slice(0, 20);
-      console.log(`✅ Fetched ${batch.length} fresh tokens`);
+      console.log(`✅ Fetched ${batch.length} fresh tokens (pool now: ${tokenPool.length})`);
       
       return batch;
     }
   } catch (error) {
-    console.error('DexScreener error:', error);
+    console.error('DexScreener error, using recycled tokens:', error);
   }
   
-  console.warn('No tokens available from DexScreener');
+  // RECYCLING: If API fails or returns nothing, shuffle from pool
+  if (tokenPool.length > 0) {
+    console.log('♻️ Recycling tokens from pool - infinite scroll mode');
+    const shuffled = [...tokenPool].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 20);
+  }
+  
+  // Try to restore from cache if pool is empty
+  const cacheKey = `token_pool_${network}`;
+  const cached = tokenCache.get<Token[]>(cacheKey);
+  if (cached && cached.length > 0) {
+    console.log('📦 Restoring token pool from cache');
+    tokenPool = cached;
+    const shuffled = [...tokenPool].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 20);
+  }
+  
+  console.warn('No tokens available - pool is empty');
   return [];
 };
