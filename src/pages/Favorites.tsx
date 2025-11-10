@@ -1,19 +1,115 @@
-import { Heart, Trash2 } from "lucide-react";
+import { Heart, Trash2, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { AppLayout } from "@/components/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useTokenFavorites } from "@/hooks/useTokenFavorites";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { useEffect, useState } from "react";
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+
+interface TokenHolding {
+  mint: string;
+  balance: number;
+  value: number;
+}
 
 export default function Favorites() {
   const { favorites, loading, removeFavorite } = useTokenFavorites();
   const navigate = useNavigate();
+  const { publicKey, connected } = useWallet();
+  const { connection } = useConnection();
+  const [holdings, setHoldings] = useState<Map<string, TokenHolding>>(new Map());
+  const [loadingHoldings, setLoadingHoldings] = useState(false);
+  const [tokenPrices, setTokenPrices] = useState<Map<string, { price: number; change24h: number }>>(new Map());
 
   const handleRemove = async (tokenId: string) => {
     await removeFavorite(tokenId);
   };
+
+  useEffect(() => {
+    const fetchWalletHoldings = async () => {
+      if (!connected || !publicKey) {
+        setHoldings(new Map());
+        return;
+      }
+
+      setLoadingHoldings(true);
+      try {
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+          publicKey,
+          { programId: TOKEN_PROGRAM_ID }
+        );
+
+        const holdingsMap = new Map<string, TokenHolding>();
+        for (const { account } of tokenAccounts.value) {
+          const parsedInfo = account.data.parsed.info;
+          const mint = parsedInfo.mint;
+          const balance = parsedInfo.tokenAmount.uiAmount;
+
+          if (balance > 0) {
+            holdingsMap.set(mint, {
+              mint,
+              balance,
+              value: 0, // Will be calculated with price
+            });
+          }
+        }
+        setHoldings(holdingsMap);
+      } catch (error) {
+        console.error('Error fetching wallet holdings:', error);
+      } finally {
+        setLoadingHoldings(false);
+      }
+    };
+
+    fetchWalletHoldings();
+  }, [connected, publicKey, connection]);
+
+  useEffect(() => {
+    const fetchTokenPrices = async () => {
+      if (favorites.length === 0) return;
+
+      const pricesMap = new Map<string, { price: number; change24h: number }>();
+      
+      for (const favorite of favorites) {
+        try {
+          const response = await fetch(
+            `https://api.dexscreener.com/latest/dex/tokens/${favorite.token_id}`
+          );
+          const data = await response.json();
+          
+          if (data.pairs && data.pairs.length > 0) {
+            const pair = data.pairs[0];
+            pricesMap.set(favorite.token_id, {
+              price: parseFloat(pair.priceUsd) || 0,
+              change24h: pair.priceChange?.h24 || 0,
+            });
+          }
+        } catch (err) {
+          console.error(`Failed to fetch price for ${favorite.token_id}:`, err);
+        }
+      }
+      
+      setTokenPrices(pricesMap);
+
+      // Update holdings values with prices
+      const updatedHoldings = new Map(holdings);
+      updatedHoldings.forEach((holding, mint) => {
+        const priceData = pricesMap.get(mint);
+        if (priceData) {
+          holding.value = holding.balance * priceData.price;
+        }
+      });
+      setHoldings(updatedHoldings);
+    };
+
+    fetchTokenPrices();
+  }, [favorites]);
 
   return (
     <AppLayout showTrendingBar>
@@ -54,53 +150,91 @@ export default function Favorites() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {favorites.map((favorite) => (
-                <Card 
-                  key={favorite.id} 
-                  className="p-4 hover:bg-accent/5 transition-all border-border/40"
-                >
-                  <div className="flex items-center gap-3">
-                    <img 
-                      src={favorite.token_image || `https://api.dicebear.com/7.x/shapes/svg?seed=${favorite.token_symbol}`} 
-                      alt={favorite.token_symbol}
-                      className="w-12 h-12 rounded-full ring-2 ring-border/20"
-                      onError={(e) => {
-                        e.currentTarget.src = `https://api.dicebear.com/7.x/shapes/svg?seed=${favorite.token_symbol}`;
-                      }}
-                    />
-                    
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-base text-foreground">{favorite.token_symbol}</h4>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-xs text-muted-foreground truncate">
-                          {favorite.token_name}
-                        </p>
-                        <span className="text-xs text-muted-foreground">•</span>
-                        <p className="text-xs text-muted-foreground">
-                          {favorite.token_chain}
-                        </p>
+              {favorites.map((favorite) => {
+                const priceData = tokenPrices.get(favorite.token_id);
+                const holding = holdings.get(favorite.token_id);
+                const isPositive = (priceData?.change24h || 0) >= 0;
+
+                return (
+                  <Card 
+                    key={favorite.id} 
+                    className="p-4 hover:bg-accent/5 transition-all border-border/40"
+                  >
+                    <div className="flex items-start gap-3">
+                      <img 
+                        src={favorite.token_image || `https://api.dicebear.com/7.x/shapes/svg?seed=${favorite.token_symbol}`} 
+                        alt={favorite.token_symbol}
+                        className="w-12 h-12 rounded-full ring-2 ring-border/20 flex-shrink-0"
+                        onError={(e) => {
+                          e.currentTarget.src = `https://api.dicebear.com/7.x/shapes/svg?seed=${favorite.token_symbol}`;
+                        }}
+                      />
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-bold text-base text-foreground">{favorite.token_symbol}</h4>
+                          {holding && (
+                            <Badge variant="outline" className="h-5 px-1.5 text-[10px] gap-1">
+                              <Wallet className="h-3 w-3" />
+                              Holding
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                          <span className="truncate">{favorite.token_name}</span>
+                          <span>•</span>
+                          <span>{favorite.token_chain}</span>
+                        </div>
+
+                        {priceData && (
+                          <div className="flex items-center gap-3 mb-2">
+                            <div>
+                              <p className="text-sm font-bold text-foreground">
+                                ${priceData.price.toFixed(6)}
+                              </p>
+                            </div>
+                            <div className={`flex items-center gap-1 text-xs font-semibold ${
+                              isPositive ? 'text-success' : 'text-destructive'
+                            }`}>
+                              {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                              {isPositive ? '+' : ''}{priceData.change24h.toFixed(2)}%
+                            </div>
+                          </div>
+                        )}
+
+                        {holding && priceData && (
+                          <div className="bg-secondary/30 rounded-lg p-2 mt-2">
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <p className="text-muted-foreground">Balance</p>
+                                <p className="font-bold text-foreground">
+                                  {holding.balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Value</p>
+                                <p className="font-bold text-foreground">
+                                  ${(holding.balance * priceData.price).toFixed(2)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
+                      
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                        onClick={() => handleRemove(favorite.token_id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    
-                    {favorite.token_price && (
-                      <div className="text-right mr-2">
-                        <p className="text-base font-bold text-foreground">
-                          ${Number(favorite.token_price).toFixed(6)}
-                        </p>
-                      </div>
-                    )}
-                    
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleRemove(favorite.token_id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
