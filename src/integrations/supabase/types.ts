@@ -114,6 +114,35 @@ export type Database = {
           },
         ]
       }
+      token_likes: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          token_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          token_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          token_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_likes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
