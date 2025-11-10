@@ -74,6 +74,7 @@ export default function Favorites() {
     const fetchTokenPrices = async () => {
       if (favorites.length === 0) return;
 
+      console.log('Fetching prices for favorites:', favorites.length);
       const pricesMap = new Map<string, { price: number; change24h: number }>();
       
       for (const favorite of favorites) {
@@ -85,31 +86,44 @@ export default function Favorites() {
           
           if (data.pairs && data.pairs.length > 0) {
             const pair = data.pairs[0];
-            pricesMap.set(favorite.token_id, {
+            const priceInfo = {
               price: parseFloat(pair.priceUsd) || 0,
               change24h: pair.priceChange?.h24 || 0,
-            });
+            };
+            pricesMap.set(favorite.token_id, priceInfo);
+            console.log(`Price for ${favorite.token_symbol}:`, priceInfo);
           }
         } catch (err) {
           console.error(`Failed to fetch price for ${favorite.token_id}:`, err);
         }
       }
       
+      console.log('Setting token prices:', pricesMap.size);
       setTokenPrices(pricesMap);
-
-      // Update holdings values with prices
-      const updatedHoldings = new Map(holdings);
-      updatedHoldings.forEach((holding, mint) => {
-        const priceData = pricesMap.get(mint);
-        if (priceData) {
-          holding.value = holding.balance * priceData.price;
-        }
-      });
-      setHoldings(updatedHoldings);
     };
 
     fetchTokenPrices();
   }, [favorites]);
+
+  // Update holdings values when prices change
+  useEffect(() => {
+    if (holdings.size === 0 || tokenPrices.size === 0) return;
+
+    const updatedHoldings = new Map(holdings);
+    let updated = false;
+    
+    updatedHoldings.forEach((holding, mint) => {
+      const priceData = tokenPrices.get(mint);
+      if (priceData && holding.value === 0) {
+        holding.value = holding.balance * priceData.price;
+        updated = true;
+      }
+    });
+
+    if (updated) {
+      setHoldings(new Map(updatedHoldings));
+    }
+  }, [tokenPrices, holdings]);
 
   return (
     <AppLayout showTrendingBar>
