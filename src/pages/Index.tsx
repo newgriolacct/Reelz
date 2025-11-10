@@ -19,34 +19,42 @@ const Index = () => {
   const isLoadingMoreRef = useRef(false);
   const tokensRef = useRef<Token[]>([]);
 
-  const loadMoreTokens = useCallback(async () => {
-    if (isLoadingMoreRef.current) return;
+  const loadMoreTokens = async () => {
+    console.log('⚡ loadMoreTokens called, isLoading:', isLoadingMoreRef.current);
+    if (isLoadingMoreRef.current) {
+      console.log('⏸️ Already loading, skipping...');
+      return;
+    }
     
     isLoadingMoreRef.current = true;
     setIsLoadingMore(true);
     
     try {
+      console.log('📡 Fetching more tokens...');
       const convertedTokens = await fetchAggregatedRandom(selectedNetwork);
+      console.log(`✅ Got ${convertedTokens.length} tokens`);
       
       // INFINITE SCROLLING: Always add tokens, even if we've seen them
-      // This creates the endless TikTok-style experience
       if (convertedTokens.length > 0) {
         setTokens(currentTokens => {
           const updated = [...currentTokens, ...convertedTokens];
           tokensRef.current = updated;
+          console.log(`📝 Total tokens now: ${updated.length}`);
           return updated;
         });
         
-        // Track all seen tokens
         setSeenTokenIds(prev => new Set([...prev, ...convertedTokens.map(t => t.id)]));
+      } else {
+        console.warn('⚠️ No tokens returned');
       }
     } catch (err) {
-      console.error('Failed to load more tokens', err);
+      console.error('❌ Failed to load more tokens:', err);
     } finally {
       isLoadingMoreRef.current = false;
       setIsLoadingMore(false);
+      console.log('✅ Loading complete');
     }
-  }, [selectedNetwork]);
+  };
 
   useEffect(() => {
     const loadTokens = async () => {
@@ -95,6 +103,7 @@ const Index = () => {
   // Track current token on scroll and load more - AGGRESSIVE INFINITE SCROLL
   useEffect(() => {
     const container = scrollContainerRef.current;
+    console.log('🎯 Scroll effect mounted, container:', container ? 'EXISTS' : 'NULL');
     if (!container) return;
 
     const handleScroll = () => {
@@ -125,16 +134,20 @@ const Index = () => {
       }
     };
 
-    // Listen to scroll with no throttle for maximum responsiveness
+    console.log('📍 Adding scroll listener');
     container.addEventListener('scroll', handleScroll, { passive: true });
     
     // Also trigger on mount if needed
-    handleScroll();
+    setTimeout(() => {
+      console.log('⏰ Initial scroll check');
+      handleScroll();
+    }, 500);
     
     return () => {
+      console.log('🧹 Removing scroll listener');
       container.removeEventListener('scroll', handleScroll);
     };
-  }, [loadMoreTokens]);
+  }, [selectedNetwork]);
 
   const handleTokenClick = (tokenId: string) => {
     const container = scrollContainerRef.current;
