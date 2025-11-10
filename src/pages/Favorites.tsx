@@ -11,6 +11,7 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useEffect, useState } from "react";
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { formatPrice, formatNumber } from "@/lib/formatters";
 
 interface TokenHolding {
   mint: string;
@@ -205,11 +206,11 @@ export default function Favorites() {
                           <div className="flex items-center gap-3 mb-2">
                             <div>
                               <p className="text-sm font-bold text-foreground">
-                                ${priceData.price.toFixed(6)}
+                                {formatPrice(priceData.price)}
                               </p>
                             </div>
                             <div className={`flex items-center gap-1 text-xs font-semibold ${
-                              isPositive ? 'text-success' : 'text-destructive'
+                              isPositive ? 'text-green-500' : 'text-red-500'
                             }`}>
                               {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                               {isPositive ? '+' : ''}{priceData.change24h.toFixed(2)}%
@@ -218,18 +219,18 @@ export default function Favorites() {
                         )}
 
                         {holding && priceData && (
-                          <div className="bg-secondary/30 rounded-lg p-2 mt-2">
-                            <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="bg-secondary/30 rounded-lg p-2.5 mt-2">
+                            <div className="grid grid-cols-2 gap-3 text-xs">
                               <div>
-                                <p className="text-muted-foreground">Balance</p>
+                                <p className="text-muted-foreground mb-0.5">Balance</p>
                                 <p className="font-bold text-foreground">
-                                  {holding.balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                  {formatNumber(holding.balance)}
                                 </p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground">Value</p>
+                                <p className="text-muted-foreground mb-0.5">Value</p>
                                 <p className="font-bold text-foreground">
-                                  ${(holding.balance * priceData.price).toFixed(2)}
+                                  ${formatNumber(holding.balance * priceData.price)}
                                 </p>
                               </div>
                             </div>
