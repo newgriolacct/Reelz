@@ -2,11 +2,12 @@ import { Heart, MessageCircle, Bookmark, ExternalLink, Globe } from "lucide-reac
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { QuickTradeDrawer } from "./QuickTradeDrawer";
 import { CommentsDrawer } from "./CommentsDrawer";
 import { formatPrice, formatCurrency } from "@/lib/formatters";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "./ui/skeleton";
 
 interface TokenCardProps {
   token: Token;
@@ -22,6 +23,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [showSellDrawer, setShowSellDrawer] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [shouldLoadChart, setShouldLoadChart] = useState(isEagerLoad);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
   const [comments, setComments] = useState([
     {
       id: "1",
@@ -43,6 +46,29 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const { toast } = useToast();
   
   const isPositive = token.change24h >= 0;
+
+  // Lazy load chart when card is near viewport
+  useEffect(() => {
+    if (shouldLoadChart) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setShouldLoadChart(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { rootMargin: '100px' } // Load 100px before entering viewport
+    );
+
+    if (chartContainerRef.current) {
+      observer.observe(chartContainerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [shouldLoadChart]);
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -168,15 +194,23 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
         </div>
 
         {/* DexScreener Chart - Flexible height */}
-        <div className="relative bg-card overflow-hidden flex-1 min-h-0">
+        <div ref={chartContainerRef} className="relative bg-card overflow-hidden flex-1 min-h-0">
         {token.dexScreenerUrl ? (
-            <iframe
-              src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
-              className="w-full h-full border-0 bg-secondary"
-              title={`${token.symbol} Chart`}
-              loading={isEagerLoad ? "eager" : "lazy"}
-              style={{ marginTop: '-40px', height: 'calc(100% + 80px)' }}
-            />
+            shouldLoadChart ? (
+              <iframe
+                src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
+                className="w-full h-full border-0 bg-secondary"
+                title={`${token.symbol} Chart`}
+                loading="lazy"
+                style={{ marginTop: '-40px', height: 'calc(100% + 80px)' }}
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-secondary">
+                <Skeleton className="w-4/5 h-8" />
+                <Skeleton className="w-3/4 h-32" />
+                <Skeleton className="w-4/5 h-8" />
+              </div>
+            )
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-secondary">
               <p className="text-muted-foreground">Chart not available</p>
