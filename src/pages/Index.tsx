@@ -272,7 +272,7 @@ const Index = () => {
       >
         {tokens.map((token, index) => (
           <TokenCard
-            key={token.id}
+            key={`${token.id}-${index}`}
             token={token}
             onLike={handleLike}
             onComment={handleComment}

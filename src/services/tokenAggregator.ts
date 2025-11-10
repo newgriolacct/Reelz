@@ -64,16 +64,22 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
     if (pairs.length > 0) {
       const converted = pairs.map(pair => convertDexPairToToken(pair));
       
-      // Add new tokens to pool (avoid exact duplicates)
-      const newTokens = converted.filter(t => !tokenPool.some(p => p.id === t.id));
-      tokenPool = [...tokenPool, ...newTokens];
+      // ALWAYS ADD new tokens to pool (don't filter duplicates)
+      // This allows fresh data and more variety
+      tokenPool = [...tokenPool, ...converted];
+      
+      // Keep pool size reasonable (max 100 tokens)
+      if (tokenPool.length > 100) {
+        tokenPool = tokenPool.slice(-100);
+      }
       
       // Cache the pool with 1 hour TTL
       const cacheKey = `token_pool_${network}`;
       tokenCache.set(cacheKey, tokenPool, 60 * 60 * 1000);
       
-      // Return batch of 20 tokens
-      const batch = converted.slice(0, 20);
+      // Shuffle and return batch of 20 tokens
+      const shuffled = [...converted].sort(() => 0.5 - Math.random());
+      const batch = shuffled.slice(0, 20);
       console.log(`✅ Fetched ${batch.length} fresh tokens (pool now: ${tokenPool.length})`);
       
       return batch;
