@@ -1,7 +1,9 @@
 import { Token } from "@/types/token";
-import { fetchMixedDexTokens } from "./dexscreener";
+import { fetchMixedDexTokens, DexScreenerResponse } from "./dexscreener";
 import { convertDexPairToToken } from "@/types/token";
 import { tokenCache } from "./apiCache";
+
+const API_BASE = 'https://api.dexscreener.com/latest/dex';
 
 /**
  * Fetch trending tokens - Uses DexScreener mixed endpoints with cache
@@ -135,4 +137,34 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
   }
   
   return [];
+};
+
+/**
+ * Fetch a specific token by its ID/address
+ */
+export const fetchSpecificToken = async (tokenId: string): Promise<Token | null> => {
+  try {
+    console.log(`Fetching specific token: ${tokenId}`);
+    const response = await fetch(`${API_BASE}/tokens/${tokenId}`);
+    
+    if (!response.ok) {
+      console.error(`Failed to fetch token ${tokenId}: ${response.status}`);
+      return null;
+    }
+    
+    const data: DexScreenerResponse = await response.json();
+    
+    if (data.pairs && data.pairs.length > 0) {
+      // Get the best pair (highest liquidity)
+      const bestPair = data.pairs
+        .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+      
+      return convertDexPairToToken(bestPair);
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`Error fetching token ${tokenId}:`, error);
+    return null;
+  }
 };

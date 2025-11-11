@@ -2,7 +2,7 @@ import { TokenCard } from "@/components/TokenCard";
 import { BottomNav } from "@/components/BottomNav";
 import { TrendingTokensList } from "@/components/TrendingTokensList";
 import { NetworkSelector } from "@/components/NetworkSelector";
-import { fetchAggregatedTrending, fetchAggregatedRandom } from "@/services/tokenAggregator";
+import { fetchAggregatedTrending, fetchAggregatedRandom, fetchSpecificToken } from "@/services/tokenAggregator";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Token } from "@/types/token";
 
@@ -79,12 +79,21 @@ const Index = () => {
         
         console.log(`Loaded ${convertedRandom.length} tokens for ${selectedNetwork}`);
         
-        // If a specific token was requested, try to find and add it to the top
+        // If a specific token was requested, fetch and add it to the top
         if (tokenId) {
-          const specificToken = convertedTrending.find(t => t.id === tokenId) || 
-                                convertedRandom.find(t => t.id === tokenId);
-          if (specificToken && !convertedRandom.find(t => t.id === tokenId)) {
+          let specificToken = convertedTrending.find(t => t.id.toLowerCase() === tokenId.toLowerCase()) || 
+                              convertedRandom.find(t => t.id.toLowerCase() === tokenId.toLowerCase());
+          
+          // If not found in loaded tokens, fetch it directly
+          if (!specificToken) {
+            console.log(`Token ${tokenId} not in feed, fetching...`);
+            specificToken = await fetchSpecificToken(tokenId);
+          }
+          
+          // Add to top of feed if found
+          if (specificToken) {
             convertedRandom.unshift(specificToken);
+            console.log(`Added ${specificToken.symbol} to top of feed`);
           }
         }
         
@@ -99,9 +108,14 @@ const Index = () => {
         
         setLoading(false);
         
-        // Scroll to top when network changes
+        // Scroll to top when network changes or specific token loaded
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTo({ top: 0, behavior: 'auto' });
+        }
+        
+        // Clear URL params after loading
+        if (tokenId) {
+          window.history.replaceState({}, '', '/');
         }
       } catch (err) {
         console.error('Failed to load tokens:', err);
