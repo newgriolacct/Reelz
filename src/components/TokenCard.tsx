@@ -381,8 +381,14 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                         {holder.percentage.toFixed(2)}%
                       </div>
                     </div>
-                    <div className="text-[9px] text-muted-foreground mt-1">
-                      {formatNumber(holder.amount)} tokens
+                    <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
+                      <span>{formatNumber(holder.amount)} tokens</span>
+                      <button
+                        onClick={() => window.open(`https://solscan.io/account/${holder.address}`, '_blank')}
+                        className="ml-auto hover:text-primary transition-colors"
+                      >
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </button>
                     </div>
                   </div>
                 ))}
