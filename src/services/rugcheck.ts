@@ -1,7 +1,8 @@
 import { apiCache } from './apiCache';
 
 const RUGCHECK_API = 'https://api.rugcheck.xyz/v1';
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes (security data doesn't change often)
+const RATE_LIMIT_RETRY_DELAY = 60 * 1000; // Wait 1 minute before retry on rate limit
 
 export interface RugcheckToken {
   mint: string;
@@ -71,8 +72,10 @@ export const fetchRugcheckData = async (mintAddress: string): Promise<SecurityDa
         return null;
       }
       if (response.status === 429) {
-        console.log(`[Rugcheck] Rate limited for ${mintAddress} - will retry later`);
-        return null; // Don't cache rate limit errors
+        console.log(`[Rugcheck] Rate limited for ${mintAddress} - caching temporary null`);
+        // Cache null for 1 minute to prevent immediate retries
+        apiCache.set(cacheKey, null as any, RATE_LIMIT_RETRY_DELAY);
+        return null;
       }
       throw new Error(`Rugcheck API error: ${response.status}`);
     }
