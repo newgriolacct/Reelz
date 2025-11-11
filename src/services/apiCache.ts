@@ -11,6 +11,40 @@ interface CacheEntry<T = any> {
 class APICache {
   private cache: Map<string, CacheEntry> = new Map();
 
+  constructor() {
+    this.loadFromStorage();
+  }
+
+  private loadFromStorage(): void {
+    try {
+      const stored = localStorage.getItem('api_cache');
+      if (stored) {
+        const data = JSON.parse(stored);
+        Object.entries(data).forEach(([key, value]: [string, any]) => {
+          this.cache.set(key, value);
+        });
+        console.log(`Loaded ${this.cache.size} cached items from storage`);
+      }
+    } catch (error) {
+      console.error('Failed to load cache from storage:', error);
+    }
+  }
+
+  private saveToStorage(): void {
+    try {
+      const data: Record<string, CacheEntry> = {};
+      this.cache.forEach((value, key) => {
+        // Only save recent cache entries (within last 2 hours)
+        if (Date.now() - value.timestamp < 2 * 60 * 60 * 1000) {
+          data[key] = value;
+        }
+      });
+      localStorage.setItem('api_cache', JSON.stringify(data));
+    } catch (error) {
+      console.error('Failed to save cache to storage:', error);
+    }
+  }
+
   get<T = DexPair[]>(key: string): T | null {
     const entry = this.cache.get(key);
     if (!entry) return null;
@@ -20,6 +54,7 @@ class APICache {
     
     if (now - entry.timestamp > cacheDuration) {
       this.cache.delete(key);
+      this.saveToStorage();
       return null;
     }
     
@@ -32,10 +67,12 @@ class APICache {
       timestamp: Date.now(),
       ttl,
     });
+    this.saveToStorage();
   }
 
   clear(): void {
     this.cache.clear();
+    localStorage.removeItem('api_cache');
   }
 }
 

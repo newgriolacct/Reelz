@@ -95,9 +95,9 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
         console.log(`⚠️ All ${converted.length} tokens were duplicates`);
       }
       
-      // Cache the pool
+      // Cache the pool for 2 hours (increased from 1 hour)
       const cacheKey = `token_pool_${network}`;
-      tokenCache.set(cacheKey, tokenPool, 60 * 60 * 1000);
+      tokenCache.set(cacheKey, tokenPool, 2 * 60 * 60 * 1000);
       
       // Return next batch
       const batch = tokenPool.slice(tokenIndex, tokenIndex + 20);
@@ -106,7 +106,14 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
       return batch;
     }
   } catch (error) {
-    console.error('DexScreener error:', error);
+    console.error('DexScreener error - using cache:', error);
+    
+    // On error, try to return from existing pool without making new API calls
+    if (tokenPool.length > 0) {
+      const batch = tokenPool.slice(tokenIndex, tokenIndex + 20);
+      tokenIndex += 20;
+      return batch;
+    }
   }
   
   // RECYCLING: Only after showing 200+ unique tokens

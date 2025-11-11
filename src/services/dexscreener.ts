@@ -273,19 +273,17 @@ export const getDexScreenerUrl = (chainId: string, pairAddress: string): string 
 /**
  * Fetch from multiple DexScreener endpoints and mix results
  * Filters by Solana chain and market cap 30k-10M
- * Optimized for speed - limits token fetching
+ * Optimized to avoid rate limits - uses caching and limits calls
  */
 export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
   const endpoints = [
     'https://api.dexscreener.com/token-profiles/latest/v1',
-    'https://api.dexscreener.com/community-takeovers/latest/v1',
-    'https://api.dexscreener.com/ads/latest/v1',
     'https://api.dexscreener.com/token-boosts/latest/v1',
     'https://api.dexscreener.com/token-boosts/top/v1'
   ];
 
   try {
-    // Fetch from all endpoints in parallel with 5s timeout
+    // Fetch from 3 endpoints (reduced from 5 to avoid rate limits)
     const responses = await Promise.allSettled(
       endpoints.map(url => 
         Promise.race([
@@ -310,8 +308,8 @@ export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
 
     console.log(`Collected ${tokenAddresses.size} unique Solana token addresses`);
 
-    // FETCH UP TO 60 tokens for more variety
-    const tokenArray = Array.from(tokenAddresses).slice(0, 60);
+    // FETCH UP TO 15 tokens to avoid rate limits (was 60)
+    const tokenArray = Array.from(tokenAddresses).slice(0, 15);
     
     // Fetch pair data for each token with timeout
     const pairPromises = tokenArray.map(async (tokenAddress) => {
