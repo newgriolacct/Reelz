@@ -111,7 +111,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
     <>
       <div className="h-[100dvh] snap-start relative flex flex-col bg-background overflow-hidden">
         {/* Top spacing for trending bar and network selector */}
-        <div className="h-[110px] md:h-[120px] lg:h-[140px] flex-shrink-0" />
+        <div className="h-[100px] md:h-[110px] lg:h-[120px] flex-shrink-0" />
         
         {/* Token Header */}
         <div className="px-3 py-1 flex items-center justify-between bg-background flex-shrink-0 border-b border-border/50">
