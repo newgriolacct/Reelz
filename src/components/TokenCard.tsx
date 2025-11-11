@@ -204,11 +204,12 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </div>
         </div>
 
-        {/* Chart/Transactions Tabs */}
+        {/* Chart/Transactions/Holders Tabs */}
         <Tabs defaultValue="chart" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="w-full grid grid-cols-2 bg-secondary h-9 flex-shrink-0">
-            <TabsTrigger value="chart" className="text-xs">Chart</TabsTrigger>
-            <TabsTrigger value="transactions" className="text-xs" onClick={loadTransactions}>Transactions</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-3 bg-secondary h-7 flex-shrink-0">
+            <TabsTrigger value="chart" className="text-[10px]">Chart</TabsTrigger>
+            <TabsTrigger value="transactions" className="text-[10px]" onClick={loadTransactions}>Transactions</TabsTrigger>
+            <TabsTrigger value="holders" className="text-[10px]">Holders</TabsTrigger>
           </TabsList>
           
           <TabsContent value="chart" className="flex-1 min-h-0 mt-0">
@@ -272,6 +273,13 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 No transactions available
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="holders" className="flex-1 overflow-y-auto mt-0 h-[200px]">
+            <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm p-4 text-center">
+              <p className="font-semibold mb-1">Holder data not available</p>
+              <p className="text-xs">Public APIs don't provide holder information without authentication</p>
+            </div>
           </TabsContent>
         </Tabs>
 
