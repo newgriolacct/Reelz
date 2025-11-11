@@ -75,6 +75,19 @@ export const useTokenFavorites = () => {
       return false;
     }
 
+    // Optimistic update
+    const tempFavorite: FavoriteToken = {
+      id: 'temp-' + Date.now(),
+      token_id: token.id,
+      token_symbol: token.symbol,
+      token_name: token.name,
+      token_chain: token.chain,
+      token_image: token.avatarUrl,
+      token_price: token.price,
+      created_at: new Date().toISOString(),
+    };
+    setFavorites(prev => [tempFavorite, ...prev]);
+
     try {
       const walletAddress = publicKey.toString();
       
@@ -114,6 +127,8 @@ export const useTokenFavorites = () => {
       await fetchFavorites();
       return true;
     } catch (error) {
+      // Revert on error
+      setFavorites(prev => prev.filter(f => f.id !== tempFavorite.id));
       console.error('Error adding favorite:', error);
       toast({
         title: "Error",
@@ -126,6 +141,10 @@ export const useTokenFavorites = () => {
 
   const removeFavorite = async (tokenId: string) => {
     if (!connected || !publicKey) return false;
+
+    // Optimistic update
+    const removedFavorite = favorites.find(f => f.token_id === tokenId);
+    setFavorites(prev => prev.filter(f => f.token_id !== tokenId));
 
     try {
       const walletAddress = publicKey.toString();
@@ -146,9 +165,12 @@ export const useTokenFavorites = () => {
 
       if (error) throw error;
 
-      await fetchFavorites();
       return true;
     } catch (error) {
+      // Revert on error
+      if (removedFavorite) {
+        setFavorites(prev => [removedFavorite, ...prev]);
+      }
       console.error('Error removing favorite:', error);
       return false;
     }

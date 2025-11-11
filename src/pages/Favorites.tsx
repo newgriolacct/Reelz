@@ -73,12 +73,15 @@ export default function Favorites() {
 
   useEffect(() => {
     const fetchTokenPrices = async () => {
-      if (favorites.length === 0) return;
+      if (!favorites || favorites.length === 0) {
+        setTokenPrices(new Map());
+        return;
+      }
 
-      console.log('Fetching prices for favorites:', favorites.length);
       const pricesMap = new Map<string, { price: number; change24h: number }>();
       
-      for (const favorite of favorites) {
+      // Fetch all prices in parallel
+      const pricePromises = favorites.map(async (favorite) => {
         try {
           const response = await fetch(
             `https://api.dexscreener.com/latest/dex/tokens/${favorite.token_id}`
@@ -87,19 +90,29 @@ export default function Favorites() {
           
           if (data.pairs && data.pairs.length > 0) {
             const pair = data.pairs[0];
-            const priceInfo = {
+            return {
+              tokenId: favorite.token_id,
               price: parseFloat(pair.priceUsd) || 0,
               change24h: pair.priceChange?.h24 || 0,
             };
-            pricesMap.set(favorite.token_id, priceInfo);
-            console.log(`Price for ${favorite.token_symbol}:`, priceInfo);
           }
         } catch (err) {
           console.error(`Failed to fetch price for ${favorite.token_id}:`, err);
         }
-      }
+        return null;
+      });
+
+      const results = await Promise.all(pricePromises);
       
-      console.log('Setting token prices:', pricesMap.size);
+      results.forEach(result => {
+        if (result) {
+          pricesMap.set(result.tokenId, {
+            price: result.price,
+            change24h: result.change24h,
+          });
+        }
+      });
+      
       setTokenPrices(pricesMap);
     };
 

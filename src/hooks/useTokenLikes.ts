@@ -57,7 +57,12 @@ export const useTokenLikes = (tokenId: string) => {
       return false;
     }
 
-    setLoading(true);
+    // Optimistic update
+    const wasLiked = isLiked;
+    const previousCount = likeCount;
+    setIsLiked(!wasLiked);
+    setLikeCount(wasLiked ? likeCount - 1 : likeCount + 1);
+
     try {
       const walletAddress = publicKey.toString();
       
@@ -79,7 +84,7 @@ export const useTokenLikes = (tokenId: string) => {
         profile = newProfile;
       }
 
-      if (isLiked) {
+      if (wasLiked) {
         // Unlike
         const { error } = await supabase
           .from('token_likes')
@@ -100,9 +105,11 @@ export const useTokenLikes = (tokenId: string) => {
         if (error) throw error;
       }
 
-      await fetchLikes();
       return true;
     } catch (error) {
+      // Revert on error
+      setIsLiked(wasLiked);
+      setLikeCount(previousCount);
       console.error('Error toggling like:', error);
       toast({
         title: "Error",
@@ -110,8 +117,6 @@ export const useTokenLikes = (tokenId: string) => {
         variant: "destructive",
       });
       return false;
-    } finally {
-      setLoading(false);
     }
   };
 
