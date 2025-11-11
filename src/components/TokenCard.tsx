@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Bookmark, ExternalLink, Flame, Copy } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, ExternalLink, Copy } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -11,6 +11,7 @@ import { Skeleton } from "./ui/skeleton";
 import { useTokenFavorites } from "@/hooks/useTokenFavorites";
 import { useTokenComments } from "@/hooks/useTokenComments";
 import { useTokenLikes } from "@/hooks/useTokenLikes";
+import pumpfunIcon from "@/assets/pumpfun-icon.png";
 
 interface TokenCardProps {
   token: Token;
@@ -115,7 +116,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 )}
                 {token.contractAddress?.toLowerCase().endsWith('pump') && (
                   <Badge className="bg-[#14F195] text-black text-[10px] px-1 py-0 flex items-center gap-0.5 font-bold">
-                    <Flame className="w-2.5 h-2.5" />
+                    <img src={pumpfunIcon} alt="Pump.fun" className="w-2.5 h-2.5" />
                     Pump.fun
                   </Badge>
                 )}
@@ -179,7 +180,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                     onClick={() => window.open(`https://pump.fun/${token.contractAddress}`, '_blank')}
                     title="View on Pump.fun"
                   >
-                    <Flame className="w-3 h-3 text-[#14F195]" />
+                    <img src={pumpfunIcon} alt="Pump.fun" className="w-3.5 h-3.5" />
                   </Button>
                 )}
               </>
