@@ -202,7 +202,7 @@ export default function Favorites() {
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="font-bold text-base text-foreground">{favorite.token_symbol}</h4>
                           {holding && (
-                            <Badge variant="outline" className="h-5 px-1.5 text-[10px] gap-1">
+                            <Badge variant="outline" className="h-5 px-1.5 text-[10px] gap-1 bg-primary/10 border-primary/20">
                               <Wallet className="h-3 w-3" />
                               Holding
                             </Badge>
@@ -215,23 +215,23 @@ export default function Favorites() {
                           <span>{favorite.token_chain}</span>
                         </div>
 
-                        {priceData && (
-                          <div className="flex items-center gap-3 mb-2">
-                            <div>
-                              <p className="text-sm font-bold text-foreground">
-                                {formatPrice(priceData.price)}
-                              </p>
-                            </div>
+                        <div className="flex items-center gap-3 mb-2">
+                          <div>
+                            <p className="text-sm font-bold text-foreground">
+                              {priceData ? formatPrice(priceData.price) : 'Loading...'}
+                            </p>
+                          </div>
+                          {priceData && (
                             <div className={`flex items-center gap-1 text-xs font-semibold ${
                               isPositive ? 'text-green-500' : 'text-red-500'
                             }`}>
                               {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                               {isPositive ? '+' : ''}{priceData.change24h.toFixed(2)}%
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
 
-                        {holding && priceData && (
+                        {holding && (
                           <div className="bg-secondary/30 rounded-lg p-2.5 mt-2">
                             <div className="grid grid-cols-2 gap-3 text-xs">
                               <div>
@@ -243,7 +243,7 @@ export default function Favorites() {
                               <div>
                                 <p className="text-muted-foreground mb-0.5">Value</p>
                                 <p className="font-bold text-foreground">
-                                  ${formatNumber(holding.balance * priceData.price)}
+                                  {priceData ? `$${formatNumber(holding.balance * priceData.price)}` : 'Loading...'}
                                 </p>
                               </div>
                             </div>
