@@ -100,9 +100,9 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   };
 
   const loadTransactions = async () => {
-    if (!token.pairAddress || loadingTxs) return;
+    if (!token.contractAddress || loadingTxs) return;
     setLoadingTxs(true);
-    const txs = await fetchTokenTransactions(token.pairAddress);
+    const txs = await fetchTokenTransactions(token.contractAddress);
     setTransactions(txs);
     setLoadingTxs(false);
   };
