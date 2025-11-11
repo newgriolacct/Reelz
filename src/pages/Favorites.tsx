@@ -85,14 +85,36 @@ export default function Favorites() {
         if (favorite.token_price) {
           pricesMap.set(favorite.token_id, {
             price: favorite.token_price,
-            change24h: 0, // No change data for saved prices
+            change24h: 0,
           });
         }
       });
       
-      // Fetch all prices in parallel
+      // Fetch prices using search endpoint for better results
       const pricePromises = favorites.map(async (favorite) => {
         try {
+          // Try search first (better for active tokens)
+          const searchResponse = await fetch(
+            `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(favorite.token_symbol)}`
+          );
+          const searchData = await searchResponse.json();
+          
+          if (searchData.pairs && searchData.pairs.length > 0) {
+            // Find the exact token match
+            const exactPair = searchData.pairs.find((p: any) => 
+              p.baseToken.address.toLowerCase() === favorite.token_id.toLowerCase()
+            ) || searchData.pairs[0];
+            
+            if (exactPair) {
+              return {
+                tokenId: favorite.token_id,
+                price: parseFloat(exactPair.priceUsd) || 0,
+                change24h: exactPair.priceChange?.h24 || 0,
+              };
+            }
+          }
+          
+          // Fallback to direct token query
           const response = await fetch(
             `https://api.dexscreener.com/latest/dex/tokens/${favorite.token_id}`
           );
