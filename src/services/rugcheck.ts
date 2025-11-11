@@ -92,8 +92,24 @@ export const fetchRugcheckData = async (mintAddress: string): Promise<SecurityDa
     console.log(`[GoPlus] Raw data:`, data);
     
     if (!data.result || !data.result[mintAddress.toLowerCase()]) {
-      console.log(`[GoPlus] No security data in response`);
-      return null;
+      console.log(`[GoPlus] Token not yet indexed by GoPlus - returning basic security data`);
+      
+      // Return basic security data for unindexed tokens
+      const basicData: SecurityData = {
+        score: 5, // Neutral score
+        riskLevel: 'MEDIUM',
+        topHoldersPercent: 0,
+        freezeAuthority: false,
+        mintAuthority: false,
+        lpLockedPercent: 0,
+        creatorPercent: 0,
+        riskFactors: ['Security data not yet available - token may be too new'],
+      };
+      
+      // Cache for shorter time since it might get indexed soon
+      apiCache.set(cacheKey, basicData, 5 * 60 * 1000); // 5 minutes
+      
+      return basicData;
     }
     
     const tokenData = data.result[mintAddress.toLowerCase()];
