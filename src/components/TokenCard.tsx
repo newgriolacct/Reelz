@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Bookmark, ExternalLink, Globe, ChevronDown, ChevronUp, Flame, Copy } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, ExternalLink, Globe, Flame, Copy } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -11,8 +11,6 @@ import { Skeleton } from "./ui/skeleton";
 import { useTokenFavorites } from "@/hooks/useTokenFavorites";
 import { useTokenComments } from "@/hooks/useTokenComments";
 import { useTokenLikes } from "@/hooks/useTokenLikes";
-import { SecurityBadge } from "./SecurityBadge";
-import { fetchRugcheckData } from "@/services/rugcheck";
 
 interface TokenCardProps {
   token: Token;
@@ -27,17 +25,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [showSellDrawer, setShowSellDrawer] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [shouldLoadChart, setShouldLoadChart] = useState(isEagerLoad);
-  const [showSecurityDetails, setShowSecurityDetails] = useState(false);
-  const [securityData, setSecurityData] = useState<{
-    securityScore?: number;
-    riskLevel?: 'GOOD' | 'MEDIUM' | 'HIGH';
-    topHoldersPercent?: number;
-    freezeAuthority?: boolean;
-    mintAuthority?: boolean;
-    lpLockedPercent?: number;
-    creatorPercent?: number;
-    riskFactors?: string[];
-  }>({});
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -46,43 +33,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const { likeCount, isLiked, toggleLike } = useTokenLikes(token.id);
   
   const isTokenFavorited = isFavorited(token.id);
-  
-  // Fetch security data with delay to avoid rate limiting
-  useEffect(() => {
-    if (!securityData.securityScore && token.contractAddress) {
-      console.log(`[Security] Scheduling fetch for ${token.symbol} (${token.contractAddress})`);
-      
-      // Add random delay between 500ms-2000ms to avoid rate limiting
-      const delay = 500 + Math.random() * 1500;
-      
-      const timer = setTimeout(() => {
-        console.log(`[Security] Fetching for ${token.symbol}`);
-        fetchRugcheckData(token.contractAddress!)
-          .then(data => {
-            if (data) {
-              console.log(`[Security] Data received for ${token.symbol}:`, data);
-              setSecurityData({
-                securityScore: data.score,
-                riskLevel: data.riskLevel,
-                topHoldersPercent: data.topHoldersPercent,
-                freezeAuthority: data.freezeAuthority,
-                mintAuthority: data.mintAuthority,
-                lpLockedPercent: data.lpLockedPercent,
-                creatorPercent: data.creatorPercent,
-                riskFactors: data.riskFactors,
-              });
-            } else {
-              console.log(`[Security] No data available for ${token.symbol}`);
-            }
-          })
-          .catch(error => {
-            console.error(`[Security] Error fetching for ${token.symbol}:`, error);
-          });
-      }, delay);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [token.contractAddress, token.symbol, securityData.securityScore]);
   
   // Update comments when drawer closes to refresh count
   useEffect(() => {
@@ -168,13 +118,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                     <Flame className="w-2.5 h-2.5" />
                     Pump.fun
                   </Badge>
-                )}
-                {securityData.securityScore !== undefined && securityData.riskLevel && (
-                  <SecurityBadge 
-                    riskLevel={securityData.riskLevel} 
-                    score={securityData.securityScore}
-                    showIcon={false}
-                  />
                 )}
               </div>
               <span className="text-[10px] text-muted-foreground truncate block">{token.name}</span>
@@ -346,7 +289,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
 
           {/* Stats Grid - Compact */}
           <div className="space-y-0.5 mb-1">
-            {/* First row: Market Cap & Volume */}
+            {/* Market Cap & Volume & Liquidity & Chain */}
             <div className="grid grid-cols-2 gap-1">
               <div className="bg-secondary rounded-lg p-1">
                 <div className="text-[9px] text-muted-foreground">Market Cap</div>
@@ -362,100 +305,21 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
               </div>
             </div>
             
-            {/* Second row: Top Holders/Liquidity & LP Locked/Chain */}
             <div className="grid grid-cols-2 gap-1">
-              {securityData.topHoldersPercent !== undefined ? (
-                <div className="bg-secondary rounded-lg p-1">
-                  <div className="text-[9px] text-muted-foreground">Top Holders</div>
-                  <div className={`text-[11px] font-bold truncate ${
-                    securityData.topHoldersPercent > 50 ? 'text-destructive' : 
-                    securityData.topHoldersPercent > 30 ? 'text-warning' : 'text-success'
-                  }`}>
-                    {securityData.topHoldersPercent.toFixed(1)}%
-                  </div>
+              <div className="bg-secondary rounded-lg p-1">
+                <div className="text-[9px] text-muted-foreground">Liquidity</div>
+                <div className="text-[11px] font-bold text-foreground truncate">
+                  {formatCurrency(token.liquidity)}
                 </div>
-              ) : (
-                <div className="bg-secondary rounded-lg p-1">
-                  <div className="text-[9px] text-muted-foreground">Liquidity</div>
-                  <div className="text-[11px] font-bold text-foreground truncate">
-                    {formatCurrency(token.liquidity)}
-                  </div>
+              </div>
+              <div className="bg-secondary rounded-lg p-1">
+                <div className="text-[9px] text-muted-foreground">Chain</div>
+                <div className="text-[11px] font-bold text-foreground truncate">
+                  {token.chain}
                 </div>
-              )}
-              {securityData.lpLockedPercent !== undefined ? (
-                <div className="bg-secondary rounded-lg p-1">
-                  <div className="text-[9px] text-muted-foreground">LP Locked</div>
-                  <div className={`text-[11px] font-bold truncate ${
-                    securityData.lpLockedPercent > 80 ? 'text-success' : 
-                    securityData.lpLockedPercent > 50 ? 'text-warning' : 'text-destructive'
-                  }`}>
-                    {securityData.lpLockedPercent.toFixed(0)}%
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-secondary rounded-lg p-1">
-                  <div className="text-[9px] text-muted-foreground">Chain</div>
-                  <div className="text-[11px] font-bold text-foreground truncate">
-                    {token.chain}
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </div>
-
-          {/* Security Details - Expandable */}
-          {securityData.securityScore !== undefined && (
-            <div className="mb-1">
-              <button
-                onClick={() => setShowSecurityDetails(!showSecurityDetails)}
-                className="w-full bg-secondary rounded-lg p-1.5 flex items-center justify-between hover:bg-secondary/80 transition-colors"
-              >
-                <span className="text-[10px] font-semibold text-foreground">Security Details</span>
-                {showSecurityDetails ? (
-                  <ChevronUp className="w-3 h-3 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                )}
-              </button>
-              
-              {showSecurityDetails && (
-                <div className="mt-1 bg-secondary rounded-lg p-2 space-y-1">
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-muted-foreground">Risk Score:</span>
-                    <span className="font-bold text-foreground">{securityData.securityScore.toFixed(1)}/10</span>
-                  </div>
-                  {securityData.creatorPercent !== undefined && (
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-muted-foreground">Creator Holding:</span>
-                      <span className={`font-bold ${securityData.creatorPercent > 10 ? 'text-destructive' : 'text-success'}`}>
-                        {securityData.creatorPercent.toFixed(1)}%
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-muted-foreground">Freeze Authority:</span>
-                    <span className={`font-bold ${securityData.freezeAuthority ? 'text-destructive' : 'text-success'}`}>
-                      {securityData.freezeAuthority ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-muted-foreground">Mint Authority:</span>
-                    <span className={`font-bold ${securityData.mintAuthority ? 'text-destructive' : 'text-success'}`}>
-                      {securityData.mintAuthority ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-                  {securityData.riskFactors && securityData.riskFactors.length > 0 && (
-                    <div className="pt-1 border-t border-border/30">
-                      <div className="text-[9px] text-muted-foreground mb-0.5">Risk Factors:</div>
-                      {securityData.riskFactors.map((factor, i) => (
-                        <div key={i} className="text-[9px] text-destructive">• {factor}</div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Action Buttons - Compact */}
           <div className="grid grid-cols-2 gap-1.5">
