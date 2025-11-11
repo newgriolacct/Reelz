@@ -23,10 +23,6 @@ export interface Token {
   pairAddress?: string;
   dexScreenerUrl?: string;
   contractAddress?: string;
-  website?: string;
-  twitter?: string;
-  telegram?: string;
-  discord?: string;
   buys24h?: number;
   sells24h?: number;
   // Security data from Rugcheck
@@ -63,13 +59,6 @@ export const convertDexPairToToken = async (pair: DexPair): Promise<Token> => {
     sparklineData.push(Math.max(50, value));
   }
 
-  // Extract social media links from DexScreener
-  const socials = pair.info?.socials || [];
-  const twitter = socials.find(s => s.platform === 'twitter')?.handle;
-  const telegram = socials.find(s => s.platform === 'telegram')?.handle;
-  const discord = socials.find(s => s.platform === 'discord')?.handle;
-  const website = pair.info?.websites?.[0]?.url;
-
   return {
     id: pair.pairAddress,
     symbol: pair.baseToken.symbol,
@@ -90,10 +79,6 @@ export const convertDexPairToToken = async (pair: DexPair): Promise<Token> => {
     pairAddress: pair.pairAddress,
     dexScreenerUrl: pair.url,
     contractAddress: pair.baseToken.address,
-    website,
-    twitter,
-    telegram,
-    discord,
     buys24h: pair.txns.h24.buys,
     sells24h: pair.txns.h24.sells,
   };
