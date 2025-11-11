@@ -213,7 +213,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </TabsList>
           
           <TabsContent value="chart" className="flex-1 min-h-0 mt-0 overflow-hidden">
-            <div ref={chartContainerRef} className="relative bg-card overflow-hidden h-full min-h-[180px] max-h-[280px]">
+            <div ref={chartContainerRef} className="relative bg-card overflow-hidden h-full">
               {token.dexScreenerUrl ? (
                 shouldLoadChart ? (
                   <iframe
@@ -238,7 +238,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             </div>
           </TabsContent>
 
-          <TabsContent value="transactions" className="flex-1 overflow-y-auto mt-0 min-h-[180px] max-h-[280px]">
+          <TabsContent value="transactions" className="flex-1 overflow-y-auto mt-0">
             {loadingTxs ? (
               <div className="p-3 space-y-2">
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -275,7 +275,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             )}
           </TabsContent>
 
-          <TabsContent value="holders" className="flex-1 overflow-y-auto mt-0 min-h-[180px] max-h-[280px]">
+          <TabsContent value="holders" className="flex-1 overflow-y-auto mt-0">
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm p-4 text-center">
               <p className="font-semibold mb-1">Holder data not available</p>
               <p className="text-xs">Public APIs don't provide holder information without authentication</p>
@@ -336,29 +336,31 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
 
           {/* Stats Grid - Compact */}
           <div className="space-y-0.5 mb-0.5">
-            {/* Market Cap & Volume & Liquidity & Chain */}
-            <div className="grid grid-cols-4 gap-1">
-              <div className="bg-secondary rounded p-0.5">
-                <div className="text-[8px] text-muted-foreground">MCap</div>
-                <div className="text-[10px] font-bold text-foreground truncate">
+            <div className="grid grid-cols-2 gap-1">
+              <div className="bg-secondary rounded p-1">
+                <div className="text-[9px] text-muted-foreground">MCap</div>
+                <div className="text-[11px] font-bold text-foreground truncate">
                   {formatCurrency(token.marketCap)}
                 </div>
               </div>
-              <div className="bg-secondary rounded p-0.5">
-                <div className="text-[8px] text-muted-foreground">Vol 24h</div>
-                <div className="text-[10px] font-bold text-foreground truncate">
+              <div className="bg-secondary rounded p-1">
+                <div className="text-[9px] text-muted-foreground">Vol 24h</div>
+                <div className="text-[11px] font-bold text-foreground truncate">
                   {formatCurrency(token.volume24h)}
                 </div>
               </div>
-              <div className="bg-secondary rounded p-0.5">
-                <div className="text-[8px] text-muted-foreground">Liq</div>
-                <div className="text-[10px] font-bold text-foreground truncate">
+            </div>
+            
+            <div className="grid grid-cols-2 gap-1">
+              <div className="bg-secondary rounded p-1">
+                <div className="text-[9px] text-muted-foreground">Liq</div>
+                <div className="text-[11px] font-bold text-foreground truncate">
                   {formatCurrency(token.liquidity)}
                 </div>
               </div>
-              <div className="bg-secondary rounded p-0.5">
-                <div className="text-[8px] text-muted-foreground">Chain</div>
-                <div className="text-[10px] font-bold text-foreground truncate">
+              <div className="bg-secondary rounded p-1">
+                <div className="text-[9px] text-muted-foreground">Chain</div>
+                <div className="text-[11px] font-bold text-foreground truncate">
                   {token.chain}
                 </div>
               </div>
