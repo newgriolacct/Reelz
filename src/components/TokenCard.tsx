@@ -14,6 +14,7 @@ import { useTokenLikes } from "@/hooks/useTokenLikes";
 import pumpfunIcon from "@/assets/pumpfun-icon.png";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { fetchTokenTransactions, fetchTokenHolders } from "@/services/solscan";
+import { fetchRugcheckData } from "@/services/rugcheck";
 import { formatDistanceToNow } from "date-fns";
 
 interface TokenCardProps {
@@ -33,6 +34,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [loadingTxs, setLoadingTxs] = useState(false);
   const [holders, setHolders] = useState<any[]>([]);
   const [loadingHolders, setLoadingHolders] = useState(false);
+  const [securityData, setSecurityData] = useState<any>(null);
+  const [loadingSecurity, setLoadingSecurity] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -115,6 +118,25 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
     const holderData = await fetchTokenHolders(token.contractAddress);
     setHolders(holderData);
     setLoadingHolders(false);
+  };
+
+  const loadSecurity = async () => {
+    if (!token.contractAddress || securityData || loadingSecurity) return;
+    setLoadingSecurity(true);
+    const data = await fetchRugcheckData(token.contractAddress);
+    if (data) {
+      setSecurityData({
+        mintAuthority: data.mintAuthority ? 'Active' : 'Revoked',
+        freezeAuthority: data.freezeAuthority ? 'Active' : 'Revoked',
+        lpLocked: data.lpLockedPercent > 50,
+        lpLockedPercent: data.lpLockedPercent,
+        topHoldersPercentage: data.topHoldersPercent,
+        riskLevel: data.riskLevel === 'GOOD' ? 'low' : data.riskLevel === 'MEDIUM' ? 'medium' : 'high',
+        score: data.score,
+        riskFactors: data.riskFactors
+      });
+    }
+    setLoadingSecurity(false);
   };
 
   return (
@@ -214,12 +236,36 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </div>
         </div>
 
-        {/* Chart/Transactions/Holders Tabs */}
+        {/* Chart/Transactions/Holders/Security Tabs */}
         <Tabs defaultValue="chart" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="w-full grid grid-cols-3 bg-secondary h-7 flex-shrink-0">
-            <TabsTrigger value="chart" className="text-[10px]">Chart</TabsTrigger>
-            <TabsTrigger value="transactions" className="text-[10px]" onClick={loadTransactions}>Transactions</TabsTrigger>
-            <TabsTrigger value="holders" className="text-[10px]" onClick={loadHolders}>Holders</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-4 bg-secondary/50 backdrop-blur-sm h-8 flex-shrink-0 p-0.5 gap-0.5 rounded-lg">
+            <TabsTrigger 
+              value="chart" 
+              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
+            >
+              Chart
+            </TabsTrigger>
+            <TabsTrigger 
+              value="transactions" 
+              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
+              onClick={loadTransactions}
+            >
+              Txns
+            </TabsTrigger>
+            <TabsTrigger 
+              value="holders" 
+              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
+              onClick={loadHolders}
+            >
+              Holders
+            </TabsTrigger>
+            <TabsTrigger 
+              value="security" 
+              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
+              onClick={loadSecurity}
+            >
+              Security
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="chart" className="flex-1 min-h-0 mt-0 overflow-hidden">
@@ -248,7 +294,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             </div>
           </TabsContent>
 
-          <TabsContent value="transactions" className="flex-1 overflow-y-auto mt-0">
+          <TabsContent value="transactions" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
             {loadingTxs ? (
               <div className="p-3 space-y-2">
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -258,7 +304,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             ) : transactions.length > 0 ? (
               <div className="p-2 space-y-1">
                 {transactions.map((tx, idx) => (
-                  <div key={idx} className="bg-secondary p-2 rounded">
+                  <div key={idx} className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2 flex-1">
                         <Badge className={tx.type === 'buy' ? 'bg-success text-success-foreground' : 'bg-destructive text-destructive-foreground'}>
@@ -285,7 +331,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             )}
           </TabsContent>
 
-          <TabsContent value="holders" className="flex-1 overflow-y-auto mt-0">
+          <TabsContent value="holders" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
             {loadingHolders ? (
               <div className="p-3 space-y-2">
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -295,7 +341,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             ) : holders.length > 0 ? (
               <div className="p-2 space-y-1">
                 {holders.map((holder, idx) => (
-                  <div key={idx} className="bg-secondary p-2 rounded">
+                  <div key={idx} className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <Badge variant="outline" className="text-[10px] px-1 py-0 flex-shrink-0">
@@ -318,6 +364,99 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             ) : (
               <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
                 No holder data available
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="security" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
+            {loadingSecurity ? (
+              <div className="p-3 space-y-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-14 w-full" />
+                ))}
+              </div>
+            ) : securityData ? (
+              <div className="p-2 space-y-2">
+                {securityData.score && (
+                  <div className="bg-secondary p-2 rounded animate-fade-in">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-muted-foreground">Security Score</span>
+                      <span className={`text-[11px] font-bold ${
+                        securityData.score >= 7 ? 'text-success' :
+                        securityData.score >= 4 ? 'text-yellow-500' :
+                        'text-destructive'
+                      }`}>
+                        {securityData.score.toFixed(1)}/10
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.05s' }}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-muted-foreground">Risk Level</span>
+                    <Badge 
+                      className={`text-[10px] ${
+                        securityData.riskLevel === 'low' ? 'bg-success text-success-foreground' :
+                        securityData.riskLevel === 'medium' ? 'bg-yellow-500 text-yellow-950' :
+                        'bg-destructive text-destructive-foreground'
+                      }`}
+                    >
+                      {securityData.riskLevel.toUpperCase()}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-muted-foreground">Mint Authority</span>
+                    <span className={`text-[10px] font-semibold ${securityData.mintAuthority === 'Revoked' ? 'text-success' : 'text-destructive'}`}>
+                      {securityData.mintAuthority}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.15s' }}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-muted-foreground">Freeze Authority</span>
+                    <span className={`text-[10px] font-semibold ${securityData.freezeAuthority === 'Revoked' ? 'text-success' : 'text-destructive'}`}>
+                      {securityData.freezeAuthority}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.2s' }}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-muted-foreground">LP Locked</span>
+                    <span className={`text-[10px] font-semibold ${securityData.lpLocked ? 'text-success' : 'text-destructive'}`}>
+                      {securityData.lpLocked ? `Yes (${securityData.lpLockedPercent?.toFixed(0) || 0}%)` : 'No'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.25s' }}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-muted-foreground">Top 10 Holders</span>
+                    <span className={`text-[10px] font-semibold ${securityData.topHoldersPercentage < 30 ? 'text-success' : securityData.topHoldersPercentage < 50 ? 'text-yellow-500' : 'text-destructive'}`}>
+                      {securityData.topHoldersPercentage.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+
+                {securityData.riskFactors && securityData.riskFactors.length > 0 && (
+                  <div className="bg-destructive/10 p-2 rounded animate-fade-in border border-destructive/20" style={{ animationDelay: '0.3s' }}>
+                    <div className="text-[10px] font-semibold text-destructive mb-1">Risk Factors:</div>
+                    {securityData.riskFactors.slice(0, 3).map((risk: string, idx: number) => (
+                      <div key={idx} className="text-[9px] text-muted-foreground mt-0.5">
+                        • {risk}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm p-4 text-center">
+                <p className="text-xs">Security data not available</p>
               </div>
             )}
           </TabsContent>
