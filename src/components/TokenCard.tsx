@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Bookmark, ExternalLink, Globe, ChevronDown, ChevronUp, Rocket } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, ExternalLink, Globe, ChevronDown, ChevronUp, Rocket, Copy } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -178,6 +178,25 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 )}
               </div>
               <span className="text-[10px] text-muted-foreground truncate block">{token.name}</span>
+              {token.contractAddress && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-[9px] text-muted-foreground font-mono truncate">
+                    {token.contractAddress.slice(0, 6)}...{token.contractAddress.slice(-4)}
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(token.contractAddress!);
+                      toast({
+                        title: "Copied!",
+                        description: "Contract address copied to clipboard",
+                      });
+                    }}
+                    className="flex-shrink-0 hover:text-primary transition-colors"
+                  >
+                    <Copy className="w-2.5 h-2.5 text-muted-foreground hover:text-primary" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           
