@@ -412,42 +412,13 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                   </div>
                 )}
                 
-                {/* Security Score & Risk Level */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-secondary p-2 rounded animate-fade-in">
-                    <div className="text-[9px] text-muted-foreground mb-1">Security Score</div>
-                    <div className={`text-lg font-bold ${
-                      securityData.score >= 7 ? 'text-success' :
-                      securityData.score >= 4 ? 'text-yellow-500' :
-                      'text-destructive'
-                    }`}>
-                      {securityData.score.toFixed(1)}/10
-                    </div>
-                  </div>
-                  
-                  <div className="bg-secondary p-2 rounded animate-fade-in">
-                    <div className="text-[9px] text-muted-foreground mb-1">Risk Level</div>
-                    <Badge 
-                      className={`text-[10px] mt-1 ${
-                        securityData.riskLevel === 'GOOD' ? 'bg-success text-success-foreground' :
-                        securityData.riskLevel === 'MEDIUM' ? 'bg-yellow-500 text-yellow-950' :
-                        'bg-destructive text-destructive-foreground'
-                      }`}
-                    >
-                      {securityData.riskLevel}
-                    </Badge>
+                {/* Token Age */}
+                <div className="bg-secondary p-2 rounded animate-fade-in">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-muted-foreground">Token Age</span>
+                    <span className="text-[11px] font-semibold">{securityData.tokenAge || 'N/A'}</span>
                   </div>
                 </div>
-
-                {/* Token Age */}
-                {securityData.tokenAge && (
-                  <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.05s' }}>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] text-muted-foreground">Token Age</span>
-                      <span className="text-[11px] font-semibold">{securityData.tokenAge}</span>
-                    </div>
-                  </div>
-                )}
                 
                 {/* Holder Distribution */}
                 <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.1s' }}>
