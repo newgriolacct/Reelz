@@ -72,7 +72,10 @@ export const convertDexPairToToken = async (pair: DexPair): Promise<Token> => {
   let website = pair.info?.websites?.[0]?.url;
 
   // Try Birdeye as fallback with 2s timeout (non-blocking)
-  if ((!twitter || !telegram || !website) && pair.baseToken.address && pair.chainId.toLowerCase() === 'solana') {
+  console.log(`[Token] Chain: ${pair.chainId}, Has address: ${!!pair.baseToken.address}, Twitter: ${!!twitter}, Telegram: ${!!telegram}`);
+  
+  if (pair.baseToken.address && pair.chainId.toLowerCase() === 'solana') {
+    console.log(`[Token] Fetching Birdeye data for ${pair.baseToken.symbol}`);
     try {
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Timeout')), 2000)
@@ -83,6 +86,7 @@ export const convertDexPairToToken = async (pair: DexPair): Promise<Token> => {
       const birdeyeData = await Promise.race([birdeyePromise, timeoutPromise]) as any;
       
       if (birdeyeData) {
+        console.log(`[Token] Birdeye data received for ${pair.baseToken.symbol}:`, birdeyeData);
         const birdeyeSocials = extractSocialLinks(birdeyeData);
         // Use Birdeye data as fallback
         website = website || birdeyeSocials.website;
@@ -91,7 +95,7 @@ export const convertDexPairToToken = async (pair: DexPair): Promise<Token> => {
         discord = discord || birdeyeSocials.discord;
       }
     } catch (error) {
-      // Silently fail if timeout or error - don't block token loading
+      console.log(`[Token] Birdeye error for ${pair.baseToken.symbol}:`, error);
     }
   }
 
