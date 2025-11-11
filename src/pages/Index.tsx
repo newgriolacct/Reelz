@@ -286,7 +286,7 @@ const Index = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center p-6">
           <p className="text-destructive mb-2 text-lg font-semibold">{error}</p>
-          <p className="text-muted-foreground mb-4 text-sm">API rate limit reached. Please wait a moment.</p>
+          <p className="text-muted-foreground mb-4 text-sm">Unable to load tokens. Please try again.</p>
           <button 
             onClick={() => {
               setError(null);
@@ -306,9 +306,9 @@ const Index = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center p-6 max-w-md">
-          <p className="text-lg font-semibold mb-2">API Rate Limit Reached</p>
+          <p className="text-lg font-semibold mb-2">No Tokens Available</p>
           <p className="text-sm text-muted-foreground mb-4">
-            Birdeye API is temporarily limiting requests. The app will use cached data once available, or try refreshing in a few minutes.
+            Unable to load tokens at the moment. The app will use cached data once available, or try refreshing.
           </p>
           <button 
             onClick={() => window.location.reload()} 
