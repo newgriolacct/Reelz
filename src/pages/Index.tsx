@@ -71,6 +71,10 @@ const Index = () => {
         const params = new URLSearchParams(window.location.search);
         const tokenId = params.get('token');
         
+        if (tokenId) {
+          console.log('🎯 URL token requested:', tokenId);
+        }
+        
         // Load both trending and random in parallel
         const [convertedRandom, convertedTrending] = await Promise.all([
           fetchAggregatedRandom(selectedNetwork, true), // Reset offset when network changes

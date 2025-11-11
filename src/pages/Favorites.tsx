@@ -220,7 +220,10 @@ export default function Favorites() {
                   <Card 
                     key={favorite.id} 
                     className="p-4 hover:bg-accent/5 transition-all border-border/40 cursor-pointer"
-                    onClick={() => window.location.href = `/?token=${favorite.token_id}`}
+                    onClick={() => {
+                      console.log('Navigating to token:', favorite.token_id, favorite.token_symbol);
+                      navigate(`/?token=${favorite.token_id}`);
+                    }}
                   >
                     <div className="flex items-start gap-3">
                       <img 
