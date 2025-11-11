@@ -47,16 +47,16 @@ export default function Discover() {
   // Show selected token in full-screen card view
   if (selectedToken) {
     return (
-      <AppLayout showTrendingBar>
+      <AppLayout showTrendingBar={false}>
         {/* Back button */}
         <button
           onClick={() => setSelectedToken(null)}
-          className="fixed top-[75px] left-4 z-50 px-4 py-2 bg-secondary/90 backdrop-blur-sm hover:bg-secondary text-foreground rounded-lg border border-border flex items-center gap-2 transition-colors shadow-lg"
+          className="fixed top-4 left-4 z-50 px-4 py-2 bg-secondary/90 backdrop-blur-sm hover:bg-secondary text-foreground rounded-lg border border-border flex items-center gap-2 transition-colors shadow-lg"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-          Back
+          Back to Search
         </button>
-        <div className="h-[100dvh] overflow-y-auto snap-y snap-mandatory bg-background">
+        <div className="h-[100dvh] overflow-y-auto bg-background pt-16">
           <TokenCard token={selectedToken} isEagerLoad />
         </div>
         <BottomNav />
