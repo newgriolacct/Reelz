@@ -116,7 +116,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 )}
                 {token.contractAddress?.toLowerCase().endsWith('pump') && (
                   <Badge className="bg-[#14F195] text-black text-[10px] px-1 py-0 flex items-center gap-0.5 font-bold">
-                    <img src={pumpfunIcon} alt="Pump.fun" className="w-2.5 h-2.5" />
+                    <img src={pumpfunIcon} alt="Pump.fun" className="w-3 h-3 rounded-full object-cover" />
                     Pump.fun
                   </Badge>
                 )}
@@ -180,7 +180,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                     onClick={() => window.open(`https://pump.fun/${token.contractAddress}`, '_blank')}
                     title="View on Pump.fun"
                   >
-                    <img src={pumpfunIcon} alt="Pump.fun" className="w-3.5 h-3.5" />
+                    <img src={pumpfunIcon} alt="Pump.fun" className="w-4 h-4 rounded-full object-cover" />
                   </Button>
                 )}
               </>
