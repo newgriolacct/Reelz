@@ -20,15 +20,17 @@ interface TokenHolder {
 }
 
 /**
- * Fetch recent transactions using Helius Enhanced Transactions API
+ * Fetch recent transactions using Helius RPC from DEX pair address
  */
-export const fetchTokenTransactions = async (tokenAddress: string): Promise<DexTransaction[]> => {
+export const fetchTokenTransactions = async (pairAddress: string): Promise<DexTransaction[]> => {
   try {
-    const cacheKey = `helius:txs:${tokenAddress}`;
+    const cacheKey = `helius:txs:${pairAddress}`;
     const cached = apiCache.get<DexTransaction[]>(cacheKey);
     if (cached) return cached;
 
-    // Fetch recent transactions for this token
+    console.log(`[Helius] Fetching transactions for pair: ${pairAddress}`);
+
+    // Fetch recent transactions for the pair address (where swaps occur)
     const response = await fetch(HELIUS_RPC_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -37,8 +39,8 @@ export const fetchTokenTransactions = async (tokenAddress: string): Promise<DexT
         id: 'tx-history',
         method: 'getSignaturesForAddress',
         params: [
-          tokenAddress,
-          { limit: 20 }
+          pairAddress,
+          { limit: 30 }
         ]
       })
     });
@@ -52,11 +54,14 @@ export const fetchTokenTransactions = async (tokenAddress: string): Promise<DexT
     const signatures = data.result || [];
     
     if (signatures.length === 0) {
+      console.log(`[Helius] No transactions found for ${pairAddress}`);
       return [];
     }
 
-    // Fetch detailed transaction data
-    const txPromises = signatures.slice(0, 15).map(async (sig: any) => {
+    console.log(`[Helius] Found ${signatures.length} signatures`);
+
+    // Fetch detailed transaction data for first 20
+    const txPromises = signatures.slice(0, 20).map(async (sig: any) => {
       try {
         const txResponse = await fetch(HELIUS_RPC_URL, {
           method: 'POST',
@@ -78,6 +83,7 @@ export const fetchTokenTransactions = async (tokenAddress: string): Promise<DexT
         const txData = await txResponse.json();
         return txData.result;
       } catch (err) {
+        console.error('[Helius] Error fetching tx detail:', err);
         return null;
       }
     });
@@ -92,7 +98,7 @@ export const fetchTokenTransactions = async (tokenAddress: string): Promise<DexT
       const preBalances = tx.meta.preTokenBalances || [];
       const postBalances = tx.meta.postTokenBalances || [];
       
-      // Find token balance changes
+      // Look for token balance changes to identify swaps
       for (let i = 0; i < postBalances.length; i++) {
         const postBalance = postBalances[i];
         const preBalance = preBalances.find((pb: any) => pb.accountIndex === postBalance.accountIndex);
@@ -103,27 +109,37 @@ export const fetchTokenTransactions = async (tokenAddress: string): Promise<DexT
         const postAmount = parseFloat(postBalance.uiTokenAmount?.uiAmountString || '0');
         const change = postAmount - preAmount;
 
-        if (Math.abs(change) > 0) {
+        if (Math.abs(change) > 0.001) { // Ignore dust amounts
           const type = change > 0 ? 'buy' : 'sell';
           const amount = Math.abs(change);
           
-          // Estimate USD value (rough approximation)
-          const solChange = (tx.meta.postBalances[0] - tx.meta.preBalances[0]) / 1e9;
-          const totalUsd = Math.abs(solChange) * 150; // Rough SOL price
-
-          transactions.push({
-            type,
-            priceUsd: totalUsd / amount,
-            amount,
-            totalUsd,
-            timestamp: (tx.blockTime || 0) * 1000,
-            txHash: tx.transaction.signatures[0].slice(0, 8) + '...',
-            maker: tx.transaction.message.accountKeys[0].pubkey?.slice(0, 8) + '...' || 'Unknown',
-          });
-          break; // Only one transaction per signature
+          // Calculate USD value from SOL balance change
+          const preSOL = tx.meta.preBalances[0] / 1e9;
+          const postSOL = tx.meta.postBalances[0] / 1e9;
+          const solChange = Math.abs(postSOL - preSOL);
+          
+          // Get current SOL price (approximate)
+          const solPrice = 150; // You could fetch this from an API for accuracy
+          const totalUsd = solChange * solPrice;
+          
+          // Only include transactions with meaningful USD value
+          if (totalUsd > 0.01) {
+            transactions.push({
+              type,
+              priceUsd: totalUsd / amount,
+              amount,
+              totalUsd,
+              timestamp: (tx.blockTime || 0) * 1000,
+              txHash: tx.transaction.signatures[0],
+              maker: tx.transaction.message.accountKeys[0]?.pubkey || 'Unknown',
+            });
+          }
+          break; // Only process first significant balance change
         }
       }
     }
+
+    console.log(`[Helius] Processed ${transactions.length} valid transactions`);
 
     // Sort by timestamp descending
     transactions.sort((a, b) => b.timestamp - a.timestamp);

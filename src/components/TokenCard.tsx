@@ -106,9 +106,9 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   };
 
   const loadTransactions = async () => {
-    if (!token.contractAddress) return;
+    if (!token.pairAddress) return;
     setLoadingTxs(true);
-    const txs = await fetchTokenTransactions(token.contractAddress);
+    const txs = await fetchTokenTransactions(token.pairAddress);
     setTransactions(txs);
     setLoadingTxs(false);
   };
@@ -153,7 +153,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
     }, 15000); // Refresh every 15 seconds
     
     return () => clearInterval(interval);
-  }, [activeTab, token.contractAddress]);
+  }, [activeTab, token.pairAddress]);
 
   return (
     <>
@@ -338,8 +338,14 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                         {formatDistanceToNow(tx.timestamp, { addSuffix: true })}
                       </div>
                     </div>
-                    <div className="text-[9px] text-muted-foreground mt-1">
-                      {formatNumber(tx.amount)} @ {formatPrice(tx.priceUsd)}
+                    <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
+                      <span>{formatNumber(tx.amount)} @ {formatPrice(tx.priceUsd)}</span>
+                      <button
+                        onClick={() => window.open(`https://solscan.io/tx/${tx.txHash}`, '_blank')}
+                        className="ml-auto hover:text-primary transition-colors"
+                      >
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </button>
                     </div>
                   </div>
                 ))}
