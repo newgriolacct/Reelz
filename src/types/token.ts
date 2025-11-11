@@ -1,5 +1,4 @@
 import { DexPair } from "@/services/dexscreener";
-import { fetchBirdeyeTokenInfo, extractSocialLinks } from "@/services/birdeye";
 
 export interface Token {
   id: string;
@@ -66,38 +65,10 @@ export const convertDexPairToToken = async (pair: DexPair): Promise<Token> => {
 
   // Extract social media links from DexScreener
   const socials = pair.info?.socials || [];
-  let twitter = socials.find(s => s.platform === 'twitter')?.handle;
-  let telegram = socials.find(s => s.platform === 'telegram')?.handle;
-  let discord = socials.find(s => s.platform === 'discord')?.handle;
-  let website = pair.info?.websites?.[0]?.url;
-
-  // Try Birdeye as fallback with 2s timeout (non-blocking)
-  console.log(`[Token] Chain: ${pair.chainId}, Has address: ${!!pair.baseToken.address}, Twitter: ${!!twitter}, Telegram: ${!!telegram}`);
-  
-  if (pair.baseToken.address && pair.chainId.toLowerCase() === 'solana') {
-    console.log(`[Token] Fetching Birdeye data for ${pair.baseToken.symbol}`);
-    try {
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 2000)
-      );
-      
-      const birdeyePromise = fetchBirdeyeTokenInfo(pair.baseToken.address);
-      
-      const birdeyeData = await Promise.race([birdeyePromise, timeoutPromise]) as any;
-      
-      if (birdeyeData) {
-        console.log(`[Token] Birdeye data received for ${pair.baseToken.symbol}:`, birdeyeData);
-        const birdeyeSocials = extractSocialLinks(birdeyeData);
-        // Use Birdeye data as fallback
-        website = website || birdeyeSocials.website;
-        twitter = twitter || birdeyeSocials.twitter;
-        telegram = telegram || birdeyeSocials.telegram;
-        discord = discord || birdeyeSocials.discord;
-      }
-    } catch (error) {
-      console.log(`[Token] Birdeye error for ${pair.baseToken.symbol}:`, error);
-    }
-  }
+  const twitter = socials.find(s => s.platform === 'twitter')?.handle;
+  const telegram = socials.find(s => s.platform === 'telegram')?.handle;
+  const discord = socials.find(s => s.platform === 'discord')?.handle;
+  const website = pair.info?.websites?.[0]?.url;
 
   return {
     id: pair.pairAddress,

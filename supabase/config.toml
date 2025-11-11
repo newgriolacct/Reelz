@@ -2,6 +2,3 @@ project_id = "ipnfjgsygaknlybkzpgj"
 
 [functions.fetch-tokens]
 verify_jwt = false
-
-[functions.birdeye-metadata]
-verify_jwt = false
