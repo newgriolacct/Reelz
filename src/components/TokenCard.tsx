@@ -12,6 +12,7 @@ import { useTokenFavorites } from "@/hooks/useTokenFavorites";
 import { useTokenComments } from "@/hooks/useTokenComments";
 import { useTokenLikes } from "@/hooks/useTokenLikes";
 import pumpfunIcon from "@/assets/pumpfun-icon.png";
+import { formatDistanceToNow } from "date-fns";
 
 interface TokenCardProps {
   token: Token;
@@ -109,6 +110,11 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
               className="w-8 h-8 rounded-full border-2 border-primary shadow-lg flex-shrink-0"
             />
             <div className="min-w-0 flex-1">
+              {token.createdAt && (
+                <div className="text-[9px] text-muted-foreground mb-0.5">
+                  Created {formatDistanceToNow(token.createdAt, { addSuffix: true })}
+                </div>
+              )}
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-foreground text-sm truncate">{token.symbol}</span>
                 {token.isNew && (
