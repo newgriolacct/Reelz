@@ -66,7 +66,13 @@ export const fetchRugcheckData = async (mintAddress: string): Promise<SecurityDa
     if (!response.ok) {
       if (response.status === 404) {
         console.log(`[Rugcheck] No data found for ${mintAddress}`);
+        // Cache null result to avoid repeated 404s
+        apiCache.set(cacheKey, null as any, CACHE_DURATION);
         return null;
+      }
+      if (response.status === 429) {
+        console.log(`[Rugcheck] Rate limited for ${mintAddress} - will retry later`);
+        return null; // Don't cache rate limit errors
       }
       throw new Error(`Rugcheck API error: ${response.status}`);
     }

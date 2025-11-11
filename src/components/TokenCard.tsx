@@ -38,33 +38,42 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   
   const isTokenFavorited = isFavorited(token.id);
   
-  // Fetch security data if not already loaded
+  // Fetch security data with delay to avoid rate limiting
   useEffect(() => {
     if (!token.securityScore && token.contractAddress && !isLoadingSecurity) {
-      console.log(`[Security] Fetching for ${token.symbol} (${token.contractAddress})`);
+      console.log(`[Security] Scheduling fetch for ${token.symbol} (${token.contractAddress})`);
       setIsLoadingSecurity(true);
-      fetchRugcheckData(token.contractAddress)
-        .then(data => {
-          if (data) {
-            console.log(`[Security] Data received for ${token.symbol}:`, data);
-            Object.assign(token, {
-              securityScore: data.score,
-              riskLevel: data.riskLevel,
-              topHoldersPercent: data.topHoldersPercent,
-              freezeAuthority: data.freezeAuthority,
-              mintAuthority: data.mintAuthority,
-              lpLockedPercent: data.lpLockedPercent,
-              creatorPercent: data.creatorPercent,
-              riskFactors: data.riskFactors,
-            });
-          } else {
-            console.log(`[Security] No data available for ${token.symbol}`);
-          }
-        })
-        .catch(error => {
-          console.error(`[Security] Error fetching for ${token.symbol}:`, error);
-        })
-        .finally(() => setIsLoadingSecurity(false));
+      
+      // Add random delay between 500ms-2000ms to avoid rate limiting
+      const delay = 500 + Math.random() * 1500;
+      
+      const timer = setTimeout(() => {
+        console.log(`[Security] Fetching for ${token.symbol}`);
+        fetchRugcheckData(token.contractAddress!)
+          .then(data => {
+            if (data) {
+              console.log(`[Security] Data received for ${token.symbol}:`, data);
+              Object.assign(token, {
+                securityScore: data.score,
+                riskLevel: data.riskLevel,
+                topHoldersPercent: data.topHoldersPercent,
+                freezeAuthority: data.freezeAuthority,
+                mintAuthority: data.mintAuthority,
+                lpLockedPercent: data.lpLockedPercent,
+                creatorPercent: data.creatorPercent,
+                riskFactors: data.riskFactors,
+              });
+            } else {
+              console.log(`[Security] No data available for ${token.symbol}`);
+            }
+          })
+          .catch(error => {
+            console.error(`[Security] Error fetching for ${token.symbol}:`, error);
+          })
+          .finally(() => setIsLoadingSecurity(false));
+      }, delay);
+      
+      return () => clearTimeout(timer);
     } else if (!token.contractAddress) {
       console.log(`[Security] No contract address for ${token.symbol}`);
     }
