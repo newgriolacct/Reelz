@@ -109,12 +109,12 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
 
   return (
     <>
-      <div className="h-screen snap-start relative flex flex-col bg-background">
+      <div className="h-[100dvh] snap-start relative flex flex-col bg-background overflow-hidden">
         {/* Top spacing for trending bar and network selector */}
         <div className="h-[110px] md:h-[120px] lg:h-[140px] flex-shrink-0" />
         
         {/* Token Header */}
-        <div className="px-3 py-1.5 flex items-center justify-between bg-background flex-shrink-0 border-b border-border/50">
+        <div className="px-3 py-1 flex items-center justify-between bg-background flex-shrink-0 border-b border-border/50">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <img 
               src={token.avatarUrl} 
@@ -212,8 +212,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             <TabsTrigger value="holders" className="text-[10px]">Holders</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="chart" className="flex-1 min-h-0 mt-0">
-            <div ref={chartContainerRef} className="relative bg-card overflow-hidden h-[200px]">
+          <TabsContent value="chart" className="flex-1 min-h-0 mt-0 overflow-hidden">
+            <div ref={chartContainerRef} className="relative bg-card overflow-hidden h-full min-h-[180px] max-h-[280px]">
               {token.dexScreenerUrl ? (
                 shouldLoadChart ? (
                   <iframe
@@ -238,7 +238,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             </div>
           </TabsContent>
 
-          <TabsContent value="transactions" className="flex-1 overflow-y-auto mt-0 h-[200px]">
+          <TabsContent value="transactions" className="flex-1 overflow-y-auto mt-0 min-h-[180px] max-h-[280px]">
             {loadingTxs ? (
               <div className="p-3 space-y-2">
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -275,7 +275,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             )}
           </TabsContent>
 
-          <TabsContent value="holders" className="flex-1 overflow-y-auto mt-0 h-[200px]">
+          <TabsContent value="holders" className="flex-1 overflow-y-auto mt-0 min-h-[180px] max-h-[280px]">
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm p-4 text-center">
               <p className="font-semibold mb-1">Holder data not available</p>
               <p className="text-xs">Public APIs don't provide holder information without authentication</p>
@@ -284,7 +284,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
         </Tabs>
 
         {/* Bottom - Token Info */}
-        <div className="px-3 py-1.5 pb-16 flex flex-col gap-1 bg-background flex-shrink-0 overflow-y-auto">
+        <div className="px-3 py-1 pb-16 flex flex-col gap-1 bg-background flex-shrink-0">
           {/* Price Info & Actions - Single Row */}
           <div className="mb-0.5 flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
@@ -335,33 +335,30 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </div>
 
           {/* Stats Grid - Compact */}
-          <div className="space-y-0.5 mb-1">
+          <div className="space-y-0.5 mb-0.5">
             {/* Market Cap & Volume & Liquidity & Chain */}
-            <div className="grid grid-cols-2 gap-1">
-              <div className="bg-secondary rounded-lg p-1">
-                <div className="text-[9px] text-muted-foreground">Market Cap</div>
-                <div className="text-[11px] font-bold text-foreground truncate">
+            <div className="grid grid-cols-4 gap-1">
+              <div className="bg-secondary rounded p-0.5">
+                <div className="text-[8px] text-muted-foreground">MCap</div>
+                <div className="text-[10px] font-bold text-foreground truncate">
                   {formatCurrency(token.marketCap)}
                 </div>
               </div>
-              <div className="bg-secondary rounded-lg p-1">
-                <div className="text-[9px] text-muted-foreground">Volume 24h</div>
-                <div className="text-[11px] font-bold text-foreground truncate">
+              <div className="bg-secondary rounded p-0.5">
+                <div className="text-[8px] text-muted-foreground">Vol 24h</div>
+                <div className="text-[10px] font-bold text-foreground truncate">
                   {formatCurrency(token.volume24h)}
                 </div>
               </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-1">
-              <div className="bg-secondary rounded-lg p-1">
-                <div className="text-[9px] text-muted-foreground">Liquidity</div>
-                <div className="text-[11px] font-bold text-foreground truncate">
+              <div className="bg-secondary rounded p-0.5">
+                <div className="text-[8px] text-muted-foreground">Liq</div>
+                <div className="text-[10px] font-bold text-foreground truncate">
                   {formatCurrency(token.liquidity)}
                 </div>
               </div>
-              <div className="bg-secondary rounded-lg p-1">
-                <div className="text-[9px] text-muted-foreground">Chain</div>
-                <div className="text-[11px] font-bold text-foreground truncate">
+              <div className="bg-secondary rounded p-0.5">
+                <div className="text-[8px] text-muted-foreground">Chain</div>
+                <div className="text-[10px] font-bold text-foreground truncate">
                   {token.chain}
                 </div>
               </div>
@@ -372,15 +369,15 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           <div className="grid grid-cols-2 gap-1.5">
             <Button 
               onClick={() => setShowBuyDrawer(true)}
-              size="lg"
-              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-sm h-9"
+              size="sm"
+              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-xs h-8"
             >
               Buy
             </Button>
             <Button 
               onClick={() => setShowSellDrawer(true)}
-              size="lg"
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-sm h-9"
+              size="sm"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-xs h-8"
             >
               Sell
             </Button>
