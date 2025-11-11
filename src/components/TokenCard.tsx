@@ -409,10 +409,24 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
               </div>
             ) : securityData ? (
               <div className="p-2 space-y-2">
-                {securityData.score && (
+                {/* Rugcheck Verification Link */}
+                {token.contractAddress && (
+                  <div className="bg-secondary/50 p-2 rounded flex items-center justify-between animate-fade-in">
+                    <span className="text-[9px] text-muted-foreground">Powered by Rugcheck</span>
+                    <button
+                      onClick={() => window.open(`https://rugcheck.xyz/tokens/${token.contractAddress}`, '_blank')}
+                      className="text-[9px] text-primary hover:underline flex items-center gap-1"
+                    >
+                      Verify Report
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                )}
+                
+                {securityData.score !== undefined && (
                   <div className="bg-secondary p-2 rounded animate-fade-in">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] text-muted-foreground">Security Score</span>
+                      <span className="text-[10px] text-muted-foreground">Rugcheck Score</span>
                       <span className={`text-[11px] font-bold ${
                         securityData.score >= 7 ? 'text-success' :
                         securityData.score >= 4 ? 'text-yellow-500' :
