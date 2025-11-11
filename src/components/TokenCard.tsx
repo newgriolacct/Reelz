@@ -269,7 +269,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
         </div>
 
         {/* Bottom - Token Info */}
-        <div className="px-3 py-1.5 pb-[72px] flex flex-col gap-1 bg-background flex-shrink-0 overflow-y-auto">
+        <div className="px-3 py-1.5 pb-16 flex flex-col gap-1 bg-background flex-shrink-0 overflow-y-auto">
           {/* Price Info & Actions - Single Row */}
           <div className="mb-0.5 flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
