@@ -12,6 +12,9 @@ import { useTokenFavorites } from "@/hooks/useTokenFavorites";
 import { useTokenComments } from "@/hooks/useTokenComments";
 import { useTokenLikes } from "@/hooks/useTokenLikes";
 import pumpfunIcon from "@/assets/pumpfun-icon.png";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { fetchTokenTransactions, fetchTokenHolders } from "@/services/solscan";
+import { formatDistanceToNow } from "date-fns";
 
 interface TokenCardProps {
   token: Token;
@@ -26,6 +29,10 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [showSellDrawer, setShowSellDrawer] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [shouldLoadChart, setShouldLoadChart] = useState(isEagerLoad);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [holders, setHolders] = useState<any[]>([]);
+  const [loadingTxs, setLoadingTxs] = useState(false);
+  const [loadingHolders, setLoadingHolders] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -92,6 +99,22 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
         });
       }
     }
+  };
+
+  const loadTransactions = async () => {
+    if (!token.contractAddress || loadingTxs || transactions.length > 0) return;
+    setLoadingTxs(true);
+    const txs = await fetchTokenTransactions(token.contractAddress);
+    setTransactions(txs);
+    setLoadingTxs(false);
+  };
+
+  const loadHolders = async () => {
+    if (!token.contractAddress || loadingHolders || holders.length > 0) return;
+    setLoadingHolders(true);
+    const holdersList = await fetchTokenHolders(token.contractAddress);
+    setHolders(holdersList);
+    setLoadingHolders(false);
   };
 
   return (
@@ -191,30 +214,101 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </div>
         </div>
 
-        {/* DexScreener Chart - Fixed compact height */}
-        <div ref={chartContainerRef} className="relative bg-card overflow-hidden h-[200px] flex-shrink-0">
-        {token.dexScreenerUrl ? (
-            shouldLoadChart ? (
-              <iframe
-                src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
-                className="w-full h-full border-0 bg-secondary"
-                title={`${token.symbol} Chart`}
-                loading="lazy"
-                style={{ marginTop: '-40px', height: 'calc(100% + 80px)' }}
-              />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-secondary">
-                <Skeleton className="w-4/5 h-8" />
-                <Skeleton className="w-3/4 h-32" />
-                <Skeleton className="w-4/5 h-8" />
-              </div>
-            )
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-secondary">
-              <p className="text-muted-foreground">Chart not available</p>
+        {/* Chart/Transactions/Holders Tabs */}
+        <Tabs defaultValue="chart" className="flex-1 flex flex-col min-h-0">
+          <TabsList className="w-full grid grid-cols-3 bg-secondary h-9 flex-shrink-0">
+            <TabsTrigger value="chart" className="text-xs">Chart</TabsTrigger>
+            <TabsTrigger value="transactions" className="text-xs" onClick={loadTransactions}>Transactions</TabsTrigger>
+            <TabsTrigger value="holders" className="text-xs" onClick={loadHolders}>Holders</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="chart" className="flex-1 min-h-0 mt-0">
+            <div ref={chartContainerRef} className="relative bg-card overflow-hidden h-[200px]">
+              {token.dexScreenerUrl ? (
+                shouldLoadChart ? (
+                  <iframe
+                    src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
+                    className="w-full h-full border-0 bg-secondary"
+                    title={`${token.symbol} Chart`}
+                    loading="lazy"
+                    style={{ marginTop: '-40px', height: 'calc(100% + 80px)' }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-secondary">
+                    <Skeleton className="w-4/5 h-8" />
+                    <Skeleton className="w-3/4 h-32" />
+                    <Skeleton className="w-4/5 h-8" />
+                  </div>
+                )
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-secondary">
+                  <p className="text-muted-foreground">Chart not available</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="transactions" className="flex-1 overflow-y-auto mt-0 h-[200px]">
+            {loadingTxs ? (
+              <div className="p-3 space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : transactions.length > 0 ? (
+              <div className="p-2 space-y-1">
+                {transactions.map((tx, idx) => (
+                  <div key={idx} className="bg-secondary p-2 rounded text-xs">
+                    <div className="flex justify-between items-start">
+                      <div className="font-mono text-[10px] truncate flex-1">
+                        {tx.txHash?.slice(0, 8)}...{tx.txHash?.slice(-8)}
+                      </div>
+                      <div className="text-[9px] text-muted-foreground ml-2">
+                        {tx.blockTime && formatDistanceToNow(tx.blockTime * 1000, { addSuffix: true })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                No transactions available
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="holders" className="flex-1 overflow-y-auto mt-0 h-[200px]">
+            {loadingHolders ? (
+              <div className="p-3 space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : holders.length > 0 ? (
+              <div className="p-2 space-y-1">
+                {holders.map((holder, idx) => (
+                  <div key={idx} className="bg-secondary p-2 rounded text-xs">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="text-[10px] text-muted-foreground">#{holder.rank || idx + 1}</span>
+                        <span className="font-mono text-[10px] truncate">
+                          {holder.owner?.slice(0, 6)}...{holder.owner?.slice(-4)}
+                        </span>
+                      </div>
+                      <div className="text-[10px] font-bold ml-2">
+                        {((holder.amount / Math.pow(10, holder.decimals || 0)) / 1000000).toFixed(2)}M
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                No holders data available
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
         {/* Bottom - Token Info */}
         <div className="px-3 py-1.5 pb-16 flex flex-col gap-1 bg-background flex-shrink-0 overflow-y-auto">
