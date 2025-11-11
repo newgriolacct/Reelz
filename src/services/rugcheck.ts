@@ -46,24 +46,33 @@ export interface SecurityData {
  */
 export const fetchRugcheckData = async (mintAddress: string): Promise<SecurityData | null> => {
   try {
+    console.log(`[Rugcheck] Fetching data for: ${mintAddress}`);
+    
     // Check cache first
     const cacheKey = `rugcheck:${mintAddress}`;
     const cached = apiCache.get<SecurityData>(cacheKey);
     if (cached) {
+      console.log(`[Rugcheck] Using cached data for ${mintAddress}`);
       return cached;
     }
 
-    const response = await fetch(`${RUGCHECK_API}/tokens/${mintAddress}/report`);
+    const url = `${RUGCHECK_API}/tokens/${mintAddress}/report`;
+    console.log(`[Rugcheck] Calling API: ${url}`);
+    
+    const response = await fetch(url);
+    
+    console.log(`[Rugcheck] Response status: ${response.status}`);
     
     if (!response.ok) {
       if (response.status === 404) {
-        console.log(`No Rugcheck data for ${mintAddress}`);
+        console.log(`[Rugcheck] No data found for ${mintAddress}`);
         return null;
       }
       throw new Error(`Rugcheck API error: ${response.status}`);
     }
 
     const data: RugcheckToken = await response.json();
+    console.log(`[Rugcheck] Raw data:`, data);
     
     // Normalize score from 0-10000 to 0-10
     const normalizedScore = data.score / 1000;
@@ -95,12 +104,14 @@ export const fetchRugcheckData = async (mintAddress: string): Promise<SecurityDa
       riskFactors,
     };
     
+    console.log(`[Rugcheck] Processed data:`, securityData);
+    
     // Cache the result
     apiCache.set(cacheKey, securityData, CACHE_DURATION);
     
     return securityData;
   } catch (error) {
-    console.error(`Error fetching Rugcheck data for ${mintAddress}:`, error);
+    console.error(`[Rugcheck] Error fetching data for ${mintAddress}:`, error);
     return null;
   }
 };
