@@ -4,9 +4,11 @@ import { TrendingTokensList } from "@/components/TrendingTokensList";
 import { NetworkSelector } from "@/components/NetworkSelector";
 import { fetchAggregatedTrending, fetchAggregatedRandom, fetchSpecificToken } from "@/services/tokenAggregator";
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Token } from "@/types/token";
 
 const Index = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tokens, setTokens] = useState<Token[]>([]);
   const [trendingTokens, setTrendingTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,8 +70,7 @@ const Index = () => {
         setLoading(true);
         
         // Check for token in URL parameters
-        const params = new URLSearchParams(window.location.search);
-        const tokenId = params.get('token');
+        const tokenId = searchParams.get('token');
         
         if (tokenId) {
           console.log('🎯 URL token requested:', tokenId);
@@ -97,7 +98,7 @@ const Index = () => {
           // Add to top of feed if found
           if (specificToken) {
             convertedRandom.unshift(specificToken);
-            console.log(`Added ${specificToken.symbol} to top of feed`);
+            console.log(`✅ Added ${specificToken.symbol} to top of feed`);
           }
         }
         
@@ -119,7 +120,7 @@ const Index = () => {
         
         // Clear URL params after loading
         if (tokenId) {
-          window.history.replaceState({}, '', '/');
+          setSearchParams({});
         }
       } catch (err) {
         console.error('Failed to load tokens:', err);
@@ -129,7 +130,7 @@ const Index = () => {
     };
 
     loadTokens();
-  }, [selectedNetwork]);
+  }, [selectedNetwork, searchParams]);
 
   // Track current token on scroll and load more - THROTTLED FOR PERFORMANCE
   useEffect(() => {
