@@ -121,26 +121,29 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                   </Badge>
                 )}
               </div>
-              <span className="text-[10px] text-muted-foreground truncate block">{token.name}</span>
-              {token.contractAddress && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="text-[9px] text-muted-foreground font-mono truncate">
-                    {token.contractAddress.slice(0, 6)}...{token.contractAddress.slice(-4)}
-                  </span>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(token.contractAddress!);
-                      toast({
-                        title: "Copied!",
-                        description: "Contract address copied to clipboard",
-                      });
-                    }}
-                    className="flex-shrink-0 hover:text-primary transition-colors"
-                  >
-                    <Copy className="w-2.5 h-2.5 text-muted-foreground hover:text-primary" />
-                  </button>
-                </div>
-              )}
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-muted-foreground truncate">{token.name}</span>
+                {token.contractAddress && (
+                  <>
+                    <span className="text-[10px] text-muted-foreground">·</span>
+                    <span className="text-[9px] text-muted-foreground font-mono truncate">
+                      {token.contractAddress.slice(0, 4)}...{token.contractAddress.slice(-4)}
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(token.contractAddress!);
+                        toast({
+                          title: "Copied!",
+                          description: "Contract address copied to clipboard",
+                        });
+                      }}
+                      className="flex-shrink-0 hover:text-primary transition-colors"
+                    >
+                      <Copy className="w-2.5 h-2.5 text-muted-foreground hover:text-primary" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           
