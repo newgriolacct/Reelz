@@ -15,6 +15,7 @@ import pumpfunIcon from "@/assets/pumpfun-icon.png";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { fetchTokenTransactions, fetchTokenHolders } from "@/services/solscan";
 import { fetchRugcheckData } from "@/services/rugcheck";
+import { fetchSolsnifferData } from "@/services/solsniffer";
 import { formatDistanceToNow } from "date-fns";
 
 interface TokenCardProps {
@@ -35,6 +36,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [holders, setHolders] = useState<any[]>([]);
   const [loadingHolders, setLoadingHolders] = useState(false);
   const [securityData, setSecurityData] = useState<any>(null);
+  const [bundleSniperData, setBundleSniperData] = useState<any>(null);
   const [loadingSecurity, setLoadingSecurity] = useState(false);
   const [activeTab, setActiveTab] = useState('chart');
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -122,10 +124,17 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   };
 
   const loadSecurity = async () => {
-    if (!token.contractAddress || securityData || loadingSecurity) return;
+    if (!token.contractAddress || (securityData && bundleSniperData) || loadingSecurity) return;
     setLoadingSecurity(true);
-    const data = await fetchRugcheckData(token.contractAddress);
-    setSecurityData(data);
+    
+    // Fetch both security sources in parallel
+    const [rugcheckResult, solsnifferResult] = await Promise.all([
+      fetchRugcheckData(token.contractAddress),
+      fetchSolsnifferData(token.contractAddress),
+    ]);
+    
+    setSecurityData(rugcheckResult);
+    setBundleSniperData(solsnifferResult);
     setLoadingSecurity(false);
   };
 
@@ -465,6 +474,48 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                     </div>
                   </div>
                 </div>
+                
+                {/* Bundle & Sniper Detection (Solsniffer) */}
+                {bundleSniperData && (
+                  <>
+                    <div className="bg-secondary/50 p-2 rounded animate-fade-in" style={{ animationDelay: '0.2s' }}>
+                      <div className="text-[9px] text-muted-foreground mb-1.5">Bundle & Sniper Detection</div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px]">Bundle %</span>
+                          <span className={`text-[11px] font-semibold ${
+                            bundleSniperData.bundlePercentage < 10 ? 'text-success' : 
+                            bundleSniperData.bundlePercentage < 30 ? 'text-yellow-500' : 
+                            'text-destructive'
+                          }`}>
+                            {bundleSniperData.bundlePercentage.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px]">Sniper %</span>
+                          <span className={`text-[11px] font-semibold ${
+                            bundleSniperData.sniperPercentage < 10 ? 'text-success' : 
+                            bundleSniperData.sniperPercentage < 30 ? 'text-yellow-500' : 
+                            'text-destructive'
+                          }`}>
+                            {bundleSniperData.sniperPercentage.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-secondary/50 p-2 rounded flex items-center justify-between animate-fade-in" style={{ animationDelay: '0.25s' }}>
+                      <span className="text-[8px] text-muted-foreground">Powered by Solsniffer</span>
+                      <button
+                        onClick={() => window.open(`https://www.solsniffer.com/scanner/${token.contractAddress}`, '_blank')}
+                        className="text-[9px] text-primary hover:underline flex items-center gap-1"
+                      >
+                        Full Report
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm p-4 text-center">
