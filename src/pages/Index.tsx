@@ -58,49 +58,23 @@ const Index = () => {
     }
   };
 
+  // Load initial tokens when network changes
   useEffect(() => {
     const loadTokens = async () => {
       try {
         setError(null);
-        
-        // INSTANT: Clear old tokens immediately when network changes
         setTokens([]);
         setTrendingTokens([]);
         setSeenTokenIds(new Set());
         setLoading(true);
         
-        // Check for token in URL parameters
-        const tokenId = searchParams.get('token');
-        
-        if (tokenId) {
-          console.log('🎯 URL token requested:', tokenId);
-        }
-        
         // Load both trending and random in parallel
         const [convertedRandom, convertedTrending] = await Promise.all([
-          fetchAggregatedRandom(selectedNetwork, true), // Reset offset when network changes
+          fetchAggregatedRandom(selectedNetwork, true),
           fetchAggregatedTrending(selectedNetwork)
         ]);
         
         console.log(`Loaded ${convertedRandom.length} tokens for ${selectedNetwork}`);
-        
-        // If a specific token was requested, fetch and add it to the top
-        if (tokenId) {
-          let specificToken = convertedTrending.find(t => t.id.toLowerCase() === tokenId.toLowerCase()) || 
-                              convertedRandom.find(t => t.id.toLowerCase() === tokenId.toLowerCase());
-          
-          // If not found in loaded tokens, fetch it directly
-          if (!specificToken) {
-            console.log(`Token ${tokenId} not in feed, fetching...`);
-            specificToken = await fetchSpecificToken(tokenId);
-          }
-          
-          // Add to top of feed if found
-          if (specificToken) {
-            convertedRandom.unshift(specificToken);
-            console.log(`✅ Added ${specificToken.symbol} to top of feed`);
-          }
-        }
         
         tokensRef.current = convertedRandom;
         setTokens(convertedRandom);
@@ -113,14 +87,9 @@ const Index = () => {
         
         setLoading(false);
         
-        // Scroll to top when network changes or specific token loaded
+        // Scroll to top when network changes
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTo({ top: 0, behavior: 'auto' });
-        }
-        
-        // Clear URL params after loading
-        if (tokenId) {
-          setSearchParams({});
         }
       } catch (err) {
         console.error('Failed to load tokens:', err);
@@ -130,7 +99,57 @@ const Index = () => {
     };
 
     loadTokens();
-  }, [selectedNetwork, searchParams]);
+  }, [selectedNetwork]);
+
+  // Handle specific token from URL parameter
+  useEffect(() => {
+    const tokenId = searchParams.get('token');
+    if (!tokenId || tokens.length === 0) return;
+
+    const loadSpecificToken = async () => {
+      console.log('🎯 URL token requested:', tokenId);
+      
+      // Check if token already exists in current feed
+      const existingIndex = tokens.findIndex(t => t.id.toLowerCase() === tokenId.toLowerCase());
+      if (existingIndex !== -1) {
+        console.log('✅ Token already in feed at index', existingIndex);
+        // Scroll to existing token
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({
+            top: existingIndex * window.innerHeight,
+            behavior: 'smooth'
+          });
+        }
+        setSearchParams({}, { replace: true });
+        return;
+      }
+
+      // Token not in feed, fetch it
+      console.log(`Token ${tokenId} not in feed, fetching...`);
+      const specificToken = await fetchSpecificToken(tokenId);
+      
+      if (specificToken) {
+        console.log(`✅ Fetched ${specificToken.symbol}, adding to top`);
+        const updatedTokens = [specificToken, ...tokens];
+        setTokens(updatedTokens);
+        tokensRef.current = updatedTokens;
+        setSeenTokenIds(prev => new Set([...prev, specificToken.id]));
+        setCurrentTokenId(specificToken.id);
+        
+        // Scroll to top
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      } else {
+        console.error('❌ Failed to fetch token');
+      }
+      
+      // Clear URL param
+      setSearchParams({}, { replace: true });
+    };
+
+    loadSpecificToken();
+  }, [searchParams, tokens.length]);
 
   // Track current token on scroll and load more - THROTTLED FOR PERFORMANCE
   useEffect(() => {
