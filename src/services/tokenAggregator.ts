@@ -18,7 +18,7 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
     if (pairs.length > 0) {
       // Select 5 random tokens for trending
       const selected = pairs.slice(0, 5);
-      const converted = selected.map(pair => convertDexPairToToken(pair));
+      const converted = await Promise.all(selected.map(pair => convertDexPairToToken(pair)));
       
       // Cache successful response
       tokenCache.set(cacheKey, converted);
@@ -75,7 +75,7 @@ export const fetchAggregatedRandom = async (chainId?: string, reset: boolean = f
     const pairs = await fetchMixedDexTokens();
     
     if (pairs.length > 0) {
-      const converted = pairs.map(pair => convertDexPairToToken(pair));
+      const converted = await Promise.all(pairs.map(pair => convertDexPairToToken(pair)));
       
       // FILTER OUT DUPLICATES: Only add tokens we haven't seen
       const newTokens = converted.filter(token => {

@@ -1,4 +1,5 @@
 import { DexPair } from "@/services/dexscreener";
+import { fetchBirdeyeTokenInfo, extractSocialLinks } from "@/services/birdeye";
 
 export interface Token {
   id: string;
@@ -40,7 +41,7 @@ export interface Token {
   riskFactors?: string[];        // Array of risk descriptions
 }
 
-export const convertDexPairToToken = (pair: DexPair): Token => {
+export const convertDexPairToToken = async (pair: DexPair): Promise<Token> => {
   const isNew = pair.pairCreatedAt ? 
     Date.now() - pair.pairCreatedAt < 24 * 60 * 60 * 1000 : false;
   
@@ -63,12 +64,36 @@ export const convertDexPairToToken = (pair: DexPair): Token => {
     sparklineData.push(Math.max(50, value));
   }
 
-  // Extract social media links
+  // Extract social media links from DexScreener
   const socials = pair.info?.socials || [];
-  const twitter = socials.find(s => s.platform === 'twitter')?.handle;
-  const telegram = socials.find(s => s.platform === 'telegram')?.handle;
-  const discord = socials.find(s => s.platform === 'discord')?.handle;
-  const website = pair.info?.websites?.[0]?.url;
+  let twitter = socials.find(s => s.platform === 'twitter')?.handle;
+  let telegram = socials.find(s => s.platform === 'telegram')?.handle;
+  let discord = socials.find(s => s.platform === 'discord')?.handle;
+  let website = pair.info?.websites?.[0]?.url;
+
+  // Try Birdeye as fallback with 2s timeout (non-blocking)
+  if ((!twitter || !telegram || !website) && pair.baseToken.address && pair.chainId.toLowerCase() === 'solana') {
+    try {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 2000)
+      );
+      
+      const birdeyePromise = fetchBirdeyeTokenInfo(pair.baseToken.address);
+      
+      const birdeyeData = await Promise.race([birdeyePromise, timeoutPromise]) as any;
+      
+      if (birdeyeData) {
+        const birdeyeSocials = extractSocialLinks(birdeyeData);
+        // Use Birdeye data as fallback
+        website = website || birdeyeSocials.website;
+        twitter = twitter || birdeyeSocials.twitter;
+        telegram = telegram || birdeyeSocials.telegram;
+        discord = discord || birdeyeSocials.discord;
+      }
+    } catch (error) {
+      // Silently fail if timeout or error - don't block token loading
+    }
+  }
 
   return {
     id: pair.pairAddress,
