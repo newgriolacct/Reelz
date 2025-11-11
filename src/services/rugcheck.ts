@@ -27,6 +27,9 @@ export interface RugcheckResponse {
     address?: string;
     pct?: number;
   };
+  token?: {
+    createAt?: string;
+  };
 }
 
 export interface SecurityData {
@@ -35,9 +38,8 @@ export interface SecurityData {
   topHoldersPercent: number;
   freezeAuthority: boolean;
   mintAuthority: boolean;
-  lpLockedPercent: number;
   creatorPercent: number;
-  riskFactors: string[];
+  tokenAge: string | null;
 }
 
 /**
@@ -55,7 +57,7 @@ export const fetchRugcheckData = async (mintAddress: string): Promise<SecurityDa
       return cached;
     }
 
-    const url = `${RUGCHECK_API}/${mintAddress}/report/summary`;
+    const url = `${RUGCHECK_API}/${mintAddress}/report`;
     console.log(`[Rugcheck] Calling API: ${url}`);
     
     const response = await fetch(url);
@@ -73,24 +75,10 @@ export const fetchRugcheckData = async (mintAddress: string): Promise<SecurityDa
     const data: RugcheckResponse = await response.json();
     console.log(`[Rugcheck] Raw data:`, data);
     
-    // Calculate risk factors from Rugcheck data
-    const riskFactors: string[] = [];
-    
-    // Add high-severity risks
-    data.risks
-      ?.filter(risk => ['danger', 'warn'].includes(risk.level))
-      .forEach(risk => {
-        riskFactors.push(risk.description);
-      });
-    
     // Calculate top holders percentage
     const topHoldersPercent = data.topHolders
       ?.slice(0, 10)
       .reduce((sum, holder) => sum + holder.pct, 0) || 0;
-    
-    if (topHoldersPercent > 50) {
-      riskFactors.push('High holder concentration (top 10 holders)');
-    }
     
     // Determine risk level based on score (0-100 scale from Rugcheck)
     let riskLevel: 'GOOD' | 'MEDIUM' | 'HIGH';
@@ -98,8 +86,28 @@ export const fetchRugcheckData = async (mintAddress: string): Promise<SecurityDa
     else if (data.score >= 40) riskLevel = 'MEDIUM';
     else riskLevel = 'HIGH';
     
-    // Get LP locked percentage
-    const lpLockedPercent = data.markets?.[0]?.lp?.lpLockedPct || 0;
+    // Calculate token age
+    let tokenAge: string | null = null;
+    if (data.token?.createAt) {
+      const createdDate = new Date(data.token.createAt);
+      const now = new Date();
+      const diffMs = now.getTime() - createdDate.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        tokenAge = 'Today';
+      } else if (diffDays === 1) {
+        tokenAge = '1 day';
+      } else if (diffDays < 30) {
+        tokenAge = `${diffDays} days`;
+      } else if (diffDays < 365) {
+        const months = Math.floor(diffDays / 30);
+        tokenAge = months === 1 ? '1 month' : `${months} months`;
+      } else {
+        const years = Math.floor(diffDays / 365);
+        tokenAge = years === 1 ? '1 year' : `${years} years`;
+      }
+    }
     
     const securityData: SecurityData = {
       score: data.score / 10, // Convert from 0-100 to 0-10
@@ -107,9 +115,8 @@ export const fetchRugcheckData = async (mintAddress: string): Promise<SecurityDa
       topHoldersPercent,
       freezeAuthority: data.freezeAuthority !== null,
       mintAuthority: data.mintAuthority !== null,
-      lpLockedPercent,
       creatorPercent: data.creator?.pct || 0,
-      riskFactors,
+      tokenAge,
     };
     
     console.log(`[Rugcheck] Processed data:`, securityData);

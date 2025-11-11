@@ -125,18 +125,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
     if (!token.contractAddress || securityData || loadingSecurity) return;
     setLoadingSecurity(true);
     const data = await fetchRugcheckData(token.contractAddress);
-    if (data) {
-      setSecurityData({
-        mintAuthority: data.mintAuthority ? 'Active' : 'Revoked',
-        freezeAuthority: data.freezeAuthority ? 'Active' : 'Revoked',
-        lpLocked: data.lpLockedPercent > 50,
-        lpLockedPercent: data.lpLockedPercent,
-        topHoldersPercentage: data.topHoldersPercent,
-        riskLevel: data.riskLevel === 'GOOD' ? 'low' : data.riskLevel === 'MEDIUM' ? 'medium' : 'high',
-        score: data.score,
-        riskFactors: data.riskFactors
-      });
-    }
+    setSecurityData(data);
     setLoadingSecurity(false);
   };
 
@@ -423,82 +412,88 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                   </div>
                 )}
                 
-                {securityData.score !== undefined && (
+                {/* Security Score & Risk Level */}
+                <div className="grid grid-cols-2 gap-2">
                   <div className="bg-secondary p-2 rounded animate-fade-in">
+                    <div className="text-[9px] text-muted-foreground mb-1">Security Score</div>
+                    <div className={`text-lg font-bold ${
+                      securityData.score >= 7 ? 'text-success' :
+                      securityData.score >= 4 ? 'text-yellow-500' :
+                      'text-destructive'
+                    }`}>
+                      {securityData.score.toFixed(1)}/10
+                    </div>
+                  </div>
+                  
+                  <div className="bg-secondary p-2 rounded animate-fade-in">
+                    <div className="text-[9px] text-muted-foreground mb-1">Risk Level</div>
+                    <Badge 
+                      className={`text-[10px] mt-1 ${
+                        securityData.riskLevel === 'GOOD' ? 'bg-success text-success-foreground' :
+                        securityData.riskLevel === 'MEDIUM' ? 'bg-yellow-500 text-yellow-950' :
+                        'bg-destructive text-destructive-foreground'
+                      }`}
+                    >
+                      {securityData.riskLevel}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Token Age */}
+                {securityData.tokenAge && (
+                  <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.05s' }}>
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] text-muted-foreground">Security Score</span>
-                      <span className={`text-[11px] font-bold ${
-                        securityData.score >= 7 ? 'text-success' :
-                        securityData.score >= 4 ? 'text-yellow-500' :
-                        'text-destructive'
-                      }`}>
-                        {securityData.score.toFixed(1)}/10
-                      </span>
+                      <span className="text-[10px] text-muted-foreground">Token Age</span>
+                      <span className="text-[11px] font-semibold">{securityData.tokenAge}</span>
                     </div>
                   </div>
                 )}
                 
-                <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.05s' }}>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-muted-foreground">Risk Level</span>
-                    <Badge 
-                      className={`text-[10px] ${
-                        securityData.riskLevel === 'low' ? 'bg-success text-success-foreground' :
-                        securityData.riskLevel === 'medium' ? 'bg-yellow-500 text-yellow-950' :
-                        'bg-destructive text-destructive-foreground'
-                      }`}
-                    >
-                      {securityData.riskLevel.toUpperCase()}
-                    </Badge>
+                {/* Holder Distribution */}
+                <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                  <div className="text-[9px] text-muted-foreground mb-1.5">Holder Distribution</div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px]">Top 10 Holders</span>
+                      <span className={`text-[11px] font-semibold ${
+                        securityData.topHoldersPercent < 30 ? 'text-success' : 
+                        securityData.topHoldersPercent < 50 ? 'text-yellow-500' : 
+                        'text-destructive'
+                      }`}>
+                        {securityData.topHoldersPercent.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px]">Creator Holdings</span>
+                      <span className={`text-[11px] font-semibold ${
+                        securityData.creatorPercent < 5 ? 'text-success' : 
+                        securityData.creatorPercent < 15 ? 'text-yellow-500' : 
+                        'text-destructive'
+                      }`}>
+                        {securityData.creatorPercent.toFixed(1)}%
+                      </span>
+                    </div>
                   </div>
                 </div>
                 
-                <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.1s' }}>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-muted-foreground">Mint Authority</span>
-                    <span className={`text-[10px] font-semibold ${securityData.mintAuthority === 'Revoked' ? 'text-success' : 'text-destructive'}`}>
-                      {securityData.mintAuthority}
-                    </span>
-                  </div>
-                </div>
-
+                {/* Token Authorities */}
                 <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.15s' }}>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-muted-foreground">Freeze Authority</span>
-                    <span className={`text-[10px] font-semibold ${securityData.freezeAuthority === 'Revoked' ? 'text-success' : 'text-destructive'}`}>
-                      {securityData.freezeAuthority}
-                    </span>
+                  <div className="text-[9px] text-muted-foreground mb-1.5">Token Authorities</div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px]">Freeze Authority</span>
+                      <Badge variant={securityData.freezeAuthority ? "destructive" : "default"} className="text-[9px]">
+                        {securityData.freezeAuthority ? "Active ⚠️" : "Revoked ✓"}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px]">Mint Authority</span>
+                      <Badge variant={securityData.mintAuthority ? "destructive" : "default"} className="text-[9px]">
+                        {securityData.mintAuthority ? "Active ⚠️" : "Revoked ✓"}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
-
-                <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-muted-foreground">LP Locked</span>
-                    <span className={`text-[10px] font-semibold ${securityData.lpLocked ? 'text-success' : 'text-destructive'}`}>
-                      {securityData.lpLocked ? `Yes (${securityData.lpLockedPercent?.toFixed(0) || 0}%)` : 'No'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.25s' }}>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-muted-foreground">Top 10 Holders</span>
-                    <span className={`text-[10px] font-semibold ${securityData.topHoldersPercentage < 30 ? 'text-success' : securityData.topHoldersPercentage < 50 ? 'text-yellow-500' : 'text-destructive'}`}>
-                      {securityData.topHoldersPercentage.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-
-                {securityData.riskFactors && securityData.riskFactors.length > 0 && (
-                  <div className="bg-destructive/10 p-2 rounded animate-fade-in border border-destructive/20" style={{ animationDelay: '0.3s' }}>
-                    <div className="text-[10px] font-semibold text-destructive mb-1">Risk Factors:</div>
-                    {securityData.riskFactors.slice(0, 3).map((risk: string, idx: number) => (
-                      <div key={idx} className="text-[9px] text-muted-foreground mt-0.5">
-                        • {risk}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm p-4 text-center">
