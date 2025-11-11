@@ -219,7 +219,8 @@ export default function Favorites() {
                 return (
                   <Card 
                     key={favorite.id} 
-                    className="p-4 hover:bg-accent/5 transition-all border-border/40"
+                    className="p-4 hover:bg-accent/5 transition-all border-border/40 cursor-pointer"
+                    onClick={() => window.location.href = `/?token=${favorite.token_id}`}
                   >
                     <div className="flex items-start gap-3">
                       <img 

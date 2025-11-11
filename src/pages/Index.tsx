@@ -67,6 +67,10 @@ const Index = () => {
         setSeenTokenIds(new Set());
         setLoading(true);
         
+        // Check for token in URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const tokenId = params.get('token');
+        
         // Load both trending and random in parallel
         const [convertedRandom, convertedTrending] = await Promise.all([
           fetchAggregatedRandom(selectedNetwork, true), // Reset offset when network changes
@@ -74,6 +78,15 @@ const Index = () => {
         ]);
         
         console.log(`Loaded ${convertedRandom.length} tokens for ${selectedNetwork}`);
+        
+        // If a specific token was requested, try to find and add it to the top
+        if (tokenId) {
+          const specificToken = convertedTrending.find(t => t.id === tokenId) || 
+                                convertedRandom.find(t => t.id === tokenId);
+          if (specificToken && !convertedRandom.find(t => t.id === tokenId)) {
+            convertedRandom.unshift(specificToken);
+          }
+        }
         
         tokensRef.current = convertedRandom;
         setTokens(convertedRandom);
