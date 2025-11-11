@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Bookmark, ExternalLink, Globe } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, ExternalLink, Globe, ChevronDown, ChevronUp } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -11,6 +11,8 @@ import { Skeleton } from "./ui/skeleton";
 import { useTokenFavorites } from "@/hooks/useTokenFavorites";
 import { useTokenComments } from "@/hooks/useTokenComments";
 import { useTokenLikes } from "@/hooks/useTokenLikes";
+import { SecurityBadge } from "./SecurityBadge";
+import { fetchRugcheckData } from "@/services/rugcheck";
 
 interface TokenCardProps {
   token: Token;
@@ -25,6 +27,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [showSellDrawer, setShowSellDrawer] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [shouldLoadChart, setShouldLoadChart] = useState(isEagerLoad);
+  const [showSecurityDetails, setShowSecurityDetails] = useState(false);
+  const [isLoadingSecurity, setIsLoadingSecurity] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -33,6 +37,29 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const { likeCount, isLiked, toggleLike } = useTokenLikes(token.id);
   
   const isTokenFavorited = isFavorited(token.id);
+  
+  // Fetch security data if not already loaded
+  useEffect(() => {
+    if (!token.securityScore && token.contractAddress && !isLoadingSecurity) {
+      setIsLoadingSecurity(true);
+      fetchRugcheckData(token.contractAddress)
+        .then(data => {
+          if (data) {
+            Object.assign(token, {
+              securityScore: data.score,
+              riskLevel: data.riskLevel,
+              topHoldersPercent: data.topHoldersPercent,
+              freezeAuthority: data.freezeAuthority,
+              mintAuthority: data.mintAuthority,
+              lpLockedPercent: data.lpLockedPercent,
+              creatorPercent: data.creatorPercent,
+              riskFactors: data.riskFactors,
+            });
+          }
+        })
+        .finally(() => setIsLoadingSecurity(false));
+    }
+  }, [token, isLoadingSecurity]);
   
   // Update comments when drawer closes to refresh count
   useEffect(() => {
@@ -108,10 +135,17 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
               className="w-8 h-8 rounded-full border-2 border-primary shadow-lg flex-shrink-0"
             />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-foreground text-sm truncate">{token.symbol}</span>
                 {token.isNew && (
                   <Badge className="bg-primary text-primary-foreground text-[10px] px-1 py-0">New</Badge>
+                )}
+                {token.securityScore !== undefined && token.riskLevel && (
+                  <SecurityBadge 
+                    riskLevel={token.riskLevel} 
+                    score={token.securityScore}
+                    showIcon={false}
+                  />
                 )}
               </div>
               <span className="text-[10px] text-muted-foreground truncate block">{token.name}</span>
@@ -237,19 +271,97 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 {formatCurrency(token.volume24h)}
               </div>
             </div>
-            <div className="bg-secondary rounded-lg p-1.5">
-              <div className="text-[9px] text-muted-foreground">Liquidity</div>
-              <div className="text-[11px] font-bold text-foreground truncate">
-                {formatCurrency(token.liquidity)}
+            {token.topHoldersPercent !== undefined ? (
+              <div className="bg-secondary rounded-lg p-1.5">
+                <div className="text-[9px] text-muted-foreground">Top Holders</div>
+                <div className={`text-[11px] font-bold truncate ${
+                  token.topHoldersPercent > 50 ? 'text-destructive' : 
+                  token.topHoldersPercent > 30 ? 'text-warning' : 'text-success'
+                }`}>
+                  {token.topHoldersPercent.toFixed(1)}%
+                </div>
               </div>
-            </div>
-            <div className="bg-secondary rounded-lg p-1.5">
-              <div className="text-[9px] text-muted-foreground">Chain</div>
-              <div className="text-[11px] font-bold text-foreground truncate">
-                {token.chain}
+            ) : (
+              <div className="bg-secondary rounded-lg p-1.5">
+                <div className="text-[9px] text-muted-foreground">Liquidity</div>
+                <div className="text-[11px] font-bold text-foreground truncate">
+                  {formatCurrency(token.liquidity)}
+                </div>
               </div>
-            </div>
+            )}
+            {token.lpLockedPercent !== undefined ? (
+              <div className="bg-secondary rounded-lg p-1.5">
+                <div className="text-[9px] text-muted-foreground">LP Locked</div>
+                <div className={`text-[11px] font-bold truncate ${
+                  token.lpLockedPercent > 80 ? 'text-success' : 
+                  token.lpLockedPercent > 50 ? 'text-warning' : 'text-destructive'
+                }`}>
+                  {token.lpLockedPercent.toFixed(0)}%
+                </div>
+              </div>
+            ) : (
+              <div className="bg-secondary rounded-lg p-1.5">
+                <div className="text-[9px] text-muted-foreground">Chain</div>
+                <div className="text-[11px] font-bold text-foreground truncate">
+                  {token.chain}
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Security Details - Expandable */}
+          {token.securityScore !== undefined && (
+            <div className="mb-1.5">
+              <button
+                onClick={() => setShowSecurityDetails(!showSecurityDetails)}
+                className="w-full bg-secondary rounded-lg p-1.5 flex items-center justify-between hover:bg-secondary/80 transition-colors"
+              >
+                <span className="text-[10px] font-semibold text-foreground">Security Details</span>
+                {showSecurityDetails ? (
+                  <ChevronUp className="w-3 h-3 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                )}
+              </button>
+              
+              {showSecurityDetails && (
+                <div className="mt-1 bg-secondary rounded-lg p-2 space-y-1">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-muted-foreground">Risk Score:</span>
+                    <span className="font-bold text-foreground">{token.securityScore.toFixed(1)}/10</span>
+                  </div>
+                  {token.creatorPercent !== undefined && (
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-muted-foreground">Creator Holding:</span>
+                      <span className={`font-bold ${token.creatorPercent > 10 ? 'text-destructive' : 'text-success'}`}>
+                        {token.creatorPercent.toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-muted-foreground">Freeze Authority:</span>
+                    <span className={`font-bold ${token.freezeAuthority ? 'text-destructive' : 'text-success'}`}>
+                      {token.freezeAuthority ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-muted-foreground">Mint Authority:</span>
+                    <span className={`font-bold ${token.mintAuthority ? 'text-destructive' : 'text-success'}`}>
+                      {token.mintAuthority ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  {token.riskFactors && token.riskFactors.length > 0 && (
+                    <div className="pt-1 border-t border-border/30">
+                      <div className="text-[9px] text-muted-foreground mb-0.5">Risk Factors:</div>
+                      {token.riskFactors.map((factor, i) => (
+                        <div key={i} className="text-[9px] text-destructive">• {factor}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons - Compact */}
           <div className="grid grid-cols-2 gap-1.5">

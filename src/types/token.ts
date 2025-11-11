@@ -29,6 +29,15 @@ export interface Token {
   discord?: string;
   buys24h?: number;
   sells24h?: number;
+  // Security data from Rugcheck
+  securityScore?: number;        // 0-10 risk score (10 = safest)
+  riskLevel?: 'GOOD' | 'MEDIUM' | 'HIGH';
+  topHoldersPercent?: number;    // % held by top 10
+  freezeAuthority?: boolean;     // Can freeze transfers
+  mintAuthority?: boolean;       // Can mint more tokens
+  lpLockedPercent?: number;      // % of LP locked
+  creatorPercent?: number;       // % held by creator
+  riskFactors?: string[];        // Array of risk descriptions
 }
 
 export const convertDexPairToToken = (pair: DexPair): Token => {
