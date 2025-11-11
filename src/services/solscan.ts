@@ -13,6 +13,12 @@ interface DexTransaction {
   maker: string;
 }
 
+interface TokenHolder {
+  address: string;
+  amount: number;
+  percentage: number;
+}
+
 /**
  * Fetch recent transactions using Helius Enhanced Transactions API
  */
@@ -131,10 +137,67 @@ export const fetchTokenTransactions = async (tokenAddress: string): Promise<DexT
 };
 
 /**
- * Holders data not available via public APIs without authentication
+ * Fetch top token holders using Helius API
  */
-export const fetchTokenHolders = async (tokenAddress: string): Promise<any[]> => {
-  // Solscan and other APIs require authentication for holder data
-  console.log('[Holders] Public holder data not available');
-  return [];
+export const fetchTokenHolders = async (tokenAddress: string): Promise<TokenHolder[]> => {
+  try {
+    const cacheKey = `helius:holders:${tokenAddress}`;
+    const cached = apiCache.get<TokenHolder[]>(cacheKey);
+    if (cached) return cached;
+
+    const response = await fetch(
+      `https://mainnet.helius-rpc.com/?api-key=c6afc762-dee9-4263-b82f-b7d2c94f8f2c`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 'holder-list',
+          method: 'getTokenLargestAccounts',
+          params: [tokenAddress]
+        })
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`[Helius] Holder fetch error: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    const accounts = data.result?.value || [];
+
+    // Get total supply to calculate percentages
+    const supplyResponse = await fetch(
+      `https://mainnet.helius-rpc.com/?api-key=c6afc762-dee9-4263-b82f-b7d2c94f8f2c`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 'supply',
+          method: 'getTokenSupply',
+          params: [tokenAddress]
+        })
+      }
+    );
+
+    const supplyData = await supplyResponse.json();
+    const totalSupply = parseFloat(supplyData.result?.value?.uiAmountString || '1');
+
+    const holders: TokenHolder[] = accounts
+      .slice(0, 10)
+      .map((account: any) => ({
+        address: account.address,
+        amount: parseFloat(account.uiAmountString || '0'),
+        percentage: (parseFloat(account.uiAmountString || '0') / totalSupply) * 100
+      }))
+      .filter((h: TokenHolder) => h.amount > 0);
+
+    apiCache.set(cacheKey, holders, CACHE_DURATION);
+    return holders;
+  } catch (error) {
+    console.error('[Helius] Error fetching holders:', error);
+    return [];
+  }
 };

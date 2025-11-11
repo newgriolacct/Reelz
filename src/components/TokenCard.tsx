@@ -5,7 +5,7 @@ import { Badge } from "./ui/badge";
 import { useState, useEffect, useRef } from "react";
 import { QuickTradeDrawer } from "./QuickTradeDrawer";
 import { CommentsDrawer } from "./CommentsDrawer";
-import { formatPrice, formatCurrency } from "@/lib/formatters";
+import { formatPrice, formatCurrency, formatNumber } from "@/lib/formatters";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "./ui/skeleton";
 import { useTokenFavorites } from "@/hooks/useTokenFavorites";
@@ -13,7 +13,7 @@ import { useTokenComments } from "@/hooks/useTokenComments";
 import { useTokenLikes } from "@/hooks/useTokenLikes";
 import pumpfunIcon from "@/assets/pumpfun-icon.png";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { fetchTokenTransactions } from "@/services/solscan";
+import { fetchTokenTransactions, fetchTokenHolders } from "@/services/solscan";
 import { formatDistanceToNow } from "date-fns";
 
 interface TokenCardProps {
@@ -31,6 +31,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [shouldLoadChart, setShouldLoadChart] = useState(isEagerLoad);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loadingTxs, setLoadingTxs] = useState(false);
+  const [holders, setHolders] = useState<any[]>([]);
+  const [loadingHolders, setLoadingHolders] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -105,6 +107,14 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
     const txs = await fetchTokenTransactions(token.contractAddress);
     setTransactions(txs);
     setLoadingTxs(false);
+  };
+
+  const loadHolders = async () => {
+    if (!token.contractAddress || loadingHolders) return;
+    setLoadingHolders(true);
+    const holderData = await fetchTokenHolders(token.contractAddress);
+    setHolders(holderData);
+    setLoadingHolders(false);
   };
 
   return (
@@ -209,7 +219,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           <TabsList className="w-full grid grid-cols-3 bg-secondary h-7 flex-shrink-0">
             <TabsTrigger value="chart" className="text-[10px]">Chart</TabsTrigger>
             <TabsTrigger value="transactions" className="text-[10px]" onClick={loadTransactions}>Transactions</TabsTrigger>
-            <TabsTrigger value="holders" className="text-[10px]">Holders</TabsTrigger>
+            <TabsTrigger value="holders" className="text-[10px]" onClick={loadHolders}>Holders</TabsTrigger>
           </TabsList>
           
           <TabsContent value="chart" className="flex-1 min-h-0 mt-0 overflow-hidden">
@@ -255,7 +265,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                           {tx.type.toUpperCase()}
                         </Badge>
                         <span className="text-[10px] font-mono">
-                          ${tx.totalUsd.toFixed(2)}
+                          {formatCurrency(tx.totalUsd)}
                         </span>
                       </div>
                       <div className="text-[9px] text-muted-foreground">
@@ -263,7 +273,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                       </div>
                     </div>
                     <div className="text-[9px] text-muted-foreground mt-1">
-                      {tx.amount.toFixed(2)} @ ${tx.priceUsd.toFixed(6)}
+                      {formatNumber(tx.amount)} @ {formatPrice(tx.priceUsd)}
                     </div>
                   </div>
                 ))}
@@ -276,10 +286,40 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </TabsContent>
 
           <TabsContent value="holders" className="flex-1 overflow-y-auto mt-0">
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm p-4 text-center">
-              <p className="font-semibold mb-1">Holder data not available</p>
-              <p className="text-xs">Public APIs don't provide holder information without authentication</p>
-            </div>
+            {loadingHolders ? (
+              <div className="p-3 space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : holders.length > 0 ? (
+              <div className="p-2 space-y-1">
+                {holders.map((holder, idx) => (
+                  <div key={idx} className="bg-secondary p-2 rounded">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Badge variant="outline" className="text-[10px] px-1 py-0 flex-shrink-0">
+                          #{idx + 1}
+                        </Badge>
+                        <span className="text-[9px] font-mono truncate">
+                          {holder.address.slice(0, 4)}...{holder.address.slice(-4)}
+                        </span>
+                      </div>
+                      <div className="text-[10px] font-semibold text-primary flex-shrink-0">
+                        {holder.percentage.toFixed(2)}%
+                      </div>
+                    </div>
+                    <div className="text-[9px] text-muted-foreground mt-1">
+                      {formatNumber(holder.amount)} tokens
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                No holder data available
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 
