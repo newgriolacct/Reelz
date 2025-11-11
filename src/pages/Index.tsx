@@ -2,13 +2,11 @@ import { TokenCard } from "@/components/TokenCard";
 import { BottomNav } from "@/components/BottomNav";
 import { TrendingTokensList } from "@/components/TrendingTokensList";
 import { NetworkSelector } from "@/components/NetworkSelector";
-import { fetchAggregatedTrending, fetchAggregatedRandom, fetchSpecificToken } from "@/services/tokenAggregator";
+import { fetchAggregatedTrending, fetchAggregatedRandom } from "@/services/tokenAggregator";
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
 import { Token } from "@/types/token";
 
 const Index = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
   const [tokens, setTokens] = useState<Token[]>([]);
   const [trendingTokens, setTrendingTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,11 +56,12 @@ const Index = () => {
     }
   };
 
-  // Load initial tokens when network changes
   useEffect(() => {
     const loadTokens = async () => {
       try {
         setError(null);
+        
+        // INSTANT: Clear old tokens immediately when network changes
         setTokens([]);
         setTrendingTokens([]);
         setSeenTokenIds(new Set());
@@ -70,7 +69,7 @@ const Index = () => {
         
         // Load both trending and random in parallel
         const [convertedRandom, convertedTrending] = await Promise.all([
-          fetchAggregatedRandom(selectedNetwork, true),
+          fetchAggregatedRandom(selectedNetwork, true), // Reset offset when network changes
           fetchAggregatedTrending(selectedNetwork)
         ]);
         
@@ -100,56 +99,6 @@ const Index = () => {
 
     loadTokens();
   }, [selectedNetwork]);
-
-  // Handle specific token from URL parameter
-  useEffect(() => {
-    const tokenId = searchParams.get('token');
-    if (!tokenId || tokens.length === 0) return;
-
-    const loadSpecificToken = async () => {
-      console.log('🎯 URL token requested:', tokenId);
-      
-      // Check if token already exists in current feed
-      const existingIndex = tokens.findIndex(t => t.id.toLowerCase() === tokenId.toLowerCase());
-      if (existingIndex !== -1) {
-        console.log('✅ Token already in feed at index', existingIndex);
-        // Scroll to existing token
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTo({
-            top: existingIndex * window.innerHeight,
-            behavior: 'smooth'
-          });
-        }
-        setSearchParams({}, { replace: true });
-        return;
-      }
-
-      // Token not in feed, fetch it
-      console.log(`Token ${tokenId} not in feed, fetching...`);
-      const specificToken = await fetchSpecificToken(tokenId);
-      
-      if (specificToken) {
-        console.log(`✅ Fetched ${specificToken.symbol}, adding to top`);
-        const updatedTokens = [specificToken, ...tokens];
-        setTokens(updatedTokens);
-        tokensRef.current = updatedTokens;
-        setSeenTokenIds(prev => new Set([...prev, specificToken.id]));
-        setCurrentTokenId(specificToken.id);
-        
-        // Scroll to top
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      } else {
-        console.error('❌ Failed to fetch token');
-      }
-      
-      // Clear URL param
-      setSearchParams({}, { replace: true });
-    };
-
-    loadSpecificToken();
-  }, [searchParams, tokens.length]);
 
   // Track current token on scroll and load more - THROTTLED FOR PERFORMANCE
   useEffect(() => {
@@ -286,7 +235,7 @@ const Index = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center p-6">
           <p className="text-destructive mb-2 text-lg font-semibold">{error}</p>
-          <p className="text-muted-foreground mb-4 text-sm">Unable to load tokens. Please try again.</p>
+          <p className="text-muted-foreground mb-4 text-sm">API rate limit reached. Please wait a moment.</p>
           <button 
             onClick={() => {
               setError(null);
@@ -306,9 +255,9 @@ const Index = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center p-6 max-w-md">
-          <p className="text-lg font-semibold mb-2">No Tokens Available</p>
+          <p className="text-lg font-semibold mb-2">API Rate Limit Reached</p>
           <p className="text-sm text-muted-foreground mb-4">
-            Unable to load tokens at the moment. The app will use cached data once available, or try refreshing.
+            Birdeye API is temporarily limiting requests. The app will use cached data once available, or try refreshing in a few minutes.
           </p>
           <button 
             onClick={() => window.location.reload()} 
