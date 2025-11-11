@@ -243,8 +243,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </div>
         </div>
 
-        {/* DexScreener Chart - Flexible height */}
-        <div ref={chartContainerRef} className="relative bg-card overflow-hidden flex-1 min-h-0">
+        {/* DexScreener Chart - Fixed compact height */}
+        <div ref={chartContainerRef} className="relative bg-card overflow-hidden h-[200px] flex-shrink-0">
         {token.dexScreenerUrl ? (
             shouldLoadChart ? (
               <iframe
@@ -269,9 +269,9 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
         </div>
 
         {/* Bottom - Token Info */}
-        <div className="px-3 py-2 pb-20 flex flex-col gap-1.5 bg-background flex-shrink-0">
+        <div className="px-3 py-1.5 pb-[72px] flex flex-col gap-1 bg-background flex-shrink-0 overflow-y-auto">
           {/* Price Info & Actions - Single Row */}
-          <div className="mb-1 flex items-center justify-between gap-2">
+          <div className="mb-0.5 flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
               <div className="text-xl font-bold text-foreground leading-tight truncate">
                 {formatPrice(token.price)}
@@ -320,16 +320,16 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </div>
 
           {/* Stats Grid - Compact */}
-          <div className="space-y-1 mb-1.5">
+          <div className="space-y-0.5 mb-1">
             {/* First row: Market Cap & Volume */}
             <div className="grid grid-cols-2 gap-1">
-              <div className="bg-secondary rounded-lg p-1.5">
+              <div className="bg-secondary rounded-lg p-1">
                 <div className="text-[9px] text-muted-foreground">Market Cap</div>
                 <div className="text-[11px] font-bold text-foreground truncate">
                   {formatCurrency(token.marketCap)}
                 </div>
               </div>
-              <div className="bg-secondary rounded-lg p-1.5">
+              <div className="bg-secondary rounded-lg p-1">
                 <div className="text-[9px] text-muted-foreground">Volume 24h</div>
                 <div className="text-[11px] font-bold text-foreground truncate">
                   {formatCurrency(token.volume24h)}
@@ -340,7 +340,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             {/* Second row: Top Holders/Liquidity & LP Locked/Chain */}
             <div className="grid grid-cols-2 gap-1">
               {securityData.topHoldersPercent !== undefined ? (
-                <div className="bg-secondary rounded-lg p-1.5">
+                <div className="bg-secondary rounded-lg p-1">
                   <div className="text-[9px] text-muted-foreground">Top Holders</div>
                   <div className={`text-[11px] font-bold truncate ${
                     securityData.topHoldersPercent > 50 ? 'text-destructive' : 
@@ -350,7 +350,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                   </div>
                 </div>
               ) : (
-                <div className="bg-secondary rounded-lg p-1.5">
+                <div className="bg-secondary rounded-lg p-1">
                   <div className="text-[9px] text-muted-foreground">Liquidity</div>
                   <div className="text-[11px] font-bold text-foreground truncate">
                     {formatCurrency(token.liquidity)}
@@ -358,7 +358,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 </div>
               )}
               {securityData.lpLockedPercent !== undefined ? (
-                <div className="bg-secondary rounded-lg p-1.5">
+                <div className="bg-secondary rounded-lg p-1">
                   <div className="text-[9px] text-muted-foreground">LP Locked</div>
                   <div className={`text-[11px] font-bold truncate ${
                     securityData.lpLockedPercent > 80 ? 'text-success' : 
@@ -368,7 +368,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                   </div>
                 </div>
               ) : (
-                <div className="bg-secondary rounded-lg p-1.5">
+                <div className="bg-secondary rounded-lg p-1">
                   <div className="text-[9px] text-muted-foreground">Chain</div>
                   <div className="text-[11px] font-bold text-foreground truncate">
                     {token.chain}
@@ -380,7 +380,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
 
           {/* Security Details - Expandable */}
           {securityData.securityScore !== undefined && (
-            <div className="mb-1.5">
+            <div className="mb-1">
               <button
                 onClick={() => setShowSecurityDetails(!showSecurityDetails)}
                 className="w-full bg-secondary rounded-lg p-1.5 flex items-center justify-between hover:bg-secondary/80 transition-colors"
@@ -437,14 +437,14 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             <Button 
               onClick={() => setShowBuyDrawer(true)}
               size="lg"
-              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-sm h-10"
+              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-sm h-9"
             >
               Buy
             </Button>
             <Button 
               onClick={() => setShowSellDrawer(true)}
               size="lg"
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-sm h-10"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-sm h-9"
             >
               Sell
             </Button>
