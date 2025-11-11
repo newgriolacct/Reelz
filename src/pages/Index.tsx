@@ -257,10 +257,10 @@ const Index = () => {
         <div className="text-center p-6 max-w-md">
           <p className="text-lg font-semibold mb-2">API Rate Limit Reached</p>
           <p className="text-sm text-muted-foreground mb-4">
-            Birdeye API is temporarily limiting requests. The app will use cached data once available, or try refreshing in a few minutes.
+            API is temporarily limiting requests. The app will use cached data once available, or try refreshing in a few minutes.
           </p>
           <button 
-            onClick={() => window.location.reload()} 
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
           >
             Refresh Now
