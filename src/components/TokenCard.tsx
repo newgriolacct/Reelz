@@ -28,7 +28,16 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [showComments, setShowComments] = useState(false);
   const [shouldLoadChart, setShouldLoadChart] = useState(isEagerLoad);
   const [showSecurityDetails, setShowSecurityDetails] = useState(false);
-  const [isLoadingSecurity, setIsLoadingSecurity] = useState(false);
+  const [securityData, setSecurityData] = useState<{
+    securityScore?: number;
+    riskLevel?: 'GOOD' | 'MEDIUM' | 'HIGH';
+    topHoldersPercent?: number;
+    freezeAuthority?: boolean;
+    mintAuthority?: boolean;
+    lpLockedPercent?: number;
+    creatorPercent?: number;
+    riskFactors?: string[];
+  }>({});
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -40,9 +49,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   
   // Fetch security data with delay to avoid rate limiting
   useEffect(() => {
-    if (!token.securityScore && token.contractAddress && !isLoadingSecurity) {
+    if (!securityData.securityScore && token.contractAddress) {
       console.log(`[Security] Scheduling fetch for ${token.symbol} (${token.contractAddress})`);
-      setIsLoadingSecurity(true);
       
       // Add random delay between 500ms-2000ms to avoid rate limiting
       const delay = 500 + Math.random() * 1500;
@@ -53,7 +61,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           .then(data => {
             if (data) {
               console.log(`[Security] Data received for ${token.symbol}:`, data);
-              Object.assign(token, {
+              setSecurityData({
                 securityScore: data.score,
                 riskLevel: data.riskLevel,
                 topHoldersPercent: data.topHoldersPercent,
@@ -69,15 +77,12 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           })
           .catch(error => {
             console.error(`[Security] Error fetching for ${token.symbol}:`, error);
-          })
-          .finally(() => setIsLoadingSecurity(false));
+          });
       }, delay);
       
       return () => clearTimeout(timer);
-    } else if (!token.contractAddress) {
-      console.log(`[Security] No contract address for ${token.symbol}`);
     }
-  }, [token, isLoadingSecurity]);
+  }, [token.contractAddress, token.symbol, securityData.securityScore]);
   
   // Update comments when drawer closes to refresh count
   useEffect(() => {
@@ -158,10 +163,10 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 {token.isNew && (
                   <Badge className="bg-primary text-primary-foreground text-[10px] px-1 py-0">New</Badge>
                 )}
-                {token.securityScore !== undefined && token.riskLevel && (
+                {securityData.securityScore !== undefined && securityData.riskLevel && (
                   <SecurityBadge 
-                    riskLevel={token.riskLevel} 
-                    score={token.securityScore}
+                    riskLevel={securityData.riskLevel} 
+                    score={securityData.securityScore}
                     showIcon={false}
                   />
                 )}
@@ -334,14 +339,14 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             
             {/* Second row: Top Holders/Liquidity & LP Locked/Chain */}
             <div className="grid grid-cols-2 gap-1">
-              {token.topHoldersPercent !== undefined ? (
+              {securityData.topHoldersPercent !== undefined ? (
                 <div className="bg-secondary rounded-lg p-1.5">
                   <div className="text-[9px] text-muted-foreground">Top Holders</div>
                   <div className={`text-[11px] font-bold truncate ${
-                    token.topHoldersPercent > 50 ? 'text-destructive' : 
-                    token.topHoldersPercent > 30 ? 'text-warning' : 'text-success'
+                    securityData.topHoldersPercent > 50 ? 'text-destructive' : 
+                    securityData.topHoldersPercent > 30 ? 'text-warning' : 'text-success'
                   }`}>
-                    {token.topHoldersPercent.toFixed(1)}%
+                    {securityData.topHoldersPercent.toFixed(1)}%
                   </div>
                 </div>
               ) : (
@@ -352,14 +357,14 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                   </div>
                 </div>
               )}
-              {token.lpLockedPercent !== undefined ? (
+              {securityData.lpLockedPercent !== undefined ? (
                 <div className="bg-secondary rounded-lg p-1.5">
                   <div className="text-[9px] text-muted-foreground">LP Locked</div>
                   <div className={`text-[11px] font-bold truncate ${
-                    token.lpLockedPercent > 80 ? 'text-success' : 
-                    token.lpLockedPercent > 50 ? 'text-warning' : 'text-destructive'
+                    securityData.lpLockedPercent > 80 ? 'text-success' : 
+                    securityData.lpLockedPercent > 50 ? 'text-warning' : 'text-destructive'
                   }`}>
-                    {token.lpLockedPercent.toFixed(0)}%
+                    {securityData.lpLockedPercent.toFixed(0)}%
                   </div>
                 </div>
               ) : (
@@ -374,7 +379,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </div>
 
           {/* Security Details - Expandable */}
-          {token.securityScore !== undefined && (
+          {securityData.securityScore !== undefined && (
             <div className="mb-1.5">
               <button
                 onClick={() => setShowSecurityDetails(!showSecurityDetails)}
@@ -392,32 +397,32 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 <div className="mt-1 bg-secondary rounded-lg p-2 space-y-1">
                   <div className="flex justify-between text-[10px]">
                     <span className="text-muted-foreground">Risk Score:</span>
-                    <span className="font-bold text-foreground">{token.securityScore.toFixed(1)}/10</span>
+                    <span className="font-bold text-foreground">{securityData.securityScore.toFixed(1)}/10</span>
                   </div>
-                  {token.creatorPercent !== undefined && (
+                  {securityData.creatorPercent !== undefined && (
                     <div className="flex justify-between text-[10px]">
                       <span className="text-muted-foreground">Creator Holding:</span>
-                      <span className={`font-bold ${token.creatorPercent > 10 ? 'text-destructive' : 'text-success'}`}>
-                        {token.creatorPercent.toFixed(1)}%
+                      <span className={`font-bold ${securityData.creatorPercent > 10 ? 'text-destructive' : 'text-success'}`}>
+                        {securityData.creatorPercent.toFixed(1)}%
                       </span>
                     </div>
                   )}
                   <div className="flex justify-between text-[10px]">
                     <span className="text-muted-foreground">Freeze Authority:</span>
-                    <span className={`font-bold ${token.freezeAuthority ? 'text-destructive' : 'text-success'}`}>
-                      {token.freezeAuthority ? 'Yes' : 'No'}
+                    <span className={`font-bold ${securityData.freezeAuthority ? 'text-destructive' : 'text-success'}`}>
+                      {securityData.freezeAuthority ? 'Yes' : 'No'}
                     </span>
                   </div>
                   <div className="flex justify-between text-[10px]">
                     <span className="text-muted-foreground">Mint Authority:</span>
-                    <span className={`font-bold ${token.mintAuthority ? 'text-destructive' : 'text-success'}`}>
-                      {token.mintAuthority ? 'Yes' : 'No'}
+                    <span className={`font-bold ${securityData.mintAuthority ? 'text-destructive' : 'text-success'}`}>
+                      {securityData.mintAuthority ? 'Yes' : 'No'}
                     </span>
                   </div>
-                  {token.riskFactors && token.riskFactors.length > 0 && (
+                  {securityData.riskFactors && securityData.riskFactors.length > 0 && (
                     <div className="pt-1 border-t border-border/30">
                       <div className="text-[9px] text-muted-foreground mb-0.5">Risk Factors:</div>
-                      {token.riskFactors.map((factor, i) => (
+                      {securityData.riskFactors.map((factor, i) => (
                         <div key={i} className="text-[9px] text-destructive">• {factor}</div>
                       ))}
                     </div>
