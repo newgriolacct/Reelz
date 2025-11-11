@@ -13,7 +13,7 @@ import { useTokenComments } from "@/hooks/useTokenComments";
 import { useTokenLikes } from "@/hooks/useTokenLikes";
 import pumpfunIcon from "@/assets/pumpfun-icon.png";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { fetchTokenTransactions, fetchTokenHolders } from "@/services/solscan";
+import { fetchTokenTransactions } from "@/services/solscan";
 import { formatDistanceToNow } from "date-fns";
 
 interface TokenCardProps {
@@ -30,9 +30,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [showComments, setShowComments] = useState(false);
   const [shouldLoadChart, setShouldLoadChart] = useState(isEagerLoad);
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [holders, setHolders] = useState<any[]>([]);
   const [loadingTxs, setLoadingTxs] = useState(false);
-  const [loadingHolders, setLoadingHolders] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -102,19 +100,11 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   };
 
   const loadTransactions = async () => {
-    if (!token.contractAddress || loadingTxs || transactions.length > 0) return;
+    if (!token.pairAddress || loadingTxs) return;
     setLoadingTxs(true);
-    const txs = await fetchTokenTransactions(token.contractAddress);
+    const txs = await fetchTokenTransactions(token.pairAddress);
     setTransactions(txs);
     setLoadingTxs(false);
-  };
-
-  const loadHolders = async () => {
-    if (!token.contractAddress || loadingHolders || holders.length > 0) return;
-    setLoadingHolders(true);
-    const holdersList = await fetchTokenHolders(token.contractAddress);
-    setHolders(holdersList);
-    setLoadingHolders(false);
   };
 
   return (
@@ -214,12 +204,11 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </div>
         </div>
 
-        {/* Chart/Transactions/Holders Tabs */}
+        {/* Chart/Transactions Tabs */}
         <Tabs defaultValue="chart" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="w-full grid grid-cols-3 bg-secondary h-9 flex-shrink-0">
+          <TabsList className="w-full grid grid-cols-2 bg-secondary h-9 flex-shrink-0">
             <TabsTrigger value="chart" className="text-xs">Chart</TabsTrigger>
             <TabsTrigger value="transactions" className="text-xs" onClick={loadTransactions}>Transactions</TabsTrigger>
-            <TabsTrigger value="holders" className="text-xs" onClick={loadHolders}>Holders</TabsTrigger>
           </TabsList>
           
           <TabsContent value="chart" className="flex-1 min-h-0 mt-0">
@@ -258,14 +247,22 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             ) : transactions.length > 0 ? (
               <div className="p-2 space-y-1">
                 {transactions.map((tx, idx) => (
-                  <div key={idx} className="bg-secondary p-2 rounded text-xs">
-                    <div className="flex justify-between items-start">
-                      <div className="font-mono text-[10px] truncate flex-1">
-                        {tx.txHash?.slice(0, 8)}...{tx.txHash?.slice(-8)}
+                  <div key={idx} className="bg-secondary p-2 rounded">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2 flex-1">
+                        <Badge className={tx.type === 'buy' ? 'bg-success text-success-foreground' : 'bg-destructive text-destructive-foreground'}>
+                          {tx.type.toUpperCase()}
+                        </Badge>
+                        <span className="text-[10px] font-mono">
+                          ${tx.totalUsd.toFixed(2)}
+                        </span>
                       </div>
-                      <div className="text-[9px] text-muted-foreground ml-2">
-                        {tx.blockTime && formatDistanceToNow(tx.blockTime * 1000, { addSuffix: true })}
+                      <div className="text-[9px] text-muted-foreground">
+                        {formatDistanceToNow(tx.timestamp, { addSuffix: true })}
                       </div>
+                    </div>
+                    <div className="text-[9px] text-muted-foreground mt-1">
+                      {tx.amount.toFixed(2)} @ ${tx.priceUsd.toFixed(6)}
                     </div>
                   </div>
                 ))}
@@ -276,38 +273,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
               </div>
             )}
           </TabsContent>
-
-          <TabsContent value="holders" className="flex-1 overflow-y-auto mt-0 h-[200px]">
-            {loadingHolders ? (
-              <div className="p-3 space-y-2">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : holders.length > 0 ? (
-              <div className="p-2 space-y-1">
-                {holders.map((holder, idx) => (
-                  <div key={idx} className="bg-secondary p-2 rounded text-xs">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="text-[10px] text-muted-foreground">#{holder.rank || idx + 1}</span>
-                        <span className="font-mono text-[10px] truncate">
-                          {holder.owner?.slice(0, 6)}...{holder.owner?.slice(-4)}
-                        </span>
-                      </div>
-                      <div className="text-[10px] font-bold ml-2">
-                        {((holder.amount / Math.pow(10, holder.decimals || 0)) / 1000000).toFixed(2)}M
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                No holders data available
-              </div>
-            )}
-          </TabsContent>
         </Tabs>
 
         {/* Bottom - Token Info */}
@@ -315,7 +280,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           {/* Price Info & Actions - Single Row */}
           <div className="mb-0.5 flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <div className="text-xl font-bold text-foreground leading-tight truncate">
+              <div className="text-2xl font-bold text-foreground leading-tight truncate">
                 {formatPrice(token.price)}
               </div>
               <div className={`text-xs font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>

@@ -17,16 +17,20 @@ export const formatNumber = (num: number): string => {
 export const formatPrice = (price: number): string => {
   if (price === 0) return '$0.00';
   
-  if (price < 0.01) {
-    // For very small prices, show more decimals
-    return `$${price.toFixed(8)}`;
-  } else if (price < 1) {
-    return `$${price.toFixed(6)}`;
-  } else if (price < 100) {
-    return `$${price.toFixed(4)}`;
-  } else {
-    return `$${price.toFixed(2)}`;
+  if (price >= 1) {
+    return `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
   }
+  
+  if (price >= 0.01) {
+    return `$${price.toFixed(4)}`;
+  }
+  
+  // For very small numbers, show more decimals
+  if (price < 0.000001) {
+    return `$${price.toFixed(10)}`;
+  }
+  
+  return `$${price.toFixed(8)}`;
 };
 
 export const formatCurrency = (num: number): string => {
