@@ -14,8 +14,6 @@ import { useTokenLikes } from "@/hooks/useTokenLikes";
 import pumpfunIcon from "@/assets/pumpfun-icon.png";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { fetchTokenTransactions, fetchTokenHolders } from "@/services/solscan";
-import { fetchRugcheckData } from "@/services/rugcheck";
-import { fetchSolsnifferData } from "@/services/solsniffer";
 import { formatDistanceToNow } from "date-fns";
 
 interface TokenCardProps {
@@ -35,9 +33,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [loadingTxs, setLoadingTxs] = useState(false);
   const [holders, setHolders] = useState<any[]>([]);
   const [loadingHolders, setLoadingHolders] = useState(false);
-  const [securityData, setSecurityData] = useState<any>(null);
-  const [bundleSniperData, setBundleSniperData] = useState<any>(null);
-  const [loadingSecurity, setLoadingSecurity] = useState(false);
   const [activeTab, setActiveTab] = useState('chart');
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -121,21 +116,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
     const holderData = await fetchTokenHolders(token.contractAddress);
     setHolders(holderData);
     setLoadingHolders(false);
-  };
-
-  const loadSecurity = async () => {
-    if (!token.contractAddress || (securityData && bundleSniperData) || loadingSecurity) return;
-    setLoadingSecurity(true);
-    
-    // Fetch both security sources in parallel
-    const [rugcheckResult, solsnifferResult] = await Promise.all([
-      fetchRugcheckData(token.contractAddress),
-      fetchSolsnifferData(token.contractAddress),
-    ]);
-    
-    setSecurityData(rugcheckResult);
-    setBundleSniperData(solsnifferResult);
-    setLoadingSecurity(false);
   };
 
   // Auto-refresh transactions when tab is active
@@ -250,9 +230,9 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </div>
         </div>
 
-        {/* Chart/Transactions/Holders/Security Tabs */}
+        {/* Chart/Transactions/Holders Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="w-full grid grid-cols-4 bg-secondary/50 backdrop-blur-sm h-8 flex-shrink-0 p-0.5 gap-0.5 rounded-lg">
+          <TabsList className="w-full grid grid-cols-3 bg-secondary/50 backdrop-blur-sm h-8 flex-shrink-0 p-0.5 gap-0.5 rounded-lg">
             <TabsTrigger 
               value="chart" 
               className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
@@ -276,13 +256,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
               onClick={loadHolders}
             >
               Holders
-            </TabsTrigger>
-            <TabsTrigger 
-              value="security" 
-              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
-              onClick={loadSecurity}
-            >
-              Security
             </TabsTrigger>
           </TabsList>
           
@@ -394,132 +367,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             ) : (
               <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
                 No holder data available
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="security" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
-            {loadingSecurity ? (
-              <div className="p-3 space-y-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} className="h-14 w-full" />
-                ))}
-              </div>
-            ) : securityData ? (
-              <div className="p-2 space-y-2">
-                {/* Rugcheck Verification Link */}
-                {token.contractAddress && (
-                  <div className="bg-secondary/50 p-2 rounded flex items-center justify-between animate-fade-in">
-                    <span className="text-[8px] text-muted-foreground">Powered by Rugcheck</span>
-                    <button
-                      onClick={() => window.open(`https://rugcheck.xyz/tokens/${token.contractAddress}`, '_blank')}
-                      className="text-[9px] text-primary hover:underline flex items-center gap-1"
-                    >
-                      Full Report
-                      <ExternalLink className="w-2.5 h-2.5" />
-                    </button>
-                  </div>
-                )}
-                
-                {/* Token Age */}
-                <div className="bg-secondary p-2 rounded animate-fade-in">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-muted-foreground">Token Age</span>
-                    <span className="text-[11px] font-semibold">{securityData.tokenAge || 'N/A'}</span>
-                  </div>
-                </div>
-                
-                {/* Holder Distribution */}
-                <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.1s' }}>
-                  <div className="text-[9px] text-muted-foreground mb-1.5">Holder Distribution</div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px]">Top 10 Holders</span>
-                      <span className={`text-[11px] font-semibold ${
-                        securityData.topHoldersPercent < 30 ? 'text-success' : 
-                        securityData.topHoldersPercent < 50 ? 'text-yellow-500' : 
-                        'text-destructive'
-                      }`}>
-                        {securityData.topHoldersPercent.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px]">Creator Holdings</span>
-                      <span className={`text-[11px] font-semibold ${
-                        securityData.creatorPercent < 5 ? 'text-success' : 
-                        securityData.creatorPercent < 15 ? 'text-yellow-500' : 
-                        'text-destructive'
-                      }`}>
-                        {securityData.creatorPercent.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Token Authorities */}
-                <div className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: '0.15s' }}>
-                  <div className="text-[9px] text-muted-foreground mb-1.5">Token Authorities</div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px]">Freeze Authority</span>
-                      <Badge variant={securityData.freezeAuthority ? "destructive" : "default"} className="text-[9px]">
-                        {securityData.freezeAuthority ? "Active ⚠️" : "Revoked ✓"}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px]">Mint Authority</span>
-                      <Badge variant={securityData.mintAuthority ? "destructive" : "default"} className="text-[9px]">
-                        {securityData.mintAuthority ? "Active ⚠️" : "Revoked ✓"}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Bundle & Sniper Detection (Solsniffer) */}
-                {bundleSniperData && (
-                  <>
-                    <div className="bg-secondary/50 p-2 rounded animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                      <div className="text-[9px] text-muted-foreground mb-1.5">Bundle & Sniper Detection</div>
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[10px]">Bundle %</span>
-                          <span className={`text-[11px] font-semibold ${
-                            bundleSniperData.bundlePercentage < 10 ? 'text-success' : 
-                            bundleSniperData.bundlePercentage < 30 ? 'text-yellow-500' : 
-                            'text-destructive'
-                          }`}>
-                            {bundleSniperData.bundlePercentage.toFixed(1)}%
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-[10px]">Sniper %</span>
-                          <span className={`text-[11px] font-semibold ${
-                            bundleSniperData.sniperPercentage < 10 ? 'text-success' : 
-                            bundleSniperData.sniperPercentage < 30 ? 'text-yellow-500' : 
-                            'text-destructive'
-                          }`}>
-                            {bundleSniperData.sniperPercentage.toFixed(1)}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-secondary/50 p-2 rounded flex items-center justify-between animate-fade-in" style={{ animationDelay: '0.25s' }}>
-                      <span className="text-[8px] text-muted-foreground">Powered by Solsniffer</span>
-                      <button
-                        onClick={() => window.open(`https://www.solsniffer.com/scanner/${token.contractAddress}`, '_blank')}
-                        className="text-[9px] text-primary hover:underline flex items-center gap-1"
-                      >
-                        Full Report
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm p-4 text-center">
-                <p className="text-xs">Security data not available</p>
               </div>
             )}
           </TabsContent>
