@@ -25,7 +25,6 @@ export interface Token {
   contractAddress?: string;
   buys24h?: number;
   sells24h?: number;
-  createdAt?: number; // timestamp
   // Security data from Rugcheck
   securityScore?: number;        // 0-10 risk score (10 = safest)
   riskLevel?: 'GOOD' | 'MEDIUM' | 'HIGH';
@@ -82,6 +81,5 @@ export const convertDexPairToToken = async (pair: DexPair): Promise<Token> => {
     contractAddress: pair.baseToken.address,
     buys24h: pair.txns.h24.buys,
     sells24h: pair.txns.h24.sells,
-    createdAt: pair.pairCreatedAt,
   };
 };
