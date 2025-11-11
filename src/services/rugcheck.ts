@@ -1,47 +1,31 @@
 import { apiCache } from './apiCache';
 
-const GOPLUS_API = 'https://api.gopluslabs.io/api/v1/token_security';
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes (security data doesn't change often)
+const RUGCHECK_API = 'https://api.rugcheck.xyz/v1/tokens';
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
-export interface GoPlusTokenSecurity {
-  is_open_source: string;
-  is_proxy: string;
-  is_mintable: string;
-  can_take_back_ownership: string;
-  owner_change_balance: string;
-  hidden_owner: string;
-  selfdestruct: string;
-  external_call: string;
-  buy_tax: string;
-  sell_tax: string;
-  is_honeypot: string;
-  transfer_pausable: string;
-  is_blacklisted: string;
-  is_whitelisted: string;
-  is_anti_whale: string;
-  trading_cooldown: string;
-  is_in_dex: string;
-  holder_count: string;
-  owner_address: string;
-  creator_address: string;
-  lp_holder_count: string;
-  lp_total_supply: string;
-  total_supply: string;
-  holders: Array<{
-    address: string;
-    balance: string;
-    percent: number;
-    is_contract: number;
-    is_locked: number;
+export interface RugcheckResponse {
+  mint: string;
+  score: number;
+  risks: Array<{
+    name: string;
+    description: string;
+    level: string;
+    score: number;
   }>;
-  trust_list: string;
-}
-
-export interface GoPlusResponse {
-  code: number;
-  message: string;
-  result: {
-    [address: string]: GoPlusTokenSecurity;
+  topHolders: Array<{
+    address: string;
+    pct: number;
+  }>;
+  freezeAuthority: string | null;
+  mintAuthority: string | null;
+  markets?: Array<{
+    lp?: {
+      lpLockedPct?: number;
+    };
+  }>;
+  creator?: {
+    address?: string;
+    pct?: number;
   };
 }
 
@@ -57,159 +41,85 @@ export interface SecurityData {
 }
 
 /**
- * Fetch security data from GoPlus Security API
+ * Fetch security data from Rugcheck API
  */
 export const fetchRugcheckData = async (mintAddress: string): Promise<SecurityData | null> => {
   try {
-    console.log(`[GoPlus] Fetching security data for: ${mintAddress}`);
+    console.log(`[Rugcheck] Fetching security data for: ${mintAddress}`);
     
     // Check cache first
     const cacheKey = `security:${mintAddress}`;
     const cached = apiCache.get<SecurityData>(cacheKey);
     if (cached) {
-      console.log(`[GoPlus] Using cached data for ${mintAddress}`);
+      console.log(`[Rugcheck] Using cached data for ${mintAddress}`);
       return cached;
     }
 
-    // GoPlus API endpoint for Solana
-    const url = `${GOPLUS_API}/solana?contract_addresses=${mintAddress}`;
-    console.log(`[GoPlus] Calling API: ${url}`);
+    const url = `${RUGCHECK_API}/${mintAddress}/report/summary`;
+    console.log(`[Rugcheck] Calling API: ${url}`);
     
     const response = await fetch(url);
     
-    console.log(`[GoPlus] Response status: ${response.status}`);
+    console.log(`[Rugcheck] Response status: ${response.status}`);
     
     if (!response.ok) {
       if (response.status === 404) {
-        console.log(`[GoPlus] No data found for ${mintAddress}`);
-        apiCache.set(cacheKey, null as any, CACHE_DURATION);
+        console.log(`[Rugcheck] No data found for ${mintAddress}`);
         return null;
       }
-      throw new Error(`GoPlus API error: ${response.status}`);
+      throw new Error(`Rugcheck API error: ${response.status}`);
     }
 
-    const data: GoPlusResponse = await response.json();
-    console.log(`[GoPlus] Raw data:`, data);
+    const data: RugcheckResponse = await response.json();
+    console.log(`[Rugcheck] Raw data:`, data);
     
-    if (!data.result || !data.result[mintAddress.toLowerCase()]) {
-      console.log(`[GoPlus] Token not yet indexed by GoPlus - returning basic security data`);
-      
-      // Return basic security data for unindexed tokens
-      const basicData: SecurityData = {
-        score: 5, // Neutral score
-        riskLevel: 'MEDIUM',
-        topHoldersPercent: 0,
-        freezeAuthority: false,
-        mintAuthority: false,
-        lpLockedPercent: 0,
-        creatorPercent: 0,
-        riskFactors: ['Security data not yet available - token may be too new'],
-      };
-      
-      // Cache for shorter time since it might get indexed soon
-      apiCache.set(cacheKey, basicData, 5 * 60 * 1000); // 5 minutes
-      
-      return basicData;
-    }
-    
-    const tokenData = data.result[mintAddress.toLowerCase()];
-    
-    // Calculate risk score based on various factors (0-10 scale)
-    let score = 10;
+    // Calculate risk factors from Rugcheck data
     const riskFactors: string[] = [];
     
-    // Mintable (very high risk)
-    if (tokenData.is_mintable === '1') {
-      score -= 3;
-      riskFactors.push('Token can be minted (supply can increase)');
-    }
-    
-    // Honeypot (critical risk)
-    if (tokenData.is_honeypot === '1') {
-      score -= 4;
-      riskFactors.push('Potential honeypot detected');
-    }
-    
-    // Transfer pausable
-    if (tokenData.transfer_pausable === '1') {
-      score -= 2;
-      riskFactors.push('Transfers can be paused by owner');
-    }
-    
-    // Hidden owner
-    if (tokenData.hidden_owner === '1') {
-      score -= 1.5;
-      riskFactors.push('Hidden owner detected');
-    }
-    
-    // Owner can change balance
-    if (tokenData.owner_change_balance === '1') {
-      score -= 2;
-      riskFactors.push('Owner can modify balances');
-    }
-    
-    // High taxes
-    const buyTax = parseFloat(tokenData.buy_tax || '0');
-    const sellTax = parseFloat(tokenData.sell_tax || '0');
-    if (buyTax > 10 || sellTax > 10) {
-      score -= 1;
-      riskFactors.push(`High transaction fees (Buy: ${buyTax}%, Sell: ${sellTax}%)`);
-    }
-    
-    // Anti-whale or trading cooldown (moderate concern)
-    if (tokenData.is_anti_whale === '1' || tokenData.trading_cooldown === '1') {
-      score -= 0.5;
-      riskFactors.push('Trading restrictions in place');
-    }
+    // Add high-severity risks
+    data.risks
+      ?.filter(risk => ['danger', 'warn'].includes(risk.level))
+      .forEach(risk => {
+        riskFactors.push(risk.description);
+      });
     
     // Calculate top holders percentage
-    const topHoldersPercent = tokenData.holders
+    const topHoldersPercent = data.topHolders
       ?.slice(0, 10)
-      .reduce((sum, holder) => sum + holder.percent, 0) || 0;
+      .reduce((sum, holder) => sum + holder.pct, 0) || 0;
     
     if (topHoldersPercent > 50) {
-      score -= 1;
-      riskFactors.push('High holder concentration');
+      riskFactors.push('High holder concentration (top 10 holders)');
     }
     
-    // Normalize score to 0-10
-    score = Math.max(0, Math.min(10, score));
-    
-    // Determine risk level
+    // Determine risk level based on score (0-100 scale from Rugcheck)
     let riskLevel: 'GOOD' | 'MEDIUM' | 'HIGH';
-    if (score >= 7) riskLevel = 'GOOD';
-    else if (score >= 4) riskLevel = 'MEDIUM';
+    if (data.score >= 70) riskLevel = 'GOOD';
+    else if (data.score >= 40) riskLevel = 'MEDIUM';
     else riskLevel = 'HIGH';
     
+    // Get LP locked percentage
+    const lpLockedPercent = data.markets?.[0]?.lp?.lpLockedPct || 0;
+    
     const securityData: SecurityData = {
-      score,
+      score: data.score / 10, // Convert from 0-100 to 0-10
       riskLevel,
       topHoldersPercent,
-      freezeAuthority: tokenData.transfer_pausable === '1',
-      mintAuthority: tokenData.is_mintable === '1',
-      lpLockedPercent: 0, // GoPlus doesn't provide LP lock percentage directly
-      creatorPercent: 0, // Calculate from holders if creator address is available
+      freezeAuthority: data.freezeAuthority !== null,
+      mintAuthority: data.mintAuthority !== null,
+      lpLockedPercent,
+      creatorPercent: data.creator?.pct || 0,
       riskFactors,
     };
     
-    // Find creator percentage from holders
-    if (tokenData.creator_address && tokenData.holders) {
-      const creatorHolder = tokenData.holders.find(
-        h => h.address.toLowerCase() === tokenData.creator_address.toLowerCase()
-      );
-      if (creatorHolder) {
-        securityData.creatorPercent = creatorHolder.percent;
-      }
-    }
-    
-    console.log(`[GoPlus] Processed data:`, securityData);
+    console.log(`[Rugcheck] Processed data:`, securityData);
     
     // Cache the result
     apiCache.set(cacheKey, securityData, CACHE_DURATION);
     
     return securityData;
   } catch (error) {
-    console.error(`[GoPlus] Error fetching data for ${mintAddress}:`, error);
+    console.error(`[Rugcheck] Error fetching data for ${mintAddress}:`, error);
     return null;
   }
 };

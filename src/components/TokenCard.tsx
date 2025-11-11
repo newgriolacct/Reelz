@@ -409,24 +409,15 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
               </div>
             ) : securityData ? (
               <div className="p-2 space-y-2">
-                {/* Info Banner */}
-                {securityData?.riskFactors?.some(rf => rf.includes('not yet available')) && (
-                  <div className="bg-yellow-500/10 border border-yellow-500/20 p-2 rounded animate-fade-in">
-                    <div className="text-[9px] text-yellow-600 dark:text-yellow-400">
-                      ⚠️ Security data unavailable - Token may be too new or not yet indexed
-                    </div>
-                  </div>
-                )}
-                
-                {/* GoPlus Security Verification Link */}
+                {/* Rugcheck Verification Link */}
                 {token.contractAddress && (
                   <div className="bg-secondary/50 p-2 rounded flex items-center justify-between animate-fade-in">
-                    <span className="text-[9px] text-muted-foreground">Powered by GoPlus Security</span>
+                    <span className="text-[8px] text-muted-foreground">Powered by Rugcheck</span>
                     <button
-                      onClick={() => window.open(`https://gopluslabs.io/token-security/solana/${token.contractAddress}`, '_blank')}
+                      onClick={() => window.open(`https://rugcheck.xyz/tokens/${token.contractAddress}`, '_blank')}
                       className="text-[9px] text-primary hover:underline flex items-center gap-1"
                     >
-                      Check Manually
+                      Full Report
                       <ExternalLink className="w-2.5 h-2.5" />
                     </button>
                   </div>
