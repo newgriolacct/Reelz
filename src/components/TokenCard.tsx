@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Bookmark, ExternalLink, Globe, ChevronDown, ChevronUp } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, ExternalLink, Globe, ChevronDown, ChevronUp, Rocket } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -162,6 +162,12 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 <span className="font-bold text-foreground text-sm truncate">{token.symbol}</span>
                 {token.isNew && (
                   <Badge className="bg-primary text-primary-foreground text-[10px] px-1 py-0">New</Badge>
+                )}
+                {token.contractAddress?.toLowerCase().endsWith('pump') && (
+                  <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] px-1 py-0 flex items-center gap-0.5">
+                    <Rocket className="w-2.5 h-2.5" />
+                    Pump.fun
+                  </Badge>
                 )}
                 {securityData.securityScore !== undefined && securityData.riskLevel && (
                   <SecurityBadge 
