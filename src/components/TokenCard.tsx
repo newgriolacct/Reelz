@@ -36,6 +36,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [loadingHolders, setLoadingHolders] = useState(false);
   const [securityData, setSecurityData] = useState<any>(null);
   const [loadingSecurity, setLoadingSecurity] = useState(false);
+  const [activeTab, setActiveTab] = useState('chart');
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -105,7 +106,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   };
 
   const loadTransactions = async () => {
-    if (!token.contractAddress || loadingTxs) return;
+    if (!token.contractAddress) return;
     setLoadingTxs(true);
     const txs = await fetchTokenTransactions(token.contractAddress);
     setTransactions(txs);
@@ -138,6 +139,21 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
     }
     setLoadingSecurity(false);
   };
+
+  // Auto-refresh transactions when tab is active
+  useEffect(() => {
+    if (activeTab !== 'transactions') return;
+    
+    // Initial load
+    loadTransactions();
+    
+    // Set up interval for auto-refresh
+    const interval = setInterval(() => {
+      loadTransactions();
+    }, 15000); // Refresh every 15 seconds
+    
+    return () => clearInterval(interval);
+  }, [activeTab, token.contractAddress]);
 
   return (
     <>
@@ -237,7 +253,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
         </div>
 
         {/* Chart/Transactions/Holders/Security Tabs */}
-        <Tabs defaultValue="chart" className="flex-1 flex flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <TabsList className="w-full grid grid-cols-4 bg-secondary/50 backdrop-blur-sm h-8 flex-shrink-0 p-0.5 gap-0.5 rounded-lg">
             <TabsTrigger 
               value="chart" 
@@ -248,9 +264,13 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             <TabsTrigger 
               value="transactions" 
               className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
-              onClick={loadTransactions}
             >
-              Txns
+              <span className="flex items-center gap-1">
+                Txns
+                {activeTab === 'transactions' && (
+                  <span className="w-1 h-1 bg-success rounded-full animate-pulse" />
+                )}
+              </span>
             </TabsTrigger>
             <TabsTrigger 
               value="holders" 
@@ -295,7 +315,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </TabsContent>
 
           <TabsContent value="transactions" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
-            {loadingTxs ? (
+            {loadingTxs && transactions.length === 0 ? (
               <div className="p-3 space-y-2">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <Skeleton key={i} className="h-12 w-full" />
