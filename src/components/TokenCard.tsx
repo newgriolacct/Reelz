@@ -247,73 +247,75 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
 
         {/* Bottom - Token Info */}
         <div className="px-3 py-2 pb-20 flex flex-col gap-1.5 bg-background flex-shrink-0">
-          {/* Price Info - Compact */}
-          <div className="mb-1">
-            <div className="text-xl font-bold text-foreground leading-tight">
-              {formatPrice(token.price)}
+          {/* Price Info & Actions - Single Row */}
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="text-xl font-bold text-foreground leading-tight truncate">
+                {formatPrice(token.price)}
+              </div>
+              <div className={`text-xs font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
+                {isPositive ? '+' : ''}{token.change24h.toFixed(2)}% (24h)
+              </div>
             </div>
-            <div className={`text-xs font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
-              {isPositive ? '+' : ''}{token.change24h.toFixed(2)}% (24h)
+            
+            {/* Action Buttons - Horizontal */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={toggleLike}
+                className="flex flex-col items-center gap-0.5 min-w-[40px]"
+              >
+                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
+                  <Heart 
+                    className={`w-3.5 h-3.5 ${isLiked ? 'fill-destructive text-destructive' : 'text-foreground'}`} 
+                  />
+                </div>
+                <span className="text-[9px] font-medium text-foreground">{likeCount}</span>
+              </button>
+
+              <button
+                onClick={() => setShowComments(true)}
+                className="flex flex-col items-center gap-0.5 min-w-[40px]"
+              >
+                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
+                  <MessageCircle className="w-3.5 h-3.5 text-foreground" />
+                </div>
+                <span className="text-[9px] font-medium text-foreground">{comments.length}</span>
+              </button>
+
+              <button
+                onClick={handleFavorite}
+                className="flex flex-col items-center gap-0.5 min-w-[40px]"
+              >
+                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
+                  <Bookmark 
+                    className={`w-3.5 h-3.5 ${isTokenFavorited ? 'fill-primary text-primary' : 'text-foreground'}`} 
+                  />
+                </div>
+                <span className="text-[9px] font-medium text-foreground">Save</span>
+              </button>
             </div>
           </div>
 
-          {/* Stats Grid with Actions - Compact */}
+          {/* Stats Grid - Compact */}
           <div className="space-y-1 mb-1.5">
-            {/* First row: Market Cap & Actions */}
-            <div className="flex items-center gap-1">
-              <div className="bg-secondary rounded-lg p-1.5 flex-1">
+            {/* First row: Market Cap & Volume */}
+            <div className="grid grid-cols-2 gap-1">
+              <div className="bg-secondary rounded-lg p-1.5">
                 <div className="text-[9px] text-muted-foreground">Market Cap</div>
                 <div className="text-[11px] font-bold text-foreground truncate">
                   {formatCurrency(token.marketCap)}
                 </div>
               </div>
-              
-              {/* Action Buttons - Horizontal */}
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={toggleLike}
-                  className="flex flex-col items-center gap-0.5 min-w-[44px]"
-                >
-                  <div className="w-9 h-9 rounded-lg bg-secondary border border-border flex items-center justify-center">
-                    <Heart 
-                      className={`w-4 h-4 ${isLiked ? 'fill-destructive text-destructive' : 'text-foreground'}`} 
-                    />
-                  </div>
-                  <span className="text-[9px] font-medium text-foreground">{likeCount}</span>
-                </button>
-
-                <button
-                  onClick={() => setShowComments(true)}
-                  className="flex flex-col items-center gap-0.5 min-w-[44px]"
-                >
-                  <div className="w-9 h-9 rounded-lg bg-secondary border border-border flex items-center justify-center">
-                    <MessageCircle className="w-4 h-4 text-foreground" />
-                  </div>
-                  <span className="text-[9px] font-medium text-foreground">{comments.length}</span>
-                </button>
-
-                <button
-                  onClick={handleFavorite}
-                  className="flex flex-col items-center gap-0.5 min-w-[44px]"
-                >
-                  <div className="w-9 h-9 rounded-lg bg-secondary border border-border flex items-center justify-center">
-                    <Bookmark 
-                      className={`w-4 h-4 ${isTokenFavorited ? 'fill-primary text-primary' : 'text-foreground'}`} 
-                    />
-                  </div>
-                  <span className="text-[9px] font-medium text-foreground">Save</span>
-                </button>
-              </div>
-            </div>
-            
-            {/* Second row: Volume & Top Holders/Liquidity */}
-            <div className="grid grid-cols-2 gap-1">
               <div className="bg-secondary rounded-lg p-1.5">
                 <div className="text-[9px] text-muted-foreground">Volume 24h</div>
                 <div className="text-[11px] font-bold text-foreground truncate">
                   {formatCurrency(token.volume24h)}
                 </div>
               </div>
+            </div>
+            
+            {/* Second row: Top Holders/Liquidity & LP Locked/Chain */}
+            <div className="grid grid-cols-2 gap-1">
               {token.topHoldersPercent !== undefined ? (
                 <div className="bg-secondary rounded-lg p-1.5">
                   <div className="text-[9px] text-muted-foreground">Top Holders</div>
@@ -332,10 +334,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                   </div>
                 </div>
               )}
-            </div>
-            
-            {/* Third row: LP Locked/Chain */}
-            <div className="grid grid-cols-2 gap-1">
               {token.lpLockedPercent !== undefined ? (
                 <div className="bg-secondary rounded-lg p-1.5">
                   <div className="text-[9px] text-muted-foreground">LP Locked</div>
@@ -348,18 +346,12 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 </div>
               ) : (
                 <div className="bg-secondary rounded-lg p-1.5">
-                  <div className="text-[9px] text-muted-foreground">Liquidity</div>
+                  <div className="text-[9px] text-muted-foreground">Chain</div>
                   <div className="text-[11px] font-bold text-foreground truncate">
-                    {formatCurrency(token.liquidity)}
+                    {token.chain}
                   </div>
                 </div>
               )}
-              <div className="bg-secondary rounded-lg p-1.5">
-                <div className="text-[9px] text-muted-foreground">Chain</div>
-                <div className="text-[11px] font-bold text-foreground truncate">
-                  {token.chain}
-                </div>
-              </div>
             </div>
           </div>
 
