@@ -80,6 +80,16 @@ export default function Favorites() {
 
       const pricesMap = new Map<string, { price: number; change24h: number }>();
       
+      // Initialize with saved prices from database as fallback
+      favorites.forEach(favorite => {
+        if (favorite.token_price) {
+          pricesMap.set(favorite.token_id, {
+            price: favorite.token_price,
+            change24h: 0, // No change data for saved prices
+          });
+        }
+      });
+      
       // Fetch all prices in parallel
       const pricePromises = favorites.map(async (favorite) => {
         try {
@@ -104,8 +114,9 @@ export default function Favorites() {
 
       const results = await Promise.all(pricePromises);
       
+      // Update with live prices where available
       results.forEach(result => {
-        if (result) {
+        if (result && result.price > 0) {
           pricesMap.set(result.tokenId, {
             price: result.price,
             change24h: result.change24h,
@@ -218,10 +229,10 @@ export default function Favorites() {
                         <div className="flex items-center gap-3 mb-2">
                           <div>
                             <p className="text-sm font-bold text-foreground">
-                              {priceData ? formatPrice(priceData.price) : 'Loading...'}
+                              {priceData ? formatPrice(priceData.price) : (favorite.token_price ? formatPrice(favorite.token_price) : '$0.00')}
                             </p>
                           </div>
-                          {priceData && (
+                          {priceData && priceData.change24h !== 0 && (
                             <div className={`flex items-center gap-1 text-xs font-semibold ${
                               isPositive ? 'text-green-500' : 'text-red-500'
                             }`}>
@@ -243,7 +254,10 @@ export default function Favorites() {
                               <div>
                                 <p className="text-muted-foreground mb-0.5">Value</p>
                                 <p className="font-bold text-foreground">
-                                  {priceData ? `$${formatNumber(holding.balance * priceData.price)}` : 'Loading...'}
+                                  {priceData 
+                                    ? `$${formatNumber(holding.balance * priceData.price)}` 
+                                    : (favorite.token_price ? `$${formatNumber(holding.balance * favorite.token_price)}` : '$0.00')
+                                  }
                                 </p>
                               </div>
                             </div>
