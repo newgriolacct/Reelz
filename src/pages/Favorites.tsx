@@ -232,14 +232,12 @@ export default function Favorites() {
                               {priceData ? formatPrice(priceData.price) : (favorite.token_price ? formatPrice(favorite.token_price) : '$0.00')}
                             </p>
                           </div>
-                          {priceData && priceData.change24h !== 0 && (
-                            <div className={`flex items-center gap-1 text-xs font-semibold ${
-                              isPositive ? 'text-green-500' : 'text-red-500'
-                            }`}>
-                              {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                              {isPositive ? '+' : ''}{priceData.change24h.toFixed(2)}%
-                            </div>
-                          )}
+                          <div className={`flex items-center gap-1 text-xs font-semibold ${
+                            isPositive ? 'text-green-500' : 'text-red-500'
+                          }`}>
+                            {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                            {isPositive ? '+' : ''}{(priceData?.change24h || 0).toFixed(2)}%
+                          </div>
                         </div>
 
                         {holding && (
