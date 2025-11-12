@@ -222,8 +222,8 @@ export default function Wallet() {
       <div className="min-h-screen bg-background pb-24 pt-44">
         <div className="max-w-3xl mx-auto px-4 py-6">
           {/* Header */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="mb-4">
+            <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-foreground">Wallet</h1>
               <div className="flex gap-2">
                 {connected && (
@@ -240,11 +240,6 @@ export default function Wallet() {
                 <CustomWalletButton className="h-10 text-sm" />
               </div>
             </div>
-            {connected && (
-              <div className="text-xs font-mono text-muted-foreground bg-secondary/30 rounded-lg px-3 py-2 inline-block">
-                {publicKey?.toString().slice(0, 8)}...{publicKey?.toString().slice(-8)}
-              </div>
-            )}
           </div>
 
           {!connected ? (
