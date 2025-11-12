@@ -279,11 +279,13 @@ export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
   const endpoints = [
     'https://api.dexscreener.com/token-profiles/latest/v1',
     'https://api.dexscreener.com/token-boosts/latest/v1',
-    'https://api.dexscreener.com/token-boosts/top/v1'
+    'https://api.dexscreener.com/token-boosts/top/v1',
+    'https://api.dexscreener.com/community-takeovers/latest/v1',
+    'https://api.dexscreener.com/ads/latest/v1'
   ];
 
   try {
-    // Fetch from 3 endpoints (reduced from 5 to avoid rate limits)
+    // Fetch from 5 endpoints in parallel with timeout protection
     const responses = await Promise.allSettled(
       endpoints.map(url => 
         Promise.race([
