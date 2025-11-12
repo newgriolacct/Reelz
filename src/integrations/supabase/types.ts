@@ -143,6 +143,48 @@ export type Database = {
           },
         ]
       }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          price_per_token: number
+          profile_id: string
+          signature: string
+          token_id: string
+          token_name: string
+          token_symbol: string
+          total_value: number
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          price_per_token: number
+          profile_id: string
+          signature: string
+          token_id: string
+          token_name: string
+          token_symbol: string
+          total_value: number
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          price_per_token?: number
+          profile_id?: string
+          signature?: string
+          token_id?: string
+          token_name?: string
+          token_symbol?: string
+          total_value?: number
+          transaction_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
