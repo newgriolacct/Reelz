@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Bookmark, ExternalLink, Copy } from "lucide-react";
+import { Sparkles, MessageSquare, Star, ExternalLink, Copy } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -392,11 +392,11 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             <div className="flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={toggleLike}
-                className="flex flex-col items-center gap-0.5 min-w-[40px]"
+                className="flex flex-col items-center gap-0.5 min-w-[40px] transition-transform hover:scale-110"
               >
-                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
-                  <Heart 
-                    className={`w-3.5 h-3.5 ${isLiked ? 'fill-destructive text-destructive' : 'text-foreground'}`} 
+                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center transition-all hover:bg-primary/10 hover:border-primary/50">
+                  <Sparkles 
+                    className={`w-3.5 h-3.5 transition-all ${isLiked ? 'fill-primary text-primary' : 'text-foreground'}`} 
                   />
                 </div>
                 <span className="text-[9px] font-medium text-foreground">{likeCount}</span>
@@ -404,21 +404,21 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
 
               <button
                 onClick={() => setShowComments(true)}
-                className="flex flex-col items-center gap-0.5 min-w-[40px]"
+                className="flex flex-col items-center gap-0.5 min-w-[40px] transition-transform hover:scale-110"
               >
-                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
-                  <MessageCircle className="w-3.5 h-3.5 text-foreground" />
+                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center transition-all hover:bg-primary/10 hover:border-primary/50">
+                  <MessageSquare className="w-3.5 h-3.5 text-foreground" />
                 </div>
                 <span className="text-[9px] font-medium text-foreground">{comments.length}</span>
               </button>
 
               <button
                 onClick={handleFavorite}
-                className="flex flex-col items-center gap-0.5 min-w-[40px]"
+                className="flex flex-col items-center gap-0.5 min-w-[40px] transition-transform hover:scale-110"
               >
-                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
-                  <Bookmark 
-                    className={`w-3.5 h-3.5 ${isTokenFavorited ? 'fill-primary text-primary' : 'text-foreground'}`} 
+                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center transition-all hover:bg-primary/10 hover:border-primary/50">
+                  <Star 
+                    className={`w-3.5 h-3.5 transition-all ${isTokenFavorited ? 'fill-primary text-primary' : 'text-foreground'}`} 
                   />
                 </div>
                 <span className="text-[9px] font-medium text-foreground">Save</span>
