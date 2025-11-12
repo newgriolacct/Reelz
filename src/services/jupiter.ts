@@ -29,13 +29,23 @@ export async function getQuote(
     slippageBps: slippageBps.toString(),
   });
 
-  const response = await fetch(`${JUPITER_QUOTE_API}?${params}`);
+  console.log("Jupiter API request:", `${JUPITER_QUOTE_API}?${params.toString()}`);
+
+  const response = await fetch(`${JUPITER_QUOTE_API}?${params}`, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
   
   if (!response.ok) {
-    throw new Error('Failed to get quote from Jupiter');
+    const errorText = await response.text();
+    console.error("Jupiter API error:", response.status, errorText);
+    throw new Error(`Failed to get quote from Jupiter: ${response.status} ${errorText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log("Jupiter API response:", data);
+  return data;
 }
 
 export async function executeSwap(

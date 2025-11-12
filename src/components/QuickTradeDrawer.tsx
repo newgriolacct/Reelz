@@ -57,6 +57,8 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
         const outputMint = type === "buy" ? token.contractAddress! : SOL_MINT;
         const slippageBps = slippage[0] * 100; // Convert percentage to basis points
 
+        console.log("Fetching quote:", { inputMint, outputMint, amountInSmallestUnit, slippageBps });
+
         const quoteResponse = await getQuote(
           inputMint,
           outputMint,
@@ -64,9 +66,11 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
           slippageBps
         );
 
+        console.log("Quote received:", quoteResponse);
         setQuote(quoteResponse);
       } catch (error) {
         console.error("Failed to fetch quote:", error);
+        toast.error("Failed to get quote. Please try again.");
         setQuote(null);
       }
     };
