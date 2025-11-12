@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Token } from "@/types/token";
 import {
   Drawer,
@@ -13,6 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { getQuote, executeSwap, SOL_MINT, getTokenDecimals } from "@/services/jupiter";
+import { toast } from "sonner";
+import { Loader2, ExternalLink } from "lucide-react";
 
 interface QuickTradeDrawerProps {
   token: Token;
@@ -24,14 +28,97 @@ interface QuickTradeDrawerProps {
 export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTradeDrawerProps) => {
   const [amount, setAmount] = useState("");
   const [slippage, setSlippage] = useState([1]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [quote, setQuote] = useState<any>(null);
+  const [decimals, setDecimals] = useState(9);
+  
+  const { connection } = useConnection();
+  const wallet = useWallet();
 
-  const estimatedTotal = amount ? parseFloat(amount) * token.price : 0;
-  const estimatedFee = estimatedTotal * 0.003; // 0.3% fee
+  // Fetch token decimals
+  useEffect(() => {
+    if (open && token.contractAddress) {
+      getTokenDecimals(connection, token.contractAddress).then(setDecimals);
+    }
+  }, [open, token.contractAddress, connection]);
 
-  const handleConfirm = () => {
-    // TODO: Implement trade logic
-    console.log(`${type} ${amount} ${token.symbol}`);
-    onOpenChange(false);
+  // Fetch quote when amount or slippage changes
+  useEffect(() => {
+    if (!amount || parseFloat(amount) <= 0 || !open || !token.contractAddress) {
+      setQuote(null);
+      return;
+    }
+
+    const fetchQuote = async () => {
+      try {
+        const amountInSmallestUnit = Math.floor(parseFloat(amount) * Math.pow(10, type === "buy" ? 9 : decimals));
+        
+        const inputMint = type === "buy" ? SOL_MINT : token.contractAddress!;
+        const outputMint = type === "buy" ? token.contractAddress! : SOL_MINT;
+        const slippageBps = slippage[0] * 100; // Convert percentage to basis points
+
+        const quoteResponse = await getQuote(
+          inputMint,
+          outputMint,
+          amountInSmallestUnit,
+          slippageBps
+        );
+
+        setQuote(quoteResponse);
+      } catch (error) {
+        console.error("Failed to fetch quote:", error);
+        setQuote(null);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchQuote, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [amount, slippage, type, token.contractAddress, decimals, open]);
+
+  const estimatedOutput = quote ? 
+    (parseInt(quote.outAmount) / Math.pow(10, type === "buy" ? decimals : 9)).toFixed(6) : 
+    "0";
+
+  const priceImpact = quote?.priceImpactPct ? (quote.priceImpactPct * 100).toFixed(2) : "0";
+
+  const handleConfirm = async () => {
+    if (!wallet.connected || !wallet.publicKey) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
+    if (!quote) {
+      toast.error("No quote available");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const signature = await executeSwap(connection, wallet, quote);
+      
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <p className="font-semibold">Transaction successful!</p>
+          <a 
+            href={`https://solscan.io/tx/${signature}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs flex items-center gap-1 text-primary hover:underline"
+          >
+            View on Solscan <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      );
+      
+      onOpenChange(false);
+      setAmount("");
+    } catch (error: any) {
+      console.error("Swap failed:", error);
+      toast.error(error.message || "Transaction failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -47,9 +134,18 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
         </DrawerHeader>
 
         <div className="px-4 pb-4 space-y-4">
+          {/* Wallet Status */}
+          {!wallet.connected && (
+            <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg text-sm text-warning">
+              Please connect your wallet to trade
+            </div>
+          )}
+
           {/* Amount Input */}
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount ({token.symbol})</Label>
+            <Label htmlFor="amount">
+              Amount ({type === "buy" ? "SOL" : token.symbol})
+            </Label>
             <Input
               id="amount"
               type="number"
@@ -57,28 +153,32 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="text-lg"
+              disabled={!wallet.connected || isLoading}
             />
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setAmount("1000")}
+                onClick={() => setAmount(type === "buy" ? "0.1" : "1000")}
+                disabled={!wallet.connected || isLoading}
               >
-                1K
+                {type === "buy" ? "0.1 SOL" : "1K"}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setAmount("5000")}
+                onClick={() => setAmount(type === "buy" ? "0.5" : "5000")}
+                disabled={!wallet.connected || isLoading}
               >
-                5K
+                {type === "buy" ? "0.5 SOL" : "5K"}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setAmount("10000")}
+                onClick={() => setAmount(type === "buy" ? "1" : "10000")}
+                disabled={!wallet.connected || isLoading}
               >
-                10K
+                {type === "buy" ? "1 SOL" : "10K"}
               </Button>
             </div>
           </div>
@@ -101,37 +201,58 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
 
           {/* Summary */}
           <div className="space-y-2 p-4 bg-secondary rounded-lg">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Estimated Total</span>
-              <span className="font-medium">${estimatedTotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Network Fee</span>
-              <span className="font-medium">${estimatedFee.toFixed(4)}</span>
-            </div>
-            <div className="flex justify-between text-sm border-t border-border pt-2">
-              <span className="text-muted-foreground">You'll receive</span>
-              <span className="font-bold">{amount || "0"} {token.symbol}</span>
-            </div>
+            {quote ? (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">You'll receive</span>
+                  <span className="font-bold">
+                    {estimatedOutput} {type === "buy" ? token.symbol : "SOL"}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Price Impact</span>
+                  <span className={`font-medium ${parseFloat(priceImpact) > 1 ? 'text-warning' : ''}`}>
+                    {priceImpact}%
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Minimum Received</span>
+                  <span className="font-medium text-xs">
+                    {(parseInt(quote.otherAmountThreshold) / Math.pow(10, type === "buy" ? decimals : 9)).toFixed(6)} {type === "buy" ? token.symbol : "SOL"}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="text-center text-sm text-muted-foreground py-2">
+                {amount ? "Fetching quote..." : "Enter an amount to see quote"}
+              </div>
+            )}
           </div>
         </div>
 
         <DrawerFooter className="flex-row gap-2">
           <DrawerClose asChild>
-            <Button variant="outline" className="flex-1">
+            <Button variant="outline" className="flex-1" disabled={isLoading}>
               Cancel
             </Button>
           </DrawerClose>
           <Button
             onClick={handleConfirm}
-            disabled={!amount || parseFloat(amount) <= 0}
+            disabled={!wallet.connected || !amount || parseFloat(amount) <= 0 || !quote || isLoading}
             className={
               type === "buy"
                 ? "flex-1 bg-success hover:bg-success/90 text-success-foreground"
                 : "flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground"
             }
           >
-            Confirm {type === "buy" ? "Buy" : "Sell"}
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              `Confirm ${type === "buy" ? "Buy" : "Sell"}`
+            )}
           </Button>
         </DrawerFooter>
       </DrawerContent>
