@@ -23,10 +23,12 @@ export default function Discover() {
     const performSearch = async () => {
       if (!debouncedSearch.trim()) {
         setSearchResults([]);
-        setSelectedToken(null);
+        // Don't clear selectedToken here - only clear when user types new search
         return;
       }
 
+      // Clear selected token when starting a new search
+      setSelectedToken(null);
       setIsSearching(true);
       try {
         const pairs = await searchTokens(debouncedSearch);
@@ -141,22 +143,6 @@ export default function Discover() {
                     </Card>
                   ))}
                 </div>
-                
-                {/* Show selected token card below search results */}
-                {selectedToken && (
-                  <div className="mt-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <h2 className="text-lg font-semibold text-foreground">Token Details</h2>
-                      <button
-                        onClick={() => setSelectedToken(null)}
-                        className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg border border-border flex items-center gap-2 transition-colors text-sm"
-                      >
-                        Close
-                      </button>
-                    </div>
-                    <TokenCard token={selectedToken} isEagerLoad />
-                  </div>
-                )}
               </>
             ) : (
               <Card className="p-8">
@@ -167,6 +153,22 @@ export default function Discover() {
             )}
           </div>
         ) : null}
+        
+        {/* Show selected token card (outside search results) */}
+        {selectedToken && !searchQuery && (
+          <div className="mt-3">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-semibold text-foreground">Token Details</h2>
+              <button
+                onClick={() => setSelectedToken(null)}
+                className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg border border-border flex items-center gap-2 transition-colors text-sm"
+              >
+                Close
+              </button>
+            </div>
+            <TokenCard token={selectedToken} isEagerLoad />
+          </div>
+        )}
         </div>
         <BottomNav />
       </div>
