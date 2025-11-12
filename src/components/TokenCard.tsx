@@ -44,9 +44,9 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   
   const isTokenFavorited = isFavorited(token.id);
   
-  // Update comments when drawer closes to refresh count
+  // Fetch comments only when drawer opens
   useEffect(() => {
-    if (!showComments) {
+    if (showComments) {
       refetchComments();
     }
   }, [showComments, refetchComments]);
