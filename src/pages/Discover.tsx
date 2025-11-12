@@ -23,6 +23,7 @@ export default function Discover() {
     const performSearch = async () => {
       if (!debouncedSearch.trim()) {
         setSearchResults([]);
+        setSelectedToken(null);
         return;
       }
 
@@ -32,7 +33,16 @@ export default function Discover() {
         // Filter for Solana tokens only
         const solanaPairs = pairs.filter(pair => pair.chainId.toLowerCase() === 'solana');
         const tokens = await Promise.all(solanaPairs.map(pair => convertDexPairToToken(pair)));
-        setSearchResults(tokens.slice(0, 10)); // Limit to top 10 results
+        
+        // Deduplicate by contract address
+        const uniqueTokens = tokens.reduce((acc, token) => {
+          if (!acc.find(t => t.contractAddress === token.contractAddress)) {
+            acc.push(token);
+          }
+          return acc;
+        }, [] as Token[]);
+        
+        setSearchResults(uniqueTokens.slice(0, 10)); // Limit to top 10 results
       } catch (error) {
         console.error('Search failed:', error);
         setSearchResults([]);
@@ -43,26 +53,6 @@ export default function Discover() {
 
     performSearch();
   }, [debouncedSearch]);
-
-  // Show selected token in full-screen card view
-  if (selectedToken) {
-    return (
-      <AppLayout showTrendingBar={false}>
-        {/* Back button */}
-        <button
-          onClick={() => setSelectedToken(null)}
-          className="fixed top-4 left-4 z-50 px-4 py-2 bg-secondary/90 backdrop-blur-sm hover:bg-secondary text-foreground rounded-lg border border-border flex items-center gap-2 transition-colors shadow-lg"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-          Back to Search
-        </button>
-        <div className="h-[100dvh] overflow-y-auto bg-background pt-16">
-          <TokenCard token={selectedToken} isEagerLoad />
-        </div>
-        <BottomNav />
-      </AppLayout>
-    );
-  }
 
   return (
     <AppLayout showTrendingBar>
@@ -108,7 +98,9 @@ export default function Discover() {
                   {searchResults.map((token) => (
                     <Card
                       key={token.id}
-                      className="p-4 cursor-pointer hover:bg-secondary/50 transition-colors"
+                      className={`p-4 cursor-pointer hover:bg-secondary/50 transition-colors ${
+                        selectedToken?.id === token.id ? 'bg-secondary/50 border-primary' : ''
+                      }`}
                       onClick={() => setSelectedToken(token)}
                     >
                       <div className="flex items-center gap-3">
@@ -146,6 +138,22 @@ export default function Discover() {
                     </Card>
                   ))}
                 </div>
+                
+                {/* Show selected token card below search results */}
+                {selectedToken && (
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-semibold text-foreground">Token Details</h2>
+                      <button
+                        onClick={() => setSelectedToken(null)}
+                        className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg border border-border flex items-center gap-2 transition-colors text-sm"
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <TokenCard token={selectedToken} isEagerLoad />
+                  </div>
+                )}
               </>
             ) : (
               <Card className="p-8">
