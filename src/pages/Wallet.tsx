@@ -347,6 +347,7 @@ export default function Wallet() {
             description: '',
             likes: 0,
             comments: 0,
+            contractAddress: selectedToken.mint,
           }}
         />
       )}
