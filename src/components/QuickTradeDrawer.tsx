@@ -17,6 +17,7 @@ import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { getQuote, executeSwap, SOL_MINT, getTokenDecimals, getTokenBalance } from "@/services/jupiter";
 import { toast } from "sonner";
 import { Loader2, ExternalLink, Wallet } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface QuickTradeDrawerProps {
   token: Token;
@@ -116,6 +117,54 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
 
     try {
       const signature = await executeSwap(connection, wallet, quote);
+      
+      // Record transaction in database
+      try {
+        const walletAddress = wallet.publicKey.toString();
+        
+        // Get or create profile
+        let { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('wallet_address', walletAddress)
+          .maybeSingle();
+
+        if (!profile) {
+          const { data: newProfile } = await supabase
+            .from('profiles')
+            .insert([{ wallet_address: walletAddress }])
+            .select()
+            .maybeSingle();
+          profile = newProfile;
+        }
+
+        if (profile) {
+          // Calculate transaction details
+          const inputAmount = parseFloat(amount);
+          const outputAmount = parseInt(quote.outAmount) / Math.pow(10, type === "buy" ? decimals : 9);
+          const pricePerToken = type === "buy" 
+            ? inputAmount / outputAmount 
+            : outputAmount / inputAmount;
+          const totalValue = type === "buy" ? inputAmount : outputAmount;
+
+          await supabase
+            .from('transactions')
+            .insert([{
+              profile_id: profile.id,
+              token_id: token.contractAddress || token.id,
+              token_symbol: token.symbol,
+              token_name: token.name,
+              transaction_type: type,
+              amount: type === "buy" ? outputAmount : inputAmount,
+              price_per_token: pricePerToken,
+              total_value: totalValue,
+              signature: signature,
+            }]);
+        }
+      } catch (dbError) {
+        console.error("Failed to record transaction:", dbError);
+        // Don't fail the whole operation if DB insert fails
+      }
       
       toast.success(
         <div className="flex flex-col gap-1">
