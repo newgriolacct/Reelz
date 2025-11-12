@@ -155,23 +155,7 @@ export default function Discover() {
               </Card>
             )}
           </div>
-        ) : (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Popular Searches</h2>
-            <div className="flex flex-wrap gap-2">
-              {["Bitcoin", "Ethereum", "Solana", "Pepe", "Bonk", "Dogecoin"].map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                  onClick={() => setSearchQuery(tag)}
-                >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
+        ) : null}
         </div>
         <BottomNav />
       </div>
