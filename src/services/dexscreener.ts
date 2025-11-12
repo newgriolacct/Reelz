@@ -308,8 +308,8 @@ export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
 
     console.log(`Collected ${tokenAddresses.size} unique Solana token addresses`);
 
-    // FETCH UP TO 15 tokens to avoid rate limits (was 60)
-    const tokenArray = Array.from(tokenAddresses).slice(0, 15);
+    // FETCH UP TO 30 tokens to ensure we get at least 5 good ones after filtering
+    const tokenArray = Array.from(tokenAddresses).slice(0, 30);
     
     // Fetch pair data for each token with timeout
     const pairPromises = tokenArray.map(async (tokenAddress) => {
