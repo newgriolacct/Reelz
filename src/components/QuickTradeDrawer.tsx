@@ -14,9 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { getQuote, executeSwap, SOL_MINT, getTokenDecimals } from "@/services/jupiter";
+import { getQuote, executeSwap, SOL_MINT, getTokenDecimals, getTokenBalance } from "@/services/jupiter";
 import { toast } from "sonner";
-import { Loader2, ExternalLink } from "lucide-react";
+import { Loader2, ExternalLink, Wallet } from "lucide-react";
 
 interface QuickTradeDrawerProps {
   token: Token;
@@ -31,16 +31,25 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
   const [isLoading, setIsLoading] = useState(false);
   const [quote, setQuote] = useState<any>(null);
   const [decimals, setDecimals] = useState(9);
+  const [balance, setBalance] = useState<number>(0);
+  const [loadingBalance, setLoadingBalance] = useState(false);
   
   const { connection } = useConnection();
   const wallet = useWallet();
 
-  // Fetch token decimals
+  // Fetch token decimals and balance
   useEffect(() => {
-    if (open && token.contractAddress) {
+    if (open && token.contractAddress && wallet.publicKey) {
       getTokenDecimals(connection, token.contractAddress).then(setDecimals);
+      
+      // Fetch balance for the appropriate token
+      setLoadingBalance(true);
+      const mintAddress = type === "buy" ? SOL_MINT : token.contractAddress;
+      getTokenBalance(connection, wallet.publicKey.toString(), mintAddress)
+        .then(setBalance)
+        .finally(() => setLoadingBalance(false));
     }
-  }, [open, token.contractAddress, connection]);
+  }, [open, token.contractAddress, connection, wallet.publicKey, type]);
 
   // Fetch quote when amount or slippage changes
   useEffect(() => {
@@ -79,7 +88,14 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
     return () => clearTimeout(debounceTimer);
   }, [amount, slippage, type, token.contractAddress, decimals, open]);
 
-  const estimatedOutput = quote ? 
+  const handlePercentageClick = (percentage: number) => {
+    if (balance > 0) {
+      const calculatedAmount = (balance * percentage).toFixed(6);
+      setAmount(calculatedAmount);
+    }
+  };
+
+  const estimatedOutput = quote ?
     (parseInt(quote.outAmount) / Math.pow(10, type === "buy" ? decimals : 9)).toFixed(6) : 
     "0";
 
@@ -145,6 +161,21 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
             </div>
           )}
 
+          {/* Balance Display */}
+          {wallet.connected && (
+            <div className="flex items-center gap-2 p-2 bg-secondary rounded-lg">
+              <Wallet className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Balance:</span>
+              <span className="text-sm font-semibold ml-auto">
+                {loadingBalance ? (
+                  "Loading..."
+                ) : (
+                  `${balance.toFixed(6)} ${type === "buy" ? "SOL" : token.symbol}`
+                )}
+              </span>
+            </div>
+          )}
+
           {/* Amount Input */}
           <div className="space-y-2">
             <Label htmlFor="amount">
@@ -159,32 +190,69 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
               className="text-lg"
               disabled={!wallet.connected || isLoading}
             />
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAmount(type === "buy" ? "0.1" : "1000")}
-                disabled={!wallet.connected || isLoading}
-              >
-                {type === "buy" ? "0.1 SOL" : "1K"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAmount(type === "buy" ? "0.5" : "5000")}
-                disabled={!wallet.connected || isLoading}
-              >
-                {type === "buy" ? "0.5 SOL" : "5K"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAmount(type === "buy" ? "1" : "10000")}
-                disabled={!wallet.connected || isLoading}
-              >
-                {type === "buy" ? "1 SOL" : "10K"}
-              </Button>
-            </div>
+            {type === "sell" ? (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePercentageClick(0.25)}
+                  disabled={!wallet.connected || isLoading || balance === 0}
+                >
+                  25%
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePercentageClick(0.5)}
+                  disabled={!wallet.connected || isLoading || balance === 0}
+                >
+                  50%
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePercentageClick(0.75)}
+                  disabled={!wallet.connected || isLoading || balance === 0}
+                >
+                  75%
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePercentageClick(1)}
+                  disabled={!wallet.connected || isLoading || balance === 0}
+                >
+                  MAX
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAmount("0.1")}
+                  disabled={!wallet.connected || isLoading}
+                >
+                  0.1 SOL
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAmount("0.5")}
+                  disabled={!wallet.connected || isLoading}
+                >
+                  0.5 SOL
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAmount("1")}
+                  disabled={!wallet.connected || isLoading}
+                >
+                  1 SOL
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Slippage */}
