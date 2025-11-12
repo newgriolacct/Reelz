@@ -73,44 +73,79 @@ export async function executeSwap(
   wallet: any,
   quoteResponse: JupiterQuote
 ): Promise<string> {
-  // Get serialized transaction from Jupiter
-  const swapResponse = await fetch(JUPITER_SWAP_API, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      quoteResponse,
-      userPublicKey: wallet.publicKey.toString(),
-      wrapAndUnwrapSol: true,
-      dynamicComputeUnitLimit: true,
-      prioritizationFeeLamports: 'auto',
-    }),
-  });
+  try {
+    console.log('🔄 Starting swap execution...');
+    
+    // Get serialized transaction from Jupiter
+    const swapResponse = await fetch(JUPITER_SWAP_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        quoteResponse,
+        userPublicKey: wallet.publicKey.toString(),
+        wrapAndUnwrapSol: true,
+        dynamicComputeUnitLimit: true,
+        prioritizationFeeLamports: 'auto',
+      }),
+    });
 
-  if (!swapResponse.ok) {
-    throw new Error('Failed to get swap transaction');
+    if (!swapResponse.ok) {
+      const errorText = await swapResponse.text();
+      console.error('❌ Jupiter swap API error:', errorText);
+      throw new Error(`Failed to get swap transaction: ${errorText}`);
+    }
+
+    const { swapTransaction } = await swapResponse.json();
+    console.log('📝 Received swap transaction from Jupiter');
+
+    // Deserialize the transaction
+    const swapTransactionBuf = Buffer.from(swapTransaction, 'base64');
+    const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
+    console.log('✅ Transaction deserialized');
+
+    // IMPORTANT: Simulate transaction before signing (Phantom requirement)
+    // This helps Phantom validate the transaction and reduces security warnings
+    try {
+      const simulationResult = await connection.simulateTransaction(transaction, {
+        sigVerify: false, // Required by Phantom docs
+      });
+      
+      if (simulationResult.value.err) {
+        console.error('❌ Transaction simulation failed:', simulationResult.value.err);
+        throw new Error(`Transaction would fail: ${JSON.stringify(simulationResult.value.err)}`);
+      }
+      
+      console.log('✅ Transaction simulation successful');
+    } catch (simError) {
+      console.error('❌ Simulation error:', simError);
+      throw new Error('Transaction simulation failed. Please try again.');
+    }
+
+    // Sign the transaction
+    console.log('📝 Requesting wallet signature...');
+    const signedTransaction = await wallet.signTransaction(transaction);
+    console.log('✅ Transaction signed by wallet');
+
+    // Send the transaction
+    console.log('📤 Sending transaction to network...');
+    const signature = await connection.sendRawTransaction(signedTransaction.serialize(), {
+      skipPreflight: false,
+      maxRetries: 3,
+    });
+    console.log('✅ Transaction sent:', signature);
+
+    // Confirm the transaction
+    console.log('⏳ Waiting for confirmation...');
+    await connection.confirmTransaction(signature, 'confirmed');
+    console.log('✅ Transaction confirmed!');
+
+    return signature;
+  } catch (error: any) {
+    console.error('💥 Swap execution failed:', error);
+    throw error;
   }
-
-  const { swapTransaction } = await swapResponse.json();
-
-  // Deserialize the transaction
-  const swapTransactionBuf = Buffer.from(swapTransaction, 'base64');
-  const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
-
-  // Sign the transaction
-  const signedTransaction = await wallet.signTransaction(transaction);
-
-  // Send the transaction
-  const signature = await connection.sendRawTransaction(signedTransaction.serialize(), {
-    skipPreflight: false,
-    maxRetries: 3,
-  });
-
-  // Confirm the transaction
-  await connection.confirmTransaction(signature, 'confirmed');
-
-  return signature;
 }
 
 export async function getTokenDecimals(
