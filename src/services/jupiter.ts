@@ -1,7 +1,9 @@
 import { Connection, VersionedTransaction, PublicKey } from '@solana/web3.js';
 
-const JUPITER_QUOTE_API = 'https://quote-api.jup.ag/v6/quote';
-const JUPITER_SWAP_API = 'https://quote-api.jup.ag/v6/swap';
+// Updated to use the correct Jupiter API v6 endpoints
+const JUPITER_API_BASE = 'https://quote-api.jup.ag/v6';
+const JUPITER_QUOTE_API = `${JUPITER_API_BASE}/quote`;
+const JUPITER_SWAP_API = `${JUPITER_API_BASE}/swap`;
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
 
 interface JupiterQuote {
@@ -20,32 +22,50 @@ export async function getQuote(
   inputMint: string,
   outputMint: string,
   amount: number,
-  slippageBps: number = 100 // 1% default slippage
+  slippageBps: number = 50 // 0.5% default slippage
 ): Promise<JupiterQuote> {
-  const params = new URLSearchParams({
-    inputMint,
-    outputMint,
-    amount: amount.toString(),
-    slippageBps: slippageBps.toString(),
-  });
+  try {
+    const params = new URLSearchParams({
+      inputMint,
+      outputMint,
+      amount: amount.toString(),
+      slippageBps: slippageBps.toString(),
+      onlyDirectRoutes: 'false',
+      asLegacyTransaction: 'false',
+    });
 
-  console.log("Jupiter API request:", `${JUPITER_QUOTE_API}?${params.toString()}`);
+    const url = `${JUPITER_QUOTE_API}?${params.toString()}`;
+    console.log("🚀 Jupiter API request:", url);
 
-  const response = await fetch(`${JUPITER_QUOTE_API}?${params}`, {
-    headers: {
-      'Accept': 'application/json',
-    },
-  });
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Jupiter API error:", response.status, errorText);
-    throw new Error(`Failed to get quote from Jupiter: ${response.status} ${errorText}`);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ Jupiter API error:", {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+      throw new Error(`Jupiter API returned ${response.status}: ${errorText || response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log("✅ Jupiter quote received:", data);
+    
+    if (!data || !data.outAmount) {
+      throw new Error("Invalid quote response from Jupiter");
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("💥 Failed to get Jupiter quote:", error);
+    throw error;
   }
-
-  const data = await response.json();
-  console.log("Jupiter API response:", data);
-  return data;
 }
 
 export async function executeSwap(
