@@ -108,19 +108,52 @@ export async function executeSwap(
     // IMPORTANT: Simulate transaction before signing (Phantom requirement)
     // This helps Phantom validate the transaction and reduces security warnings
     try {
+      console.log('🔍 Simulating transaction...');
       const simulationResult = await connection.simulateTransaction(transaction, {
         sigVerify: false, // Required by Phantom docs
+        commitment: 'processed',
       });
       
       if (simulationResult.value.err) {
         console.error('❌ Transaction simulation failed:', simulationResult.value.err);
-        throw new Error(`Transaction would fail: ${JSON.stringify(simulationResult.value.err)}`);
+        
+        // Provide specific error messages based on the error type
+        const errorStr = JSON.stringify(simulationResult.value.err);
+        
+        if (errorStr.includes('InsufficientFunds')) {
+          throw new Error('Insufficient balance. Make sure you have enough tokens and SOL for fees.');
+        }
+        
+        if (errorStr.includes('SlippageToleranceExceeded')) {
+          throw new Error('Price moved too much. Try increasing slippage or waiting a moment.');
+        }
+        
+        if (errorStr.includes('0x1')) {
+          throw new Error('Insufficient balance for this transaction. Check your wallet balance.');
+        }
+        
+        // Generic error with details
+        throw new Error(`Transaction validation failed. This usually means: insufficient balance, price changed too much, or slippage is too low. Try increasing slippage or reducing amount.`);
       }
       
       console.log('✅ Transaction simulation successful');
-    } catch (simError) {
+    } catch (simError: any) {
       console.error('❌ Simulation error:', simError);
-      throw new Error('Transaction simulation failed. Please try again.');
+      
+      // If it's already our custom error, re-throw it
+      if (simError.message && simError.message.includes('balance') || 
+          simError.message.includes('slippage') || 
+          simError.message.includes('Price moved')) {
+        throw simError;
+      }
+      
+      // Network/RPC errors
+      if (simError.message && simError.message.includes('fetch')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+      
+      // Generic simulation failure
+      throw new Error('Unable to simulate transaction. The quote may be outdated - try getting a fresh quote.');
     }
 
     // Sign the transaction
