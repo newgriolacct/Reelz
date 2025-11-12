@@ -1,9 +1,9 @@
 import { Connection, VersionedTransaction, PublicKey } from '@solana/web3.js';
 
-// Updated to use the correct Jupiter API v6 endpoints
-const JUPITER_API_BASE = 'https://quote-api.jup.ag/v6';
+// Using Jupiter API v1 endpoints
+const JUPITER_API_BASE = 'https://api.jup.ag/swap/v1';
 const JUPITER_QUOTE_API = `${JUPITER_API_BASE}/quote`;
-const JUPITER_SWAP_API = `${JUPITER_API_BASE}/swap`;
+const JUPITER_SWAP_API = 'https://quote-api.jup.ag/v6/swap';
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
 
 interface JupiterQuote {
