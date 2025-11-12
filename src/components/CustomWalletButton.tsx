@@ -15,10 +15,13 @@ export const CustomWalletButton = ({ className }: { className?: string }) => {
 
   useEffect(() => {
     if (wallet && !connected && isConnecting) {
-      connect().catch((err) => {
-        console.error('Wallet connection error:', err);
-        setIsConnecting(false);
-      });
+      const timer = setTimeout(() => {
+        connect().catch((err) => {
+          console.error('Wallet connection error:', err);
+          setIsConnecting(false);
+        });
+      }, 300);
+      return () => clearTimeout(timer);
     }
   }, [wallet, connected, connect, isConnecting]);
 
