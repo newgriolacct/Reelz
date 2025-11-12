@@ -156,7 +156,7 @@ export default function Discover() {
         
         {/* Show selected token card (outside search results) */}
         {selectedToken && !searchQuery && (
-          <div className="mt-3">
+          <div>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-foreground">Token Details</h2>
               <button
@@ -166,7 +166,7 @@ export default function Discover() {
                 Close
               </button>
             </div>
-            <TokenCard token={selectedToken} isEagerLoad />
+            <TokenCard token={selectedToken} isEagerLoad showTopSpacing={false} />
           </div>
         )}
         </div>
