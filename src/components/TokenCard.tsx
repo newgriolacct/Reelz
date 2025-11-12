@@ -35,6 +35,9 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [holders, setHolders] = useState<any[]>([]);
   const [loadingHolders, setLoadingHolders] = useState(false);
   const [activeTab, setActiveTab] = useState('chart');
+  const [currentPrice, setCurrentPrice] = useState(token.price);
+  const [priceChange, setPriceChange] = useState(token.change24h);
+  const [chartKey, setChartKey] = useState(Date.now());
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -133,6 +136,37 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
     
     return () => clearInterval(interval);
   }, [activeTab, token.pairAddress]);
+
+  // Auto-refresh price data every 10 seconds for real-time updates
+  useEffect(() => {
+    const refreshPrice = async () => {
+      if (!token.contractAddress) return;
+      
+      try {
+        const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${token.contractAddress}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.pairs && data.pairs.length > 0) {
+            const bestPair = data.pairs[0];
+            setCurrentPrice(parseFloat(bestPair.priceUsd));
+            setPriceChange(bestPair.priceChange.h24);
+            // Refresh chart iframe
+            setChartKey(Date.now());
+          }
+        }
+      } catch (error) {
+        console.error('Failed to refresh price:', error);
+      }
+    };
+
+    // Initial price update
+    refreshPrice();
+
+    // Set up interval for real-time updates
+    const interval = setInterval(refreshPrice, 10000); // Refresh every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, [token.contractAddress]);
 
   return (
     <>
@@ -267,7 +301,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
               {token.dexScreenerUrl ? (
                 shouldLoadChart ? (
                   <iframe
-                    src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
+                    key={chartKey}
+                    src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0&chart=1&t=${chartKey}`}
                     className="w-full h-full border-0 bg-secondary"
                     title={`${token.symbol} Chart`}
                     loading="lazy"
@@ -381,10 +416,10 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           <div className="mb-0.5 flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
               <div className="text-2xl font-bold text-foreground leading-tight truncate">
-                {formatPrice(token.price)}
+                {formatPrice(currentPrice)}
               </div>
-              <div className={`text-xs font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
-                {isPositive ? '+' : ''}{token.change24h.toFixed(2)}% (24h)
+              <div className={`text-xs font-semibold ${priceChange >= 0 ? 'text-positive' : 'text-negative'}`}>
+                {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}% (24h)
               </div>
             </div>
             

@@ -1,6 +1,6 @@
 import { DexPair } from './dexscreener';
 
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes default (increased to reduce API calls)
+const CACHE_DURATION = 30 * 1000; // 30 seconds for real-time data
 
 interface CacheEntry<T = any> {
   data: T;
