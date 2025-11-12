@@ -1,4 +1,5 @@
-import { Connection, VersionedTransaction, PublicKey } from '@solana/web3.js';
+import { Connection, VersionedTransaction, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { getAssociatedTokenAddress, getAccount } from '@solana/spl-token';
 
 // Using Jupiter Lite API v1 endpoints
 const JUPITER_QUOTE_API = 'https://lite-api.jup.ag/swap/v1/quote';
@@ -132,6 +133,37 @@ export async function getTokenDecimals(
   }
   
   return 6; // Default to 6 decimals
+}
+
+export async function getTokenBalance(
+  connection: Connection,
+  walletAddress: string,
+  mintAddress: string
+): Promise<number> {
+  try {
+    if (mintAddress === SOL_MINT) {
+      // Get SOL balance
+      const balance = await connection.getBalance(new PublicKey(walletAddress));
+      return balance / LAMPORTS_PER_SOL;
+    } else {
+      // Get SPL token balance
+      const mintPublicKey = new PublicKey(mintAddress);
+      const walletPublicKey = new PublicKey(walletAddress);
+      
+      const tokenAddress = await getAssociatedTokenAddress(
+        mintPublicKey,
+        walletPublicKey
+      );
+      
+      const tokenAccount = await getAccount(connection, tokenAddress);
+      const decimals = await getTokenDecimals(connection, mintAddress);
+      
+      return Number(tokenAccount.amount) / Math.pow(10, decimals);
+    }
+  } catch (error) {
+    console.error('Error fetching token balance:', error);
+    return 0;
+  }
 }
 
 export { SOL_MINT };
