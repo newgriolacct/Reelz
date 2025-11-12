@@ -272,7 +272,7 @@ export const getDexScreenerUrl = (chainId: string, pairAddress: string): string 
 
 /**
  * Fetch from multiple DexScreener endpoints and mix results
- * Filters by Solana chain and market cap 30k-10M
+ * Filters by Solana chain and market cap 10k-50M (expanded for more variety)
  * Optimized to avoid rate limits - uses caching and limits calls
  */
 export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
@@ -308,8 +308,8 @@ export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
 
     console.log(`Collected ${tokenAddresses.size} unique Solana token addresses`);
 
-    // FETCH UP TO 30 tokens to ensure we get at least 5 good ones after filtering
-    const tokenArray = Array.from(tokenAddresses).slice(0, 30);
+    // FETCH UP TO 60 tokens for more variety (increased from 30)
+    const tokenArray = Array.from(tokenAddresses).slice(0, 60);
     
     // Fetch pair data for each token with timeout
     const pairPromises = tokenArray.map(async (tokenAddress) => {
@@ -332,11 +332,12 @@ export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
               if (pair.chainId.toLowerCase() !== 'solana') return false;
               
               // Use FDV as primary source (more accurate for tokens)
+              // EXPANDED RANGE: 10k-50M for more variety (was 30k-10M)
               const marketCap = pair.fdv || pair.marketCap || 0;
-              if (marketCap < 30000 || marketCap > 10000000) return false;
+              if (marketCap < 10000 || marketCap > 50000000) return false;
               
-              // Must have volume data
-              if (!pair.volume?.h24 || pair.volume.h24 < 100) return false;
+              // Must have volume data (relaxed threshold for more tokens)
+              if (!pair.volume?.h24 || pair.volume.h24 < 50) return false;
               
               const quoteSymbol = pair.quoteToken.symbol.toUpperCase();
               return quoteSymbol === 'SOL' || quoteSymbol === 'USDC' || quoteSymbol === 'USDT';
@@ -370,10 +371,10 @@ export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
       new Map(allPairs.map(pair => [pair.pairAddress, pair])).values()
     );
 
-    // Shuffle for variety
-    const shuffled = uniquePairs.sort(() => 0.5 - Math.random());
+    // Shuffle for variety using better randomization
+    const shuffled = uniquePairs.sort(() => Math.random() - 0.5);
     
-    console.log(`Fetched ${shuffled.length} Solana pairs in 30k-10M market cap range`);
+    console.log(`Fetched ${shuffled.length} Solana pairs in 10k-50M market cap range`);
     
     return shuffled;
   } catch (error) {
