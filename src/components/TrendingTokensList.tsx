@@ -13,7 +13,7 @@ export const TrendingTokensList = ({ tokens, currentTokenId, onTokenClick }: Tre
   const emptySlots = Math.max(0, 5 - displayTokens.length);
   
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+    <div className="fixed top-10 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="flex gap-1 md:gap-2 lg:gap-2 p-1.5 md:p-2 lg:p-3 md:px-3 lg:px-4">
         {displayTokens.map((token) => {
           const isPositive = token.change24h >= 0;

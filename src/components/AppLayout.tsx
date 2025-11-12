@@ -1,7 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { TrendingTokensList } from "./TrendingTokensList";
 import { NetworkSelector } from "./NetworkSelector";
-import { SocialBar } from "./SocialBar";
 import { fetchAggregatedTrending } from "@/services/tokenAggregator";
 import { Token } from "@/types/token";
 
@@ -43,7 +42,6 @@ export const AppLayout = ({
 
   return (
     <>
-      <SocialBar />
       {showTrendingBar && (
         <TrendingTokensList 
           tokens={trendingTokens}
