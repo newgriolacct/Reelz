@@ -139,7 +139,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
       <div className="h-[100dvh] snap-start relative flex flex-col bg-background overflow-hidden">
         {/* Top spacing for trending bar and network selector */}
         {showTopSpacing && (
-          <div className="h-[105px] sm:h-[110px] md:h-[120px] lg:h-[130px] xl:h-[135px] flex-shrink-0" />
+          <div className="h-[145px] sm:h-[150px] md:h-[155px] lg:h-[160px] flex-shrink-0" />
         )}
         
         {/* Token Header */}
