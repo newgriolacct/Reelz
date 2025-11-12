@@ -326,18 +326,27 @@ export const fetchMixedDexTokens = async (): Promise<DexPair[]> => {
         const data: DexScreenerResponse = await response.json();
         
         if (data.pairs && data.pairs.length > 0) {
-          // Get best pair for this token
+          // Get best pair for this token - prioritize pairs with most accurate data
           const bestPair = data.pairs
             .filter(pair => {
               if (pair.chainId.toLowerCase() !== 'solana') return false;
               
-              const marketCap = pair.marketCap || pair.fdv || 0;
+              // Use FDV as primary source (more accurate for tokens)
+              const marketCap = pair.fdv || pair.marketCap || 0;
               if (marketCap < 30000 || marketCap > 10000000) return false;
+              
+              // Must have volume data
+              if (!pair.volume?.h24 || pair.volume.h24 < 100) return false;
               
               const quoteSymbol = pair.quoteToken.symbol.toUpperCase();
               return quoteSymbol === 'SOL' || quoteSymbol === 'USDC' || quoteSymbol === 'USDT';
             })
-            .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+            .sort((a, b) => {
+              // Sort by liquidity first, then by volume for better accuracy
+              const liquidityDiff = (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0);
+              if (Math.abs(liquidityDiff) > 1000) return liquidityDiff;
+              return (b.volume?.h24 || 0) - (a.volume?.h24 || 0);
+            })[0];
           
           return bestPair || null;
         }

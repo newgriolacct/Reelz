@@ -59,6 +59,10 @@ export const convertDexPairToToken = async (pair: DexPair): Promise<Token> => {
     sparklineData.push(Math.max(50, value));
   }
 
+  // Use FDV as fallback for marketCap, but prefer actual marketCap when available
+  // FDV is typically more accurate for new/small tokens
+  const marketCap = pair.fdv || pair.marketCap || 0;
+  
   return {
     id: pair.pairAddress,
     symbol: pair.baseToken.symbol,
@@ -66,7 +70,7 @@ export const convertDexPairToToken = async (pair: DexPair): Promise<Token> => {
     avatarUrl: pair.info?.imageUrl || `https://api.dicebear.com/7.x/shapes/svg?seed=${pair.baseToken.symbol}&backgroundColor=00d084`,
     price: parseFloat(pair.priceUsd) || 0,
     change24h: pair.priceChange.h24 || 0,
-    marketCap: pair.marketCap || pair.fdv || 0,
+    marketCap: marketCap,
     volume24h: pair.volume.h24 || 0,
     sparklineData,
     tags,
