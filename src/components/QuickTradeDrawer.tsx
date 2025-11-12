@@ -27,7 +27,7 @@ interface QuickTradeDrawerProps {
 }
 
 export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTradeDrawerProps) => {
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState("0.1");
   const [slippage, setSlippage] = useState([0.5]); // Default to 0.5% slippage
   const [isLoading, setIsLoading] = useState(false);
   const [quote, setQuote] = useState<any>(null);
