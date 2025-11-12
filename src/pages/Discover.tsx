@@ -101,7 +101,10 @@ export default function Discover() {
                       className={`p-4 cursor-pointer hover:bg-secondary/50 transition-colors ${
                         selectedToken?.id === token.id ? 'bg-secondary/50 border-primary' : ''
                       }`}
-                      onClick={() => setSelectedToken(token)}
+                      onClick={() => {
+                        setSelectedToken(token);
+                        setSearchQuery('');
+                      }}
                     >
                       <div className="flex items-center gap-3">
                         <img
@@ -141,8 +144,8 @@ export default function Discover() {
                 
                 {/* Show selected token card below search results */}
                 {selectedToken && (
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between mb-3">
+                  <div className="mt-1">
+                    <div className="flex items-center justify-between mb-1">
                       <h2 className="text-lg font-semibold text-foreground">Token Details</h2>
                       <button
                         onClick={() => setSelectedToken(null)}

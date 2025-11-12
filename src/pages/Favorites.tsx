@@ -1,4 +1,4 @@
-import { Heart, Trash2, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { Heart, Trash2, TrendingUp, TrendingDown, Wallet, ExternalLink } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { AppLayout } from "@/components/AppLayout";
 import { Card } from "@/components/ui/card";
@@ -290,14 +290,24 @@ export default function Favorites() {
                         )}
                       </div>
                       
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
-                        onClick={() => handleRemove(favorite.token_id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex flex-col gap-1.5 flex-shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-9 w-9 p-0 text-primary hover:text-primary hover:bg-primary/10"
+                          onClick={() => window.open(`https://dexscreener.com/solana/${favorite.token_id}`, '_blank')}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleRemove(favorite.token_id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 );
