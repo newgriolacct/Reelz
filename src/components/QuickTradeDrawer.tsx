@@ -148,7 +148,7 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
           const totalValue = type === "buy" ? inputAmount : outputAmount;
 
           await supabase
-            .from('transactions')
+            .from('transactions' as any)
             .insert([{
               profile_id: profile.id,
               token_id: token.contractAddress || token.id,

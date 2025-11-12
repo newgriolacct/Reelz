@@ -182,7 +182,7 @@ export default function Wallet() {
 
       if (profile) {
         const { data, error } = await supabase
-          .from('transactions')
+          .from('transactions' as any)
           .select('*')
           .eq('profile_id', profile.id)
           .order('created_at', { ascending: false })
