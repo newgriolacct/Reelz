@@ -271,7 +271,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                     className="w-full h-full border-0 bg-secondary"
                     title={`${token.symbol} Chart`}
                     loading="lazy"
-                    style={{ marginTop: '-60px', height: 'calc(100% + 100px)' }}
+                    style={{ marginTop: '-30px', height: 'calc(100% + 60px)' }}
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-secondary">
