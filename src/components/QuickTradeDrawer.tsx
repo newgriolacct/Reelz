@@ -37,14 +37,14 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
 
   // Fetch token decimals
   useEffect(() => {
-    if (open && token.address) {
-      getTokenDecimals(connection, token.address).then(setDecimals);
+    if (open && token.contractAddress) {
+      getTokenDecimals(connection, token.contractAddress).then(setDecimals);
     }
-  }, [open, token.address, connection]);
+  }, [open, token.contractAddress, connection]);
 
   // Fetch quote when amount or slippage changes
   useEffect(() => {
-    if (!amount || parseFloat(amount) <= 0 || !open) {
+    if (!amount || parseFloat(amount) <= 0 || !open || !token.contractAddress) {
       setQuote(null);
       return;
     }
@@ -53,8 +53,8 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
       try {
         const amountInSmallestUnit = Math.floor(parseFloat(amount) * Math.pow(10, type === "buy" ? 9 : decimals));
         
-        const inputMint = type === "buy" ? SOL_MINT : token.address;
-        const outputMint = type === "buy" ? token.address : SOL_MINT;
+        const inputMint = type === "buy" ? SOL_MINT : token.contractAddress!;
+        const outputMint = type === "buy" ? token.contractAddress! : SOL_MINT;
         const slippageBps = slippage[0] * 100; // Convert percentage to basis points
 
         const quoteResponse = await getQuote(
@@ -73,7 +73,7 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
 
     const debounceTimer = setTimeout(fetchQuote, 500);
     return () => clearTimeout(debounceTimer);
-  }, [amount, slippage, type, token.address, decimals, open]);
+  }, [amount, slippage, type, token.contractAddress, decimals, open]);
 
   const estimatedOutput = quote ? 
     (parseInt(quote.outAmount) / Math.pow(10, type === "buy" ? decimals : 9)).toFixed(6) : 
