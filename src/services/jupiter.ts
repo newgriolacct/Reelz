@@ -3,7 +3,7 @@ import { getAssociatedTokenAddress, getAccount } from '@solana/spl-token';
 
 // Using Jupiter Lite API v1 endpoints
 const JUPITER_QUOTE_API = 'https://lite-api.jup.ag/swap/v1/quote';
-const JUPITER_SWAP_API = 'https://quote-api.jup.ag/v6/swap';
+const JUPITER_SWAP_API = 'https://lite-api.jup.ag/swap/v1/swap';
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
 
 interface JupiterQuote {
