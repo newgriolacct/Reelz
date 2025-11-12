@@ -138,11 +138,8 @@ export const useTokenComments = (tokenId: string) => {
     }
   };
 
-  useEffect(() => {
-    if (tokenId) {
-      fetchComments();
-    }
-  }, [tokenId]);
+  // Don't auto-fetch on mount - only fetch when explicitly requested
+  // This prevents hundreds of unnecessary API calls
 
   return {
     comments,
