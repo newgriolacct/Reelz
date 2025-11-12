@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { CustomWalletButton } from "@/components/CustomWalletButton";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -237,7 +237,7 @@ export default function Wallet() {
                     <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                   </Button>
                 )}
-                <WalletMultiButton className="!bg-primary hover:!bg-primary/90 !h-10 !text-sm" />
+                <CustomWalletButton className="h-10 text-sm" />
               </div>
             </div>
             {connected && (
@@ -256,7 +256,7 @@ export default function Wallet() {
               <p className="text-sm text-muted-foreground mb-4">
                 Connect to view portfolio
               </p>
-              <WalletMultiButton />
+              <CustomWalletButton />
             </Card>
           ) : (
             <>
