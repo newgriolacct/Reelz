@@ -218,7 +218,7 @@ export default function Wallet() {
   const totalValue = solBalance * 150 + tokenHoldings.reduce((sum, token) => sum + token.value, 0); // Rough SOL price estimate
 
   return (
-    <AppLayout showTrendingBar>
+    <AppLayout showTrendingBar showNetworkSelector>
       <div className="min-h-screen bg-background pb-24 pt-20">
         <div className="max-w-3xl mx-auto px-4 py-6">
           {/* Header */}

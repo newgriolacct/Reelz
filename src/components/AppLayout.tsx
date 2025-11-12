@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { TrendingTokensList } from "./TrendingTokensList";
 import { NetworkSelector } from "./NetworkSelector";
+import { SocialBar } from "./SocialBar";
 import { fetchAggregatedTrending } from "@/services/tokenAggregator";
 import { Token } from "@/types/token";
 
@@ -13,7 +14,7 @@ interface AppLayoutProps {
 export const AppLayout = ({ 
   children, 
   showTrendingBar = true,
-  showNetworkSelector = false 
+  showNetworkSelector = true 
 }: AppLayoutProps) => {
   const [trendingTokens, setTrendingTokens] = useState<Token[]>([]);
   const [selectedNetwork, setSelectedNetwork] = useState('solana');
@@ -42,17 +43,18 @@ export const AppLayout = ({
 
   return (
     <>
+      <SocialBar />
+      {showNetworkSelector && (
+        <NetworkSelector 
+          selectedNetwork={selectedNetwork}
+          onNetworkChange={setSelectedNetwork}
+        />
+      )}
       {showTrendingBar && (
         <TrendingTokensList 
           tokens={trendingTokens}
           currentTokenId={currentTokenId}
           onTokenClick={handleTokenClick}
-        />
-      )}
-      {showNetworkSelector && (
-        <NetworkSelector 
-          selectedNetwork={selectedNetwork}
-          onNetworkChange={setSelectedNetwork}
         />
       )}
       {children}
