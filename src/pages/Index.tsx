@@ -2,6 +2,7 @@ import { TokenCard } from "@/components/TokenCard";
 import { BottomNav } from "@/components/BottomNav";
 import { TrendingTokensList } from "@/components/TrendingTokensList";
 import { NetworkSelector } from "@/components/NetworkSelector";
+import { WelcomePopup } from "@/components/WelcomePopup";
 import { fetchAggregatedTrending, fetchAggregatedRandom } from "@/services/tokenAggregator";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Token } from "@/types/token";
@@ -272,6 +273,7 @@ const Index = () => {
 
   return (
     <>
+      <WelcomePopup />
       <TrendingTokensList 
         tokens={trendingTokens}
         currentTokenId={currentTokenId}
