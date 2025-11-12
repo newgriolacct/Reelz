@@ -141,8 +141,8 @@ export default function Discover() {
                 
                 {/* Show selected token card below search results */}
                 {selectedToken && (
-                  <div className="mt-6">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between mb-3">
                       <h2 className="text-lg font-semibold text-foreground">Token Details</h2>
                       <button
                         onClick={() => setSelectedToken(null)}
