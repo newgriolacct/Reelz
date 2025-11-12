@@ -174,7 +174,7 @@ export default function Favorites() {
 
   return (
     <AppLayout showTrendingBar showNetworkSelector>
-      <div className="min-h-screen bg-background pb-24 pt-20">
+      <div className="min-h-screen bg-background pb-24 pt-44">
         <div className="max-w-2xl mx-auto px-4 py-6">
           {/* Header */}
           <div className="mb-6">
