@@ -210,6 +210,18 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
             </div>
           )}
 
+          {/* Phantom Warning Info */}
+          {wallet.connected && (
+            <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs">
+              <p className="font-semibold text-blue-600 dark:text-blue-400 mb-1">
+                ℹ️ Phantom Security Notice
+              </p>
+              <p className="text-muted-foreground">
+                If Phantom shows a "This dApp could be malicious" warning, it's because preview domains aren't yet verified. The transaction is safe and properly simulated. For production, deploy to your own domain.
+              </p>
+            </div>
+          )}
+
           {/* Balance Display */}
           {wallet.connected && (
             <div className="flex items-center gap-2 p-2 bg-secondary rounded-lg">
