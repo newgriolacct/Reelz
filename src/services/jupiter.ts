@@ -128,12 +128,16 @@ export async function executeSwap(
           throw new Error('Price moved too much. Try increasing slippage or waiting a moment.');
         }
         
+        if (errorStr.includes('0x1771') || errorStr.includes('6001')) {
+          throw new Error('Price moved too much. Try increasing slippage to 10-15% or waiting a moment.');
+        }
+        
         if (errorStr.includes('0x1')) {
           throw new Error('Insufficient balance for this transaction. Check your wallet balance.');
         }
         
         // Generic error with details
-        throw new Error(`Transaction validation failed. This usually means: insufficient balance, price changed too much, or slippage is too low. Try increasing slippage or reducing amount.`);
+        throw new Error(`Transaction validation failed. This usually means: insufficient balance, price changed too much, or slippage is too low. Try increasing slippage to 10-15% or reducing amount.`);
       }
       
       console.log('✅ Transaction simulation successful');

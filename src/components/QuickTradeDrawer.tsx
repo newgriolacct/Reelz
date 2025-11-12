@@ -28,7 +28,7 @@ interface QuickTradeDrawerProps {
 
 export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTradeDrawerProps) => {
   const [amount, setAmount] = useState("0.1");
-  const [slippage, setSlippage] = useState([1]); // Default to 1% slippage
+  const [slippage, setSlippage] = useState([5]); // Default to 5% slippage for volatile tokens
   const [isLoading, setIsLoading] = useState(false);
   const [quote, setQuote] = useState<any>(null);
   const [decimals, setDecimals] = useState(9);
@@ -314,10 +314,13 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
               value={slippage}
               onValueChange={setSlippage}
               min={1}
-              max={20}
-              step={0.1}
+              max={30}
+              step={0.5}
               className="w-full"
             />
+            <p className="text-xs text-muted-foreground">
+              For volatile tokens, use 10-15% slippage to avoid transaction failures
+            </p>
           </div>
 
           {/* Summary */}
