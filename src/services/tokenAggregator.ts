@@ -5,6 +5,7 @@ import { tokenCache } from "./apiCache";
 
 /**
  * Fetch trending tokens - Uses DexScreener mixed endpoints with cache
+ * Ensures we always get at least 5 tokens for the trending bar
  */
 export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]> => {
   const network = chainId || 'solana';
@@ -16,13 +17,32 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
     const pairs = await fetchMixedDexTokens();
     
     if (pairs.length > 0) {
-      // Select 5 random tokens for trending
-      const selected = pairs.slice(0, 5);
-      const converted = await Promise.all(selected.map(pair => convertDexPairToToken(pair)));
+      // Take first 8 to ensure we get at least 5 after conversion (some may fail)
+      const selected = pairs.slice(0, 8);
+      const conversionResults = await Promise.allSettled(
+        selected.map(pair => convertDexPairToToken(pair))
+      );
       
-      // Cache successful response
-      tokenCache.set(cacheKey, converted);
-      return converted;
+      // Filter out failed conversions
+      const converted = conversionResults
+        .filter((result): result is PromiseFulfilledResult<Token> => 
+          result.status === 'fulfilled'
+        )
+        .map(result => result.value)
+        .slice(0, 5); // Take only 5 for trending bar
+      
+      if (converted.length >= 5) {
+        // Cache successful response
+        tokenCache.set(cacheKey, converted);
+        return converted;
+      } else {
+        console.warn(`Only got ${converted.length} tokens, fetching more...`);
+        // If we don't have 5, try to get more from cache or retry
+        const cached = tokenCache.get<Token[]>(cacheKey);
+        if (cached && cached.length >= 5) {
+          return cached.slice(0, 5);
+        }
+      }
     }
   } catch (error) {
     console.error('DexScreener error, checking cache:', error);
@@ -30,9 +50,9 @@ export const fetchAggregatedTrending = async (chainId?: string): Promise<Token[]
   
   // Try cache on failure
   const cached = tokenCache.get<Token[]>(cacheKey);
-  if (cached) {
+  if (cached && cached.length > 0) {
     console.log('Using cached trending tokens');
-    return cached;
+    return cached.slice(0, 5);
   }
   
   console.warn('No trending tokens available');
