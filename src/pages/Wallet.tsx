@@ -182,17 +182,27 @@ export default function Wallet() {
 
       if (profile) {
         const { data, error } = await supabase
-          .from('transactions')
+          .from('transactions' as any)
           .select('*')
           .eq('profile_id', profile.id)
           .order('created_at', { ascending: false })
           .limit(50);
 
         if (error) throw error;
-        setTransactions((data || []).map(tx => ({
-          ...tx,
-          transaction_type: tx.transaction_type as 'buy' | 'sell'
-        })));
+        
+        if (data) {
+          setTransactions(data.map((tx: any) => ({
+            id: tx.id,
+            token_symbol: tx.token_symbol,
+            token_name: tx.token_name,
+            transaction_type: tx.transaction_type as 'buy' | 'sell',
+            amount: tx.amount,
+            price_per_token: tx.price_per_token,
+            total_value: tx.total_value,
+            signature: tx.signature,
+            created_at: tx.created_at,
+          })));
+        }
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
