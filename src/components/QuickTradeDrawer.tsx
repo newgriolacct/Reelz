@@ -139,13 +139,17 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
         }
 
         if (profile) {
-          // Calculate transaction details
+          // Calculate transaction details with proper USD values
           const inputAmount = parseFloat(amount);
           const outputAmount = parseInt(quote.outAmount) / Math.pow(10, type === "buy" ? decimals : 9);
-          const pricePerToken = type === "buy" 
-            ? inputAmount / outputAmount 
-            : outputAmount / inputAmount;
-          const totalValue = type === "buy" ? inputAmount : outputAmount;
+          
+          // Get actual token price in USD
+          const tokenPriceUSD = token.price || 0;
+          
+          // For buy: we spent SOL to get tokens
+          // For sell: we sold tokens to get SOL
+          const tokenAmount = type === "buy" ? outputAmount : inputAmount;
+          const totalValueUSD = tokenAmount * tokenPriceUSD;
 
           await supabase
             .from('transactions' as any)
@@ -155,9 +159,9 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
               token_symbol: token.symbol,
               token_name: token.name,
               transaction_type: type,
-              amount: type === "buy" ? outputAmount : inputAmount,
-              price_per_token: pricePerToken,
-              total_value: totalValue,
+              amount: tokenAmount,
+              price_per_token: tokenPriceUSD,
+              total_value: totalValueUSD,
               signature: signature,
             }]);
         }
