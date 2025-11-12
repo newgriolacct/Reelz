@@ -314,7 +314,7 @@ export const QuickTradeDrawer = ({ token, type, open, onOpenChange }: QuickTrade
               value={slippage}
               onValueChange={setSlippage}
               min={0.1}
-              max={5}
+              max={20}
               step={0.1}
               className="w-full"
             />
