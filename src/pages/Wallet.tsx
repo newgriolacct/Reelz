@@ -189,7 +189,10 @@ export default function Wallet() {
           .limit(50);
 
         if (error) throw error;
-        setTransactions(data || []);
+        setTransactions((data || []).map(tx => ({
+          ...tx,
+          transaction_type: tx.transaction_type as 'buy' | 'sell'
+        })));
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
