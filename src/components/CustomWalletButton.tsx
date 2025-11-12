@@ -1,7 +1,7 @@
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Button } from '@/components/ui/button';
 import { Wallet, LogOut } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,8 +10,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export const CustomWalletButton = ({ className }: { className?: string }) => {
-  const { publicKey, disconnect, select, wallets, connected } = useWallet();
+  const { publicKey, disconnect, connect, select, wallets, connected, wallet } = useWallet();
   const [isConnecting, setIsConnecting] = useState(false);
+
+  useEffect(() => {
+    if (wallet && !connected && isConnecting) {
+      connect().catch((err) => {
+        console.error('Wallet connection error:', err);
+        setIsConnecting(false);
+      });
+    }
+  }, [wallet, connected, connect, isConnecting]);
 
   const handleConnect = async () => {
     if (connected) return;
@@ -21,12 +30,11 @@ export const CustomWalletButton = ({ className }: { className?: string }) => {
       const phantomWallet = wallets.find(w => w.adapter.name === 'Phantom');
       if (phantomWallet) {
         select(phantomWallet.adapter.name);
-        // Wait for wallet selection to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+      } else {
+        setIsConnecting(false);
       }
     } catch (error) {
-      console.error('Error connecting wallet:', error);
-    } finally {
+      console.error('Error selecting wallet:', error);
       setIsConnecting(false);
     }
   };
