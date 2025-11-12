@@ -18,10 +18,11 @@ export const CustomWalletButton = ({ className }: { className?: string }) => {
     
     setIsConnecting(true);
     try {
-      // Try to connect to Phantom wallet
       const phantomWallet = wallets.find(w => w.adapter.name === 'Phantom');
       if (phantomWallet) {
         select(phantomWallet.adapter.name);
+        // Wait for wallet selection to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     } catch (error) {
       console.error('Error connecting wallet:', error);
