@@ -302,7 +302,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                     key={chartKey}
                     src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
                     className="w-full border-0 bg-secondary"
-                    style={{ height: 'calc(100% + 50px)', marginBottom: '-50px' }}
+                    style={{ height: 'calc(100% + 80px)', marginBottom: '-80px' }}
                     title={`${token.symbol} Chart`}
                     loading="lazy"
                   />
