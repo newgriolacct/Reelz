@@ -15,8 +15,6 @@ import pumpfunIcon from "@/assets/pumpfun-icon.png";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { fetchTokenTransactions, fetchTokenHolders } from "@/services/solscan";
 import { formatDistanceToNow } from "date-fns";
-import { fetchRugCheckReport, RugCheckReport } from "@/services/rugcheck";
-import { Shield, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 
 interface TokenCardProps {
   token: Token;
@@ -41,8 +39,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [priceChange, setPriceChange] = useState(token.change24h);
   const [chartKey, setChartKey] = useState(Date.now());
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const [rugCheckData, setRugCheckData] = useState<RugCheckReport | null>(null);
-  const [loadingSecurity, setLoadingSecurity] = useState(false);
   const { toast } = useToast();
   
   const { isFavorited, addFavorite, removeFavorite } = useTokenFavorites();
@@ -124,14 +120,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
     const holderData = await fetchTokenHolders(token.contractAddress);
     setHolders(holderData);
     setLoadingHolders(false);
-  };
-
-  const loadSecurity = async () => {
-    if (!token.contractAddress || loadingSecurity) return;
-    setLoadingSecurity(true);
-    const securityData = await fetchRugCheckReport(token.contractAddress);
-    setRugCheckData(securityData);
-    setLoadingSecurity(false);
   };
 
   // Auto-refresh transactions when tab is active
@@ -277,9 +265,9 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </div>
         </div>
 
-        {/* Chart/Transactions/Holders/Security Tabs */}
+        {/* Chart/Transactions/Holders Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="w-full grid grid-cols-4 bg-secondary/50 backdrop-blur-sm h-8 flex-shrink-0 p-0.5 gap-0.5 rounded-lg">
+          <TabsList className="w-full grid grid-cols-3 bg-secondary/50 backdrop-blur-sm h-8 flex-shrink-0 p-0.5 gap-0.5 rounded-lg">
             <TabsTrigger 
               value="chart" 
               className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
@@ -303,13 +291,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
               onClick={loadHolders}
             >
               Holders
-            </TabsTrigger>
-            <TabsTrigger 
-              value="security" 
-              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
-              onClick={loadSecurity}
-            >
-              Security
             </TabsTrigger>
           </TabsList>
           
@@ -426,203 +407,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             )}
           </TabsContent>
 
-          <TabsContent value="security" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
-            {loadingSecurity ? (
-              <div className="p-3 space-y-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
-                ))}
-              </div>
-            ) : rugCheckData ? (
-              <div className="p-2 space-y-2">
-                {/* Overall Risk Score */}
-                <div className="bg-secondary p-3 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-foreground">Risk Score</span>
-                    <Badge 
-                      className={
-                        (rugCheckData.score || 0) >= 7000 
-                          ? 'bg-success text-success-foreground' 
-                          : (rugCheckData.score || 0) >= 4000 
-                          ? 'bg-warning text-warning-foreground' 
-                          : 'bg-destructive text-destructive-foreground'
-                      }
-                    >
-                      {rugCheckData.score || 'N/A'}
-                    </Badge>
-                  </div>
-                  {rugCheckData.rugged && (
-                    <div className="flex items-center gap-1 text-destructive text-xs">
-                      <AlertTriangle className="w-3 h-3" />
-                      <span className="font-semibold">RUGGED TOKEN</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Token Type */}
-                {rugCheckData.tokenType && (
-                  <div className="bg-secondary p-3 rounded-lg">
-                    <div className="text-xs font-semibold text-foreground mb-1">Token Type</div>
-                    <div className="text-xs text-muted-foreground">{rugCheckData.tokenType}</div>
-                  </div>
-                )}
-
-                {/* Authorities */}
-                <div className="bg-secondary p-3 rounded-lg">
-                  <div className="text-xs font-semibold text-foreground mb-2">Token Authorities</div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Freeze Authority</span>
-                      <div className="flex items-center gap-1">
-                        {rugCheckData.tokenMeta?.freezeAuthority ? (
-                          <>
-                            <XCircle className="w-3 h-3 text-destructive" />
-                            <span className="text-[10px] text-destructive">Active</span>
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="w-3 h-3 text-success" />
-                            <span className="text-[10px] text-success">Revoked</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Mint Authority</span>
-                      <div className="flex items-center gap-1">
-                        {rugCheckData.tokenMeta?.mintAuthority ? (
-                          <>
-                            <XCircle className="w-3 h-3 text-destructive" />
-                            <span className="text-[10px] text-destructive">Active</span>
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="w-3 h-3 text-success" />
-                            <span className="text-[10px] text-success">Revoked</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    {rugCheckData.tokenMeta?.updateAuthority && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Update Authority</span>
-                        <div className="flex items-center gap-1">
-                          <XCircle className="w-3 h-3 text-warning" />
-                          <span className="text-[10px] text-warning">Active</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Creator Holdings */}
-                {rugCheckData.creator && rugCheckData.creator.pct !== undefined && (
-                  <div className="bg-secondary p-3 rounded-lg">
-                    <div className="text-xs font-semibold text-foreground mb-2">Creator Holdings</div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground font-mono">
-                        {rugCheckData.creator.address?.slice(0, 4)}...{rugCheckData.creator.address?.slice(-4)}
-                      </span>
-                      <Badge variant={rugCheckData.creator.pct > 5 ? 'destructive' : 'default'}>
-                        {rugCheckData.creator.pct.toFixed(2)}%
-                      </Badge>
-                    </div>
-                    {rugCheckData.creator.amount && (
-                      <div className="text-[9px] text-muted-foreground mt-1">
-                        {formatNumber(rugCheckData.creator.amount)} tokens
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Supply Information */}
-                {rugCheckData.totalSupply && (
-                  <div className="bg-secondary p-3 rounded-lg">
-                    <div className="text-xs font-semibold text-foreground mb-2">Supply</div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Total Supply</span>
-                      <span className="text-[10px] font-semibold text-foreground">
-                        {formatNumber(rugCheckData.totalSupply)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Top Holders */}
-                {rugCheckData.topHolders && rugCheckData.topHolders.length > 0 && (
-                  <div className="bg-secondary p-3 rounded-lg">
-                    <div className="text-xs font-semibold text-foreground mb-2">Top Holders</div>
-                    <div className="space-y-1.5">
-                      {rugCheckData.topHolders.slice(0, 5).map((holder, idx) => (
-                        holder.pct !== undefined && (
-                          <div key={idx} className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-[9px] px-1 py-0">
-                                #{idx + 1}
-                              </Badge>
-                              {holder.address && (
-                                <span className="text-[9px] text-muted-foreground font-mono">
-                                  {holder.address.slice(0, 4)}...{holder.address.slice(-4)}
-                                </span>
-                              )}
-                            </div>
-                            <Badge variant={holder.pct > 10 ? 'destructive' : holder.pct > 5 ? 'secondary' : 'default'}>
-                              {holder.pct.toFixed(2)}%
-                            </Badge>
-                          </div>
-                        )
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Risks - Filter out LP Providers warning */}
-                {rugCheckData.risks && rugCheckData.risks.filter(r => !r.name.toLowerCase().includes('lp providers')).length > 0 && (
-                  <div className="bg-secondary p-3 rounded-lg">
-                    <div className="text-xs font-semibold text-foreground mb-2">Detected Risks</div>
-                    <div className="space-y-2">
-                      {rugCheckData.risks
-                        .filter(risk => !risk.name.toLowerCase().includes('lp providers'))
-                        .map((risk, idx) => (
-                          <div key={idx} className="border-l-2 border-primary pl-2">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <span className="text-[11px] font-semibold text-foreground">{risk.name}</span>
-                              <Badge 
-                                variant={
-                                  risk.level === 'danger' || risk.level === 'critical' 
-                                    ? 'destructive' 
-                                    : 'secondary'
-                                }
-                                className="text-[9px] px-1 py-0"
-                              >
-                                {risk.level}
-                              </Badge>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground leading-relaxed">{risk.description}</p>
-                            <div className="text-[9px] text-muted-foreground mt-1">Score Impact: {risk.score}</div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Error Message */}
-                {rugCheckData.fileMeta?.error && (
-                  <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg">
-                    <div className="flex items-center gap-1 text-destructive text-xs">
-                      <AlertTriangle className="w-3 h-3" />
-                      <span className="font-semibold">Error</span>
-                    </div>
-                    <p className="text-[10px] text-destructive/80 mt-1">{rugCheckData.fileMeta.error}</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                No security data available
-              </div>
-            )}
-          </TabsContent>
         </Tabs>
 
         {/* Bottom - Token Info */}
