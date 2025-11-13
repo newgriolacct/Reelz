@@ -15,6 +15,7 @@ import pumpfunIcon from "@/assets/pumpfun-icon.png";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { fetchTokenTransactions, fetchTokenHolders } from "@/services/solscan";
 import { formatDistanceToNow } from "date-fns";
+import { SecurityInfoOverlay } from "./SecurityInfoOverlay";
 
 interface TokenCardProps {
   token: Token;
@@ -296,6 +297,11 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           
           <TabsContent value="chart" className="flex-1 min-h-0 mt-0 overflow-hidden">
             <div ref={chartContainerRef} className="relative bg-card overflow-hidden h-full">
+              {/* Security Info Overlay */}
+              {shouldLoadChart && token.contractAddress && (
+                <SecurityInfoOverlay contractAddress={token.contractAddress} />
+              )}
+              
               {token.dexScreenerUrl ? (
                 shouldLoadChart ? (
                   <iframe
