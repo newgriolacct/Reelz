@@ -16,15 +16,28 @@ export interface RugCheckReport {
   tokenMeta?: {
     freezeAuthority?: string | null;
     mintAuthority?: string | null;
+    updateAuthority?: string | null;
   };
   markets?: Array<{
     lp?: {
       lpLockedPct?: number;
+      lpTotalSupply?: number;
+      lpBurnPct?: number;
     };
   }>;
   topHolders?: Array<{
+    address?: string;
     pct?: number;
+    amount?: number;
   }>;
+  creator?: {
+    address?: string;
+    pct?: number;
+    amount?: number;
+  };
+  totalSupply?: number;
+  circulatingSupply?: number;
+  lockedPct?: number;
   rugged?: boolean;
   fileMeta?: {
     error?: string;

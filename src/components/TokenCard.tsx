@@ -503,57 +503,158 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                         )}
                       </div>
                     </div>
+                    {rugCheckData.tokenMeta?.updateAuthority && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Update Authority</span>
+                        <div className="flex items-center gap-1">
+                          <XCircle className="w-3 h-3 text-warning" />
+                          <span className="text-[10px] text-warning">Active</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* LP Lock */}
-                {rugCheckData.markets && rugCheckData.markets.length > 0 && rugCheckData.markets[0].lp?.lpLockedPct !== undefined && (
+                {/* Creator Holdings */}
+                {rugCheckData.creator && rugCheckData.creator.pct !== undefined && (
                   <div className="bg-secondary p-3 rounded-lg">
+                    <div className="text-xs font-semibold text-foreground mb-2">Creator Holdings</div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-foreground">LP Locked</span>
-                      <Badge variant={rugCheckData.markets[0].lp.lpLockedPct > 80 ? 'default' : 'destructive'}>
-                        {rugCheckData.markets[0].lp.lpLockedPct.toFixed(1)}%
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        {rugCheckData.creator.address?.slice(0, 4)}...{rugCheckData.creator.address?.slice(-4)}
+                      </span>
+                      <Badge variant={rugCheckData.creator.pct > 5 ? 'destructive' : 'default'}>
+                        {rugCheckData.creator.pct.toFixed(2)}%
                       </Badge>
+                    </div>
+                    {rugCheckData.creator.amount && (
+                      <div className="text-[9px] text-muted-foreground mt-1">
+                        {formatNumber(rugCheckData.creator.amount)} tokens
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Supply Information */}
+                {(rugCheckData.totalSupply || rugCheckData.circulatingSupply || rugCheckData.lockedPct !== undefined) && (
+                  <div className="bg-secondary p-3 rounded-lg">
+                    <div className="text-xs font-semibold text-foreground mb-2">Supply Information</div>
+                    <div className="space-y-1.5">
+                      {rugCheckData.totalSupply && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Total Supply</span>
+                          <span className="text-[10px] font-semibold text-foreground">
+                            {formatNumber(rugCheckData.totalSupply)}
+                          </span>
+                        </div>
+                      )}
+                      {rugCheckData.circulatingSupply && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Circulating</span>
+                          <span className="text-[10px] font-semibold text-foreground">
+                            {formatNumber(rugCheckData.circulatingSupply)}
+                          </span>
+                        </div>
+                      )}
+                      {rugCheckData.lockedPct !== undefined && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Locked</span>
+                          <Badge variant={rugCheckData.lockedPct > 50 ? 'default' : 'destructive'}>
+                            {rugCheckData.lockedPct.toFixed(1)}%
+                          </Badge>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {/* Top Holder */}
-                {rugCheckData.topHolders && rugCheckData.topHolders.length > 0 && rugCheckData.topHolders[0].pct !== undefined && (
+                {/* LP Information */}
+                {rugCheckData.markets && rugCheckData.markets.length > 0 && rugCheckData.markets[0].lp && (
                   <div className="bg-secondary p-3 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-foreground">Top Holder</span>
-                      <Badge variant={rugCheckData.topHolders[0].pct > 10 ? 'destructive' : 'default'}>
-                        {rugCheckData.topHolders[0].pct.toFixed(2)}%
-                      </Badge>
+                    <div className="text-xs font-semibold text-foreground mb-2">Liquidity Pool</div>
+                    <div className="space-y-1.5">
+                      {rugCheckData.markets[0].lp.lpLockedPct !== undefined && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">LP Locked</span>
+                          <Badge variant={rugCheckData.markets[0].lp.lpLockedPct > 80 ? 'default' : 'destructive'}>
+                            {rugCheckData.markets[0].lp.lpLockedPct.toFixed(1)}%
+                          </Badge>
+                        </div>
+                      )}
+                      {rugCheckData.markets[0].lp.lpBurnPct !== undefined && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">LP Burned</span>
+                          <Badge variant={rugCheckData.markets[0].lp.lpBurnPct > 50 ? 'default' : 'secondary'}>
+                            {rugCheckData.markets[0].lp.lpBurnPct.toFixed(1)}%
+                          </Badge>
+                        </div>
+                      )}
+                      {rugCheckData.markets[0].lp.lpTotalSupply !== undefined && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">LP Supply</span>
+                          <span className="text-[10px] font-semibold text-foreground">
+                            {formatNumber(rugCheckData.markets[0].lp.lpTotalSupply)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {/* Risks */}
-                {rugCheckData.risks && rugCheckData.risks.length > 0 && (
+                {/* Top Holders */}
+                {rugCheckData.topHolders && rugCheckData.topHolders.length > 0 && (
+                  <div className="bg-secondary p-3 rounded-lg">
+                    <div className="text-xs font-semibold text-foreground mb-2">Top Holders</div>
+                    <div className="space-y-1.5">
+                      {rugCheckData.topHolders.slice(0, 5).map((holder, idx) => (
+                        holder.pct !== undefined && (
+                          <div key={idx} className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-[9px] px-1 py-0">
+                                #{idx + 1}
+                              </Badge>
+                              {holder.address && (
+                                <span className="text-[9px] text-muted-foreground font-mono">
+                                  {holder.address.slice(0, 4)}...{holder.address.slice(-4)}
+                                </span>
+                              )}
+                            </div>
+                            <Badge variant={holder.pct > 10 ? 'destructive' : holder.pct > 5 ? 'secondary' : 'default'}>
+                              {holder.pct.toFixed(2)}%
+                            </Badge>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Risks - Filter out LP Providers warning */}
+                {rugCheckData.risks && rugCheckData.risks.filter(r => !r.name.toLowerCase().includes('lp providers')).length > 0 && (
                   <div className="bg-secondary p-3 rounded-lg">
                     <div className="text-xs font-semibold text-foreground mb-2">Detected Risks</div>
                     <div className="space-y-2">
-                      {rugCheckData.risks.map((risk, idx) => (
-                        <div key={idx} className="border-l-2 border-primary pl-2">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <span className="text-[11px] font-semibold text-foreground">{risk.name}</span>
-                            <Badge 
-                              variant={
-                                risk.level === 'danger' || risk.level === 'critical' 
-                                  ? 'destructive' 
-                                  : 'secondary'
-                              }
-                              className="text-[9px] px-1 py-0"
-                            >
-                              {risk.level}
-                            </Badge>
+                      {rugCheckData.risks
+                        .filter(risk => !risk.name.toLowerCase().includes('lp providers'))
+                        .map((risk, idx) => (
+                          <div key={idx} className="border-l-2 border-primary pl-2">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <span className="text-[11px] font-semibold text-foreground">{risk.name}</span>
+                              <Badge 
+                                variant={
+                                  risk.level === 'danger' || risk.level === 'critical' 
+                                    ? 'destructive' 
+                                    : 'secondary'
+                                }
+                                className="text-[9px] px-1 py-0"
+                              >
+                                {risk.level}
+                              </Badge>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground leading-relaxed">{risk.description}</p>
+                            <div className="text-[9px] text-muted-foreground mt-1">Score Impact: {risk.score}</div>
                           </div>
-                          <p className="text-[10px] text-muted-foreground leading-relaxed">{risk.description}</p>
-                          <div className="text-[9px] text-muted-foreground mt-1">Score Impact: {risk.score}</div>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </div>
                 )}
