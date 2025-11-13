@@ -150,8 +150,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             const bestPair = data.pairs[0];
             setCurrentPrice(parseFloat(bestPair.priceUsd));
             setPriceChange(bestPair.priceChange.h24);
-            // Refresh chart iframe
-            setChartKey(Date.now());
           }
         }
       } catch (error) {
@@ -302,7 +300,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 shouldLoadChart ? (
                   <iframe
                     key={chartKey}
-                    src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0&chart=1&t=${chartKey}`}
+                    src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0&chart=1`}
                     className="w-full h-full border-0 bg-secondary"
                     title={`${token.symbol} Chart`}
                     loading="lazy"
