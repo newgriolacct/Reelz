@@ -46,118 +46,141 @@ export interface RugCheckReport {
 
 export const fetchRugCheckReport = async (mintAddress: string): Promise<RugCheckReport | null> => {
   try {
-    const { data, error } = await supabase.functions.invoke('goplus-security', {
-      body: { contractAddress: mintAddress }
-    });
+    // Fetch from both RugCheck and GoPlus APIs
+    const [rugCheckResponse, goPlusData] = await Promise.allSettled([
+      fetch(`https://api.rugcheck.xyz/v1/tokens/${mintAddress}/report`),
+      supabase.functions.invoke('goplus-security', {
+        body: { contractAddress: mintAddress }
+      })
+    ]);
 
-    if (error) {
-      console.error('Error calling GoPlus function:', error);
-      return null;
-    }
-
-    if (!data || data.code !== 1) {
-      console.error('GoPlus API returned error:', data);
-      return null;
-    }
-
-    // Transform GoPlus response to our format
-    const tokenData = data.result?.[mintAddress];
-    if (!tokenData) {
-      return null;
-    }
-
-    // Calculate a simple score based on risk factors (0-10000 scale like RugCheck)
-    let calculatedScore = 10000;
-    const risks: Array<{ name: string; description: string; level: string; score: number }> = [];
-
-    // Check for various risk factors and reduce score accordingly
-    if (tokenData.is_mintable === '1') {
-      calculatedScore -= 2000;
-      risks.push({
-        name: 'Mintable Token',
-        description: 'The token owner can still mint new tokens, which could lead to inflation.',
-        level: 'danger',
-        score: -2000
-      });
-    }
-
-    if (tokenData.is_freezeable === '1') {
-      calculatedScore -= 2000;
-      risks.push({
-        name: 'Freezeable Token',
-        description: 'The token owner can freeze individual accounts, preventing transfers.',
-        level: 'danger',
-        score: -2000
-      });
-    }
-
-    if (parseFloat(tokenData.creator_balance || '0') > 5) {
-      calculatedScore -= 1500;
-      risks.push({
-        name: 'High Creator Balance',
-        description: `Creator holds ${parseFloat(tokenData.creator_balance || '0').toFixed(2)}% of supply.`,
-        level: 'warn',
-        score: -1500
-      });
-    }
-
-    if (parseFloat(tokenData.lp_locked_percent || '0') < 50) {
-      calculatedScore -= 1500;
-      risks.push({
-        name: 'Low LP Lock',
-        description: `Only ${parseFloat(tokenData.lp_locked_percent || '0').toFixed(1)}% of liquidity is locked.`,
-        level: 'warn',
-        score: -1500
-      });
-    }
-
-    const topHolders: Array<{ address?: string; pct?: number; amount?: number }> = [];
-    if (tokenData.holder_list) {
-      tokenData.holder_list.forEach((holder: any, idx: number) => {
-        if (idx < 5) {
-          topHolders.push({
-            address: holder.address,
-            pct: parseFloat(holder.percent || '0'),
-            amount: parseFloat(holder.balance || '0')
-          });
-        }
-      });
-    }
-
-    const transformedData: RugCheckReport = {
+    let combinedData: RugCheckReport = {
       mint: mintAddress,
-      name: tokenData.token_name,
-      symbol: tokenData.token_symbol,
       tokenType: 'SPL Token',
-      score: Math.max(0, calculatedScore),
-      risks: risks,
-      tokenMeta: {
-        freezeAuthority: tokenData.is_freezeable === '1' ? 'active' : null,
-        mintAuthority: tokenData.is_mintable === '1' ? 'active' : null,
-        updateAuthority: null
-      },
-      markets: [{
-        lp: {
-          lpLockedPct: parseFloat(tokenData.lp_locked_percent || '0'),
-          lpBurnPct: parseFloat(tokenData.lp_burn_percent || '0'),
-          lpTotalSupply: parseFloat(tokenData.lp_total_supply || '0')
-        }
-      }],
-      topHolders: topHolders,
-      creator: {
-        address: tokenData.creator_address,
-        pct: parseFloat(tokenData.creator_balance || '0'),
-        amount: 0
-      },
-      totalSupply: parseFloat(tokenData.total_supply || '0'),
-      circulatingSupply: 0,
-      lockedPct: parseFloat(tokenData.lp_locked_percent || '0'),
+      score: 5000, // Default medium score
+      risks: [],
+      tokenMeta: {},
+      topHolders: [],
+      totalSupply: 0,
       rugged: false
     };
 
-    return transformedData;
+    // Process RugCheck data
+    if (rugCheckResponse.status === 'fulfilled' && rugCheckResponse.value.ok) {
+      const rugCheckData = await rugCheckResponse.value.json();
+      
+      combinedData = {
+        ...combinedData,
+        name: rugCheckData.tokenMeta?.name,
+        symbol: rugCheckData.tokenMeta?.symbol,
+        score: rugCheckData.score || 5000,
+        tokenMeta: {
+          freezeAuthority: rugCheckData.tokenMeta?.freezeAuthority,
+          mintAuthority: rugCheckData.tokenMeta?.mintAuthority,
+          updateAuthority: rugCheckData.tokenMeta?.updateAuthority,
+        },
+        topHolders: rugCheckData.topHolders?.slice(0, 5) || [],
+        totalSupply: rugCheckData.totalSupply,
+        creator: rugCheckData.creator,
+        rugged: rugCheckData.rugged || false,
+        risks: rugCheckData.risks || []
+      };
+    }
+
+    // Process GoPlus data and merge
+    if (goPlusData.status === 'fulfilled' && !goPlusData.value.error) {
+      const data = goPlusData.value.data;
+      
+      if (data && data.code === 1) {
+        const tokenData = data.result?.[mintAddress];
+        if (tokenData) {
+          // Update name/symbol if not from RugCheck
+          if (!combinedData.name) combinedData.name = tokenData.token_name;
+          if (!combinedData.symbol) combinedData.symbol = tokenData.token_symbol;
+
+          // Add GoPlus-specific risks
+          const goPlusRisks: Array<{ name: string; description: string; level: string; score: number }> = [];
+          
+          if (tokenData.is_mintable === '1') {
+            goPlusRisks.push({
+              name: 'Mintable Token',
+              description: 'Token owner can mint new tokens, risking inflation',
+              level: 'danger',
+              score: -2000
+            });
+          }
+
+          if (tokenData.is_freezeable === '1') {
+            goPlusRisks.push({
+              name: 'Freezeable',
+              description: 'Owner can freeze accounts and prevent transfers',
+              level: 'danger',
+              score: -2000
+            });
+          }
+
+          const creatorBalance = parseFloat(tokenData.creator_balance || '0');
+          if (creatorBalance > 10) {
+            goPlusRisks.push({
+              name: 'High Creator Holdings',
+              description: `Creator holds ${creatorBalance.toFixed(1)}% of supply`,
+              level: 'danger',
+              score: -1500
+            });
+          } else if (creatorBalance > 5) {
+            goPlusRisks.push({
+              name: 'Moderate Creator Holdings',
+              description: `Creator holds ${creatorBalance.toFixed(1)}% of supply`,
+              level: 'warn',
+              score: -1000
+            });
+          }
+
+          // Merge risks (avoid duplicates)
+          const existingRiskNames = new Set(combinedData.risks?.map(r => r.name.toLowerCase()) || []);
+          goPlusRisks.forEach(risk => {
+            if (!existingRiskNames.has(risk.name.toLowerCase())) {
+              combinedData.risks?.push(risk);
+            }
+          });
+
+          // Update authorities if not set
+          if (!combinedData.tokenMeta?.freezeAuthority && tokenData.is_freezeable === '1') {
+            combinedData.tokenMeta!.freezeAuthority = 'active';
+          }
+          if (!combinedData.tokenMeta?.mintAuthority && tokenData.is_mintable === '1') {
+            combinedData.tokenMeta!.mintAuthority = 'active';
+          }
+
+          // Add top holders if not from RugCheck
+          if (!combinedData.topHolders?.length && tokenData.holder_list) {
+            combinedData.topHolders = tokenData.holder_list.slice(0, 5).map((holder: any) => ({
+              address: holder.address,
+              pct: parseFloat(holder.percent || '0'),
+              amount: parseFloat(holder.balance || '0')
+            }));
+          }
+
+          // Update creator info if not set
+          if (!combinedData.creator && tokenData.creator_address) {
+            combinedData.creator = {
+              address: tokenData.creator_address,
+              pct: parseFloat(tokenData.creator_balance || '0'),
+              amount: 0
+            };
+          }
+
+          // Update total supply if not set
+          if (!combinedData.totalSupply && tokenData.total_supply) {
+            combinedData.totalSupply = parseFloat(tokenData.total_supply || '0');
+          }
+        }
+      }
+    }
+
+    return combinedData;
   } catch (error) {
-    console.error('Error fetching GoPlus report:', error);
+    console.error('Error fetching security reports:', error);
     return null;
   }
 };

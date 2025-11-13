@@ -536,67 +536,14 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 )}
 
                 {/* Supply Information */}
-                {(rugCheckData.totalSupply || rugCheckData.circulatingSupply || rugCheckData.lockedPct !== undefined) && (
+                {rugCheckData.totalSupply && (
                   <div className="bg-secondary p-3 rounded-lg">
-                    <div className="text-xs font-semibold text-foreground mb-2">Supply Information</div>
-                    <div className="space-y-1.5">
-                      {rugCheckData.totalSupply && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Total Supply</span>
-                          <span className="text-[10px] font-semibold text-foreground">
-                            {formatNumber(rugCheckData.totalSupply)}
-                          </span>
-                        </div>
-                      )}
-                      {rugCheckData.circulatingSupply && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Circulating</span>
-                          <span className="text-[10px] font-semibold text-foreground">
-                            {formatNumber(rugCheckData.circulatingSupply)}
-                          </span>
-                        </div>
-                      )}
-                      {rugCheckData.lockedPct !== undefined && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Locked</span>
-                          <Badge variant={rugCheckData.lockedPct > 50 ? 'default' : 'destructive'}>
-                            {rugCheckData.lockedPct.toFixed(1)}%
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* LP Information */}
-                {rugCheckData.markets && rugCheckData.markets.length > 0 && rugCheckData.markets[0].lp && (
-                  <div className="bg-secondary p-3 rounded-lg">
-                    <div className="text-xs font-semibold text-foreground mb-2">Liquidity Pool</div>
-                    <div className="space-y-1.5">
-                      {rugCheckData.markets[0].lp.lpLockedPct !== undefined && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">LP Locked</span>
-                          <Badge variant={rugCheckData.markets[0].lp.lpLockedPct > 80 ? 'default' : 'destructive'}>
-                            {rugCheckData.markets[0].lp.lpLockedPct.toFixed(1)}%
-                          </Badge>
-                        </div>
-                      )}
-                      {rugCheckData.markets[0].lp.lpBurnPct !== undefined && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">LP Burned</span>
-                          <Badge variant={rugCheckData.markets[0].lp.lpBurnPct > 50 ? 'default' : 'secondary'}>
-                            {rugCheckData.markets[0].lp.lpBurnPct.toFixed(1)}%
-                          </Badge>
-                        </div>
-                      )}
-                      {rugCheckData.markets[0].lp.lpTotalSupply !== undefined && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">LP Supply</span>
-                          <span className="text-[10px] font-semibold text-foreground">
-                            {formatNumber(rugCheckData.markets[0].lp.lpTotalSupply)}
-                          </span>
-                        </div>
-                      )}
+                    <div className="text-xs font-semibold text-foreground mb-2">Supply</div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Total Supply</span>
+                      <span className="text-[10px] font-semibold text-foreground">
+                        {formatNumber(rugCheckData.totalSupply)}
+                      </span>
                     </div>
                   </div>
                 )}
