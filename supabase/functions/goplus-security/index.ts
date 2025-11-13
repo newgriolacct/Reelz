@@ -11,11 +11,15 @@ let cachedToken: { token: string; expiresAt: number } | null = null;
 async function getAccessToken(appKey: string, appSecret: string): Promise<string> {
   // Return cached token if still valid
   if (cachedToken && cachedToken.expiresAt > Date.now()) {
+    console.log("Using cached access token");
     return cachedToken.token;
   }
 
+  console.log("Generating new access token...");
   const timestamp = Math.floor(Date.now() / 1000);
   const signString = `${appKey}${timestamp}${appSecret}`;
+  
+  console.log("Sign string components:", { appKey, timestamp, appSecretLength: appSecret.length });
   
   // Calculate SHA1 signature
   const encoder = new TextEncoder();
@@ -23,6 +27,8 @@ async function getAccessToken(appKey: string, appSecret: string): Promise<string
   const hashBuffer = await crypto.subtle.digest("SHA-1", encodedData);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const sign = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  console.log("Generated signature:", sign);
 
   const tokenResponse = await fetch("https://api.gopluslabs.io/api/v1/token", {
     method: "POST",
@@ -37,6 +43,8 @@ async function getAccessToken(appKey: string, appSecret: string): Promise<string
     }),
   });
 
+  console.log("Token API response status:", tokenResponse.status);
+
   if (!tokenResponse.ok) {
     const errorText = await tokenResponse.text();
     console.error("Failed to get GoPlus access token:", tokenResponse.status, errorText);
@@ -44,11 +52,14 @@ async function getAccessToken(appKey: string, appSecret: string): Promise<string
   }
 
   const tokenData = await tokenResponse.json();
+  console.log("Token API response code:", tokenData.code);
   
   if (tokenData.code !== 1 || !tokenData.result?.access_token) {
-    console.error("GoPlus token response error:", tokenData);
+    console.error("GoPlus token response error:", JSON.stringify(tokenData));
     throw new Error("Invalid token response from GoPlus");
   }
+
+  console.log("Successfully obtained access token");
 
   // Cache the token (expires in 1 hour minus 5 minutes for safety)
   cachedToken = {
@@ -66,6 +77,8 @@ serve(async (req) => {
 
   try {
     const { contractAddress } = await req.json();
+    
+    console.log("Received request for contract:", contractAddress);
     
     if (!contractAddress) {
       return new Response(
@@ -85,8 +98,12 @@ serve(async (req) => {
       );
     }
 
+    console.log("GoPlus credentials found, getting access token...");
+
     // Get access token
     const accessToken = await getAccessToken(GOPLUS_APP_KEY, GOPLUS_APP_SECRET);
+
+    console.log("Got access token, calling security API...");
 
     // GoPlus API endpoint for Solana token security
     const url = `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${contractAddress}`;
@@ -99,16 +116,19 @@ serve(async (req) => {
       },
     });
 
+    console.log("Security API response status:", response.status);
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error("GoPlus API error:", response.status, errorText);
       return new Response(
-        JSON.stringify({ error: `GoPlus API error: ${response.status}` }),
+        JSON.stringify({ error: `GoPlus API error: ${response.status}`, details: errorText }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const data = await response.json();
+    console.log("Security API response code:", data.code);
     
     return new Response(
       JSON.stringify(data),
