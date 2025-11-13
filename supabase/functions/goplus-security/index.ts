@@ -60,7 +60,7 @@ async function getAccessToken(appKey: string, appSecret: string): Promise<string
   }
 
   const accessToken = tokenData.result.access_token;
-  console.log("Successfully obtained access token:", accessToken.substring(0, 20) + "...");
+  console.log("Successfully obtained access token");
 
   // Cache the token (expires in 1 hour minus 5 minutes for safety)
   cachedToken = {
@@ -105,21 +105,17 @@ serve(async (req) => {
     const accessToken = await getAccessToken(GOPLUS_APP_KEY, GOPLUS_APP_SECRET);
 
     console.log("Got access token, calling security API...");
-    console.log("Access token (first 20 chars):", accessToken.substring(0, 20) + "...");
 
     // GoPlus API endpoint for Solana token security
     const url = `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${contractAddress}`;
-    console.log("Request URL:", url);
     
-    const headers = {
-      "Authorization": `Bearer ${accessToken}`,
-      "accept": "*/*"
-    };
-    console.log("Request headers:", JSON.stringify(headers).substring(0, 100) + "...");
-    
+    // The access token already includes "Bearer " prefix, so use it directly
     const response = await fetch(url, {
       method: "GET",
-      headers,
+      headers: {
+        "Authorization": accessToken,
+        "accept": "*/*"
+      },
     });
 
     console.log("Security API response status:", response.status);
