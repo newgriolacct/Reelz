@@ -59,15 +59,16 @@ async function getAccessToken(appKey: string, appSecret: string): Promise<string
     throw new Error("Invalid token response from GoPlus");
   }
 
-  console.log("Successfully obtained access token");
+  const accessToken = tokenData.result.access_token;
+  console.log("Successfully obtained access token:", accessToken.substring(0, 20) + "...");
 
   // Cache the token (expires in 1 hour minus 5 minutes for safety)
   cachedToken = {
-    token: tokenData.result.access_token,
+    token: accessToken,
     expiresAt: Date.now() + (55 * 60 * 1000), // 55 minutes
   };
 
-  return tokenData.result.access_token;
+  return accessToken;
 }
 
 serve(async (req) => {
@@ -104,16 +105,21 @@ serve(async (req) => {
     const accessToken = await getAccessToken(GOPLUS_APP_KEY, GOPLUS_APP_SECRET);
 
     console.log("Got access token, calling security API...");
+    console.log("Access token (first 20 chars):", accessToken.substring(0, 20) + "...");
 
     // GoPlus API endpoint for Solana token security
     const url = `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${contractAddress}`;
+    console.log("Request URL:", url);
+    
+    const headers = {
+      "Authorization": `Bearer ${accessToken}`,
+      "accept": "*/*"
+    };
+    console.log("Request headers:", JSON.stringify(headers).substring(0, 100) + "...");
     
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "accept": "*/*"
-      },
+      headers,
     });
 
     console.log("Security API response status:", response.status);
