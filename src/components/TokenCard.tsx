@@ -301,7 +301,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                   <iframe
                     key={chartKey}
                     src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
-                    className="w-full h-full border-0 bg-secondary"
+                    className="w-full border-0 bg-secondary"
+                    style={{ height: 'calc(100% + 50px)', marginBottom: '-50px' }}
                     title={`${token.symbol} Chart`}
                     loading="lazy"
                   />
