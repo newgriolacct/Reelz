@@ -300,11 +300,11 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 shouldLoadChart ? (
                   <iframe
                     key={chartKey}
-                    src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0&header=0`}
-                    className="w-full h-full border-0 bg-secondary"
+                    src={`${token.dexScreenerUrl}?embed=1&theme=dark`}
+                    className="h-full border-0 bg-secondary"
+                    style={{ marginLeft: '-280px', width: 'calc(100% + 280px)', marginTop: '-30px', height: 'calc(100% + 60px)' }}
                     title={`${token.symbol} Chart`}
                     loading="lazy"
-                    style={{ marginTop: '-30px', height: 'calc(100% + 60px)' }}
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-secondary">
