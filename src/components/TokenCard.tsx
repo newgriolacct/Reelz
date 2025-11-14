@@ -1,4 +1,4 @@
-import { Sparkles, MessageSquare, Star, ExternalLink, Copy, Shield, Lock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Sparkles, MessageSquare, Star, ExternalLink, Copy, Shield, Lock, AlertTriangle, CheckCircle2, User, Clock, Droplets } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -463,9 +463,12 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                         <span className="text-xs">Mint Authority</span>
                       </div>
                       {securityData.mintAuthority ? (
-                        <Badge variant="outline" className="text-[9px] bg-warning/10 text-warning border-warning/20">
-                          Active
-                        </Badge>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
+                            ⚠️ Active - High Risk
+                          </Badge>
+                          <span className="text-[8px] text-muted-foreground">Can mint unlimited tokens</span>
+                        </div>
                       ) : (
                         <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
                           <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -479,9 +482,12 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                         <span className="text-xs">Freeze Authority</span>
                       </div>
                       {securityData.freezeAuthority ? (
-                        <Badge variant="outline" className="text-[9px] bg-warning/10 text-warning border-warning/20">
-                          Active
-                        </Badge>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
+                            ⚠️ Active - High Risk
+                          </Badge>
+                          <span className="text-[8px] text-muted-foreground">Can freeze user wallets</span>
+                        </div>
                       ) : (
                         <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
                           <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -492,10 +498,105 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                   </div>
                 </div>
 
+                {/* Creator Holdings */}
+                {securityData.creator && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      Creator Holdings
+                    </h4>
+                    <div className="bg-secondary p-3 rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Share</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={securityData.creator.share > 10 ? "destructive" : securityData.creator.share > 5 ? "outline" : "secondary"} className="text-[9px]">
+                            {(securityData.creator.share ?? 0).toFixed(2)}%
+                          </Badge>
+                          {securityData.creator.share > 10 && (
+                            <span className="text-[8px] text-destructive">High concentration</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Balance</span>
+                        <span className="text-xs font-semibold">{(securityData.creator.balance ?? 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted-foreground">Address</span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(securityData.creator!.owner);
+                            toast({ description: "Address copied!" });
+                          }}
+                          className="flex items-center gap-1 text-[9px] font-mono text-primary hover:text-primary/80 transition-colors"
+                        >
+                          {securityData.creator.owner.slice(0, 6)}...{securityData.creator.owner.slice(-4)}
+                          <Copy className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Rug History */}
+                {securityData.rugHistory && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      Rug History
+                    </h4>
+                    <div className={`p-3 rounded-lg ${securityData.rugHistory.detected ? 'bg-destructive/10 border border-destructive/20' : 'bg-success/10 border border-success/20'}`}>
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${securityData.rugHistory.detected ? 'text-destructive' : 'text-success'}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold mb-1">
+                            {securityData.rugHistory.detected ? '⚠️ Rug History Detected' : '✓ No Rug History'}
+                          </div>
+                          {securityData.rugHistory.details && (
+                            <p className="text-[10px] text-muted-foreground leading-relaxed">
+                              {securityData.rugHistory.details}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Token Supply */}
+                {(securityData.totalSupply || securityData.circulatingSupply) && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Token Supply</h4>
+                    <div className="grid gap-2">
+                      {securityData.totalSupply && (
+                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Total Supply</span>
+                          <span className="text-xs font-semibold">{(securityData.totalSupply ?? 0).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {securityData.circulatingSupply && (
+                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Circulating Supply</span>
+                          <span className="text-xs font-semibold">{(securityData.circulatingSupply ?? 0).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {securityData.token?.decimals && (
+                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Decimals</span>
+                          <span className="text-xs font-semibold">{securityData.token.decimals}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* LP Information */}
                 {securityData.markets && securityData.markets.length > 0 && securityData.markets[0].lp && (
                   <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Liquidity Pool</h4>
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                      <Droplets className="w-4 h-4" />
+                      Liquidity Pool
+                    </h4>
                     <div className="grid gap-2">
                       <div className="bg-secondary p-3 rounded-lg">
                         <div className="flex justify-between items-center mb-1">
@@ -521,7 +622,42 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                           />
                         </div>
                       </div>
+                      {securityData.markets[0].liquidity && (
+                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Total Liquidity</span>
+                          <span className="text-xs font-semibold">${(securityData.markets[0].liquidity ?? 0).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {securityData.markets[0].marketCap && (
+                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Market Cap</span>
+                          <span className="text-xs font-semibold">${(securityData.markets[0].marketCap ?? 0).toLocaleString()}</span>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Lockers Info */}
+                    {securityData.lockers && securityData.lockers.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        <span className="text-[10px] text-muted-foreground font-medium">Lock Details:</span>
+                        {securityData.lockers.map((locker: any, idx: number) => (
+                          <div key={idx} className="bg-muted/50 p-2 rounded text-[9px] space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Provider</span>
+                              <span className="font-medium">{locker.provider}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Amount</span>
+                              <span className="font-medium">{(locker.amount ?? 0).toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Unlock Date</span>
+                              <span className="font-medium">{locker.unlockDate ? new Date(locker.unlockDate).toLocaleDateString() : 'N/A'}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -530,7 +666,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                   <div className="space-y-2">
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Risk Analysis</h4>
                     <div className="space-y-2">
-                      {securityData.risks[0].risks.slice(0, 5).map((risk: any, idx: number) => (
+                      {securityData.risks[0].risks.map((risk: any, idx: number) => (
                         <div key={idx} className="bg-secondary p-3 rounded-lg animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
                           <div className="flex items-start gap-2">
                             <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
@@ -545,30 +681,16 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                                   {risk.level}
                                 </Badge>
                               </div>
+                              {risk.value && (
+                                <div className="text-[9px] font-semibold text-foreground mb-1">
+                                  {risk.value}
+                                </div>
+                              )}
                               <p className="text-[10px] text-muted-foreground leading-relaxed">
                                 {risk.description}
                               </p>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Top Holders */}
-                {securityData.topHolders && securityData.topHolders.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Top Holders</h4>
-                    <div className="space-y-1">
-                      {securityData.topHolders.slice(0, 5).map((holder: any, idx: number) => (
-                        <div key={idx} className="bg-secondary p-2 rounded flex items-center justify-between">
-                          <span className="text-[9px] font-mono text-muted-foreground">
-                            {holder.owner?.slice(0, 6)}...{holder.owner?.slice(-6)}
-                          </span>
-                          <Badge variant="outline" className="text-[9px]">
-                            {(holder.pct ?? 0).toFixed(2)}%
-                          </Badge>
                         </div>
                       ))}
                     </div>
