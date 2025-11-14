@@ -1,4 +1,4 @@
-import { Sparkles, MessageSquare, Star, ExternalLink, Copy } from "lucide-react";
+import { Sparkles, MessageSquare, Star, ExternalLink, Copy, Shield, Lock, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -14,6 +14,7 @@ import { useTokenLikes } from "@/hooks/useTokenLikes";
 import pumpfunIcon from "@/assets/pumpfun-icon.png";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { fetchTokenTransactions, fetchTokenHolders } from "@/services/solscan";
+import { fetchRugCheckData, getRiskLevelColor, formatRiskScore } from "@/services/rugcheck";
 import { formatDistanceToNow } from "date-fns";
 
 interface TokenCardProps {
@@ -34,6 +35,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [loadingTxs, setLoadingTxs] = useState(false);
   const [holders, setHolders] = useState<any[]>([]);
   const [loadingHolders, setLoadingHolders] = useState(false);
+  const [securityData, setSecurityData] = useState<any>(null);
+  const [loadingSecurity, setLoadingSecurity] = useState(false);
   const [activeTab, setActiveTab] = useState('chart');
   const [currentPrice, setCurrentPrice] = useState(token.price);
   const [priceChange, setPriceChange] = useState(token.change24h);
@@ -120,6 +123,14 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
     const holderData = await fetchTokenHolders(token.contractAddress);
     setHolders(holderData);
     setLoadingHolders(false);
+  };
+
+  const loadSecurity = async () => {
+    if (securityData || !token.contractAddress || loadingSecurity) return;
+    setLoadingSecurity(true);
+    const data = await fetchRugCheckData(token.contractAddress);
+    setSecurityData(data);
+    setLoadingSecurity(false);
   };
 
   // Auto-refresh transactions when tab is active
@@ -267,7 +278,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
 
         {/* Chart/Transactions/Holders Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="w-full grid grid-cols-3 bg-secondary/50 backdrop-blur-sm h-8 flex-shrink-0 p-0.5 gap-0.5 rounded-lg">
+          <TabsList className="w-full grid grid-cols-4 bg-secondary/50 backdrop-blur-sm h-8 flex-shrink-0 p-0.5 gap-0.5 rounded-lg">
             <TabsTrigger 
               value="chart" 
               className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
@@ -291,6 +302,13 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
               onClick={loadHolders}
             >
               Holders
+            </TabsTrigger>
+            <TabsTrigger 
+              value="security" 
+              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
+              onClick={loadSecurity}
+            >
+              <Shield className="w-3 h-3" />
             </TabsTrigger>
           </TabsList>
           
@@ -403,6 +421,165 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             ) : (
               <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
                 No holder data available
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="security" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
+            {loadingSecurity ? (
+              <div className="p-3 space-y-3">
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            ) : securityData ? (
+              <div className="p-3 space-y-3">
+                {/* Overall Security Score */}
+                {securityData.risks && securityData.risks.length > 0 && (
+                  <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-4 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-5 h-5 text-primary" />
+                        <span className="text-sm font-semibold">Security Score</span>
+                      </div>
+                      <Badge className={getRiskLevelColor(securityData.risks[0].level)}>
+                        {securityData.risks[0].level?.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <div className="text-2xl font-bold text-primary">
+                      {formatRiskScore(securityData.risks[0].score)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Authority Status */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Authority Status</h4>
+                  <div className="grid gap-2">
+                    <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Lock className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-xs">Mint Authority</span>
+                      </div>
+                      {securityData.mintAuthority ? (
+                        <Badge variant="outline" className="text-[9px] bg-warning/10 text-warning border-warning/20">
+                          Active
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
+                          <CheckCircle2 className="w-3 h-3 mr-1" />
+                          Revoked
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Lock className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-xs">Freeze Authority</span>
+                      </div>
+                      {securityData.freezeAuthority ? (
+                        <Badge variant="outline" className="text-[9px] bg-warning/10 text-warning border-warning/20">
+                          Active
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
+                          <CheckCircle2 className="w-3 h-3 mr-1" />
+                          Revoked
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* LP Information */}
+                {securityData.markets && securityData.markets.length > 0 && securityData.markets[0].lp && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Liquidity Pool</h4>
+                    <div className="grid gap-2">
+                      <div className="bg-secondary p-3 rounded-lg">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs text-muted-foreground">LP Burned</span>
+                          <span className="text-xs font-semibold">{securityData.markets[0].lp.lpBurnedPct.toFixed(2)}%</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-1.5">
+                          <div 
+                            className="bg-success h-1.5 rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(securityData.markets[0].lp.lpBurnedPct, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="bg-secondary p-3 rounded-lg">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs text-muted-foreground">LP Locked</span>
+                          <span className="text-xs font-semibold">{securityData.markets[0].lp.lpLockedPct.toFixed(2)}%</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-1.5">
+                          <div 
+                            className="bg-primary h-1.5 rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(securityData.markets[0].lp.lpLockedPct, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Risk Factors */}
+                {securityData.risks && securityData.risks.length > 0 && securityData.risks[0].risks && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Risk Analysis</h4>
+                    <div className="space-y-2">
+                      {securityData.risks[0].risks.slice(0, 5).map((risk: any, idx: number) => (
+                        <div key={idx} className="bg-secondary p-3 rounded-lg animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
+                              risk.level === 'danger' ? 'text-destructive' :
+                              risk.level === 'warn' ? 'text-warning' :
+                              'text-success'
+                            }`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <span className="text-xs font-medium truncate">{risk.name}</span>
+                                <Badge variant="outline" className={`text-[9px] ${getRiskLevelColor(risk.level)}`}>
+                                  {risk.level}
+                                </Badge>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                {risk.description}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Top Holders */}
+                {securityData.topHolders && securityData.topHolders.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Top Holders</h4>
+                    <div className="space-y-1">
+                      {securityData.topHolders.slice(0, 5).map((holder: any, idx: number) => (
+                        <div key={idx} className="bg-secondary p-2 rounded flex items-center justify-between">
+                          <span className="text-[9px] font-mono text-muted-foreground">
+                            {holder.owner.slice(0, 6)}...{holder.owner.slice(-6)}
+                          </span>
+                          <Badge variant="outline" className="text-[9px]">
+                            {holder.pct.toFixed(2)}%
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm p-6 text-center">
+                <Shield className="w-12 h-12 mb-3 opacity-50" />
+                <p>Security data not available</p>
+                <p className="text-xs mt-1">Check back later</p>
               </div>
             )}
           </TabsContent>
