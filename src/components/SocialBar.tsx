@@ -1,6 +1,19 @@
-import { Send } from "lucide-react";
+import { Send, Copy } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export const SocialBar = () => {
+  const { toast } = useToast();
+  const contractAddress = "GzDuyMUMLnCWDteDcqDdUbG7qznVo9UoXZDBa6yqpump";
+  const truncatedAddress = `${contractAddress.slice(0, 4)}...${contractAddress.slice(-4)}`;
+
+  const copyAddress = () => {
+    navigator.clipboard.writeText(contractAddress);
+    toast({
+      title: "Copied!",
+      description: "Contract address copied to clipboard",
+    });
+  };
+
   return (
     <div className="fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
       <div className="flex items-center justify-between px-4 py-1.5 max-w-7xl mx-auto">
@@ -26,10 +39,14 @@ export const SocialBar = () => {
             <span>X</span>
           </a>
         </div>
-        <div className="text-xs text-muted-foreground">
+        <button
+          onClick={copyAddress}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+        >
           <span className="hidden sm:inline">$RLZ: </span>
-          <span className="text-warning">Coming Soon</span>
-        </div>
+          <span className="font-mono">{truncatedAddress}</span>
+          <Copy size={12} />
+        </button>
       </div>
     </div>
   );
