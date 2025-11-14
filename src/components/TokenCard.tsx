@@ -1,4 +1,4 @@
-import { Sparkles, MessageSquare, Star, ExternalLink, Copy, Shield, Lock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Sparkles, MessageSquare, Star, ExternalLink, Copy, Shield, Lock, AlertTriangle, CheckCircle2, User, History, TrendingDown } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -464,7 +464,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                       </div>
                       {securityData.mintAuthority ? (
                         <Badge variant="outline" className="text-[9px] bg-warning/10 text-warning border-warning/20">
-                          Active
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          Active Risk
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
@@ -480,7 +481,8 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                       </div>
                       {securityData.freezeAuthority ? (
                         <Badge variant="outline" className="text-[9px] bg-warning/10 text-warning border-warning/20">
-                          Active
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          Active Risk
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
@@ -491,6 +493,128 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                     </div>
                   </div>
                 </div>
+
+                {/* Creator Holdings */}
+                {securityData.creator && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5" />
+                      Creator Holdings
+                    </h4>
+                    <div className="bg-gradient-to-br from-secondary to-secondary/50 p-4 rounded-lg border border-border/50">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground">Creator Share</span>
+                          <span className="text-sm font-bold text-foreground">{(securityData.creator.share ?? 0).toFixed(2)}%</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full transition-all duration-500 ${
+                              (securityData.creator.share ?? 0) > 10 ? 'bg-destructive' :
+                              (securityData.creator.share ?? 0) > 5 ? 'bg-warning' :
+                              'bg-success'
+                            }`}
+                            style={{ width: `${Math.min(securityData.creator.share ?? 0, 100)}%` }}
+                          />
+                        </div>
+                        <div className="pt-2 border-t border-border/50">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] text-muted-foreground">Token Balance</span>
+                            <span className="text-[10px] font-mono">{formatNumber(securityData.creator.tokenBalance ?? 0)}</span>
+                          </div>
+                          <div className="flex justify-between items-center mt-1">
+                            <span className="text-[10px] text-muted-foreground">Creator Address</span>
+                            <button
+                              onClick={() => {
+                                if (securityData.creator?.address) {
+                                  navigator.clipboard.writeText(securityData.creator.address);
+                                  toast({
+                                    title: "Copied!",
+                                    description: "Creator address copied",
+                                  });
+                                }
+                              }}
+                              className="text-[9px] font-mono hover:text-primary transition-colors flex items-center gap-1"
+                            >
+                              {securityData.creator.address?.slice(0, 4)}...{securityData.creator.address?.slice(-4)}
+                              <Copy className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Rug History */}
+                {securityData.rugHistory && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5" />
+                      Rug History
+                    </h4>
+                    <div className={`p-4 rounded-lg border ${
+                      securityData.rugHistory.hasRugHistory 
+                        ? 'bg-destructive/5 border-destructive/30' 
+                        : 'bg-success/5 border-success/30'
+                    }`}>
+                      <div className="flex items-start gap-3">
+                        {securityData.rugHistory.hasRugHistory ? (
+                          <>
+                            <TrendingDown className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-destructive mb-1">Warning: Rug History Detected</p>
+                              {securityData.rugHistory.details && (
+                                <p className="text-xs text-muted-foreground">{securityData.rugHistory.details}</p>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-success">No Rug History Found</p>
+                              <p className="text-xs text-muted-foreground mt-1">Creator has clean record</p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Supply Information */}
+                {(securityData.totalSupply || securityData.circulatingSupply || securityData.token) && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Token Supply</h4>
+                    <div className="bg-secondary p-3 rounded-lg space-y-2">
+                      {securityData.totalSupply && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground">Total Supply</span>
+                          <span className="text-xs font-semibold">{formatNumber(securityData.totalSupply)}</span>
+                        </div>
+                      )}
+                      {securityData.circulatingSupply && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground">Circulating Supply</span>
+                          <span className="text-xs font-semibold">{formatNumber(securityData.circulatingSupply)}</span>
+                        </div>
+                      )}
+                      {securityData.token?.supply && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground">Token Supply</span>
+                          <span className="text-xs font-semibold">{formatNumber(securityData.token.supply)}</span>
+                        </div>
+                      )}
+                      {securityData.token?.decimals && (
+                        <div className="flex justify-between items-center pt-2 border-t border-border/50">
+                          <span className="text-xs text-muted-foreground">Decimals</span>
+                          <span className="text-xs font-semibold">{securityData.token.decimals}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* LP Information */}
                 {securityData.markets && securityData.markets.length > 0 && securityData.markets[0].lp && (
@@ -521,6 +645,46 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                           />
                         </div>
                       </div>
+                      {securityData.markets[0].liquidity && (
+                        <div className="bg-secondary p-3 rounded-lg mt-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground">Total Liquidity</span>
+                            <span className="text-xs font-semibold">{formatCurrency(securityData.markets[0].liquidity)}</span>
+                          </div>
+                        </div>
+                      )}
+                      {securityData.markets[0].marketCap && (
+                        <div className="bg-secondary p-3 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground">Market Cap</span>
+                            <span className="text-xs font-semibold">{formatCurrency(securityData.markets[0].marketCap)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Lockers Info */}
+                {securityData.lockers && securityData.lockers.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Locked Liquidity Details</h4>
+                    <div className="space-y-1.5">
+                      {securityData.lockers.map((locker: any, idx: number) => (
+                        <div key={idx} className="bg-secondary p-3 rounded-lg">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-medium">{locker.name || 'Locker'}</span>
+                            <Badge variant="outline" className="text-[9px]">
+                              {formatNumber(locker.amount)}
+                            </Badge>
+                          </div>
+                          {locker.unlockDate && (
+                            <div className="text-[10px] text-muted-foreground">
+                              Unlocks: {new Date(locker.unlockDate).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

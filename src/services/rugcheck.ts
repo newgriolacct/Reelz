@@ -35,6 +35,17 @@ interface TopHolder {
   pct: number;
 }
 
+interface CreatorData {
+  address: string;
+  share: number;
+  tokenBalance: number;
+}
+
+interface RugHistory {
+  hasRugHistory: boolean;
+  details?: string;
+}
+
 interface RugCheckResponse {
   token: RugCheckToken;
   markets?: RugCheckMarket[];
@@ -42,6 +53,15 @@ interface RugCheckResponse {
   topHolders: TopHolder[];
   freezeAuthority: string | null;
   mintAuthority: string | null;
+  creator?: CreatorData;
+  rugHistory?: RugHistory;
+  lockers?: Array<{
+    name: string;
+    amount: number;
+    unlockDate?: string;
+  }>;
+  totalSupply?: number;
+  circulatingSupply?: number;
 }
 
 const API_BASE = 'https://api.rugcheck.xyz/v1';
