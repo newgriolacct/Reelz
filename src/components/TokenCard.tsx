@@ -500,24 +500,24 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                       <div className="bg-secondary p-3 rounded-lg">
                         <div className="flex justify-between items-center mb-1">
                           <span className="text-xs text-muted-foreground">LP Burned</span>
-                          <span className="text-xs font-semibold">{securityData.markets[0].lp.lpBurnedPct.toFixed(2)}%</span>
+                          <span className="text-xs font-semibold">{(securityData.markets[0].lp.lpBurnedPct ?? 0).toFixed(2)}%</span>
                         </div>
                         <div className="w-full bg-muted rounded-full h-1.5">
                           <div 
                             className="bg-success h-1.5 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(securityData.markets[0].lp.lpBurnedPct, 100)}%` }}
+                            style={{ width: `${Math.min(securityData.markets[0].lp.lpBurnedPct ?? 0, 100)}%` }}
                           />
                         </div>
                       </div>
                       <div className="bg-secondary p-3 rounded-lg">
                         <div className="flex justify-between items-center mb-1">
                           <span className="text-xs text-muted-foreground">LP Locked</span>
-                          <span className="text-xs font-semibold">{securityData.markets[0].lp.lpLockedPct.toFixed(2)}%</span>
+                          <span className="text-xs font-semibold">{(securityData.markets[0].lp.lpLockedPct ?? 0).toFixed(2)}%</span>
                         </div>
                         <div className="w-full bg-muted rounded-full h-1.5">
                           <div 
                             className="bg-primary h-1.5 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(securityData.markets[0].lp.lpLockedPct, 100)}%` }}
+                            style={{ width: `${Math.min(securityData.markets[0].lp.lpLockedPct ?? 0, 100)}%` }}
                           />
                         </div>
                       </div>
@@ -564,10 +564,10 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                       {securityData.topHolders.slice(0, 5).map((holder: any, idx: number) => (
                         <div key={idx} className="bg-secondary p-2 rounded flex items-center justify-between">
                           <span className="text-[9px] font-mono text-muted-foreground">
-                            {holder.owner.slice(0, 6)}...{holder.owner.slice(-6)}
+                            {holder.owner?.slice(0, 6)}...{holder.owner?.slice(-6)}
                           </span>
                           <Badge variant="outline" className="text-[9px]">
-                            {holder.pct.toFixed(2)}%
+                            {(holder.pct ?? 0).toFixed(2)}%
                           </Badge>
                         </div>
                       ))}
