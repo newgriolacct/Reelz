@@ -11,11 +11,9 @@ import { Skeleton } from "./ui/skeleton";
 import { useTokenFavorites } from "@/hooks/useTokenFavorites";
 import { useTokenComments } from "@/hooks/useTokenComments";
 import { useTokenLikes } from "@/hooks/useTokenLikes";
-import pumpfunIcon from "@/assets/pumpfun-icon.png";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { fetchTokenTransactions, fetchTokenHolders } from "@/services/solscan";
 import { fetchRugCheckData, getRiskLevelColor, formatRiskScore } from "@/services/rugcheck";
-import { fetchGoPlusSecurityData, getHoneypotStatus, getTaxLevel } from "@/services/goplus";
 import { formatDistanceToNow } from "date-fns";
 
 interface TokenCardProps {
@@ -37,7 +35,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [holders, setHolders] = useState<any[]>([]);
   const [loadingHolders, setLoadingHolders] = useState(false);
   const [securityData, setSecurityData] = useState<any>(null);
-  const [goPlusData, setGoPlusData] = useState<any>(null);
   const [loadingSecurity, setLoadingSecurity] = useState(false);
   const [activeTab, setActiveTab] = useState('chart');
   const [currentPrice, setCurrentPrice] = useState(token.price);
@@ -74,7 +71,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           }
         });
       },
-      { rootMargin: '100px' } // Load 100px before entering viewport
+      { rootMargin: '100px' }
     );
 
     if (chartContainerRef.current) {
@@ -98,904 +95,460 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
         id: token.id,
         symbol: token.symbol,
         name: token.name,
-        chain: token.chain,
-        avatarUrl: token.avatarUrl,
         price: token.price,
+        avatarUrl: token.avatarUrl || '',
+        chain: token.chain,
       });
       if (success) {
         toast({
           title: "Added to favorites",
-          description: "Token saved to your favorites",
+          description: "Token added to your favorites",
         });
       }
     }
+    onBookmark?.(token.id);
   };
 
-  const loadTransactions = async () => {
-    if (!token.pairAddress) return;
-    setLoadingTxs(true);
-    const txs = await fetchTokenTransactions(token.pairAddress);
-    setTransactions(txs);
-    setLoadingTxs(false);
+  const handleLike = async () => {
+    const success = await toggleLike();
+    if (success) {
+      onLike?.(token.id);
+    }
   };
 
-  const loadHolders = async () => {
-    if (!token.contractAddress || loadingHolders) return;
-    setLoadingHolders(true);
-    const holderData = await fetchTokenHolders(token.contractAddress);
-    setHolders(holderData);
-    setLoadingHolders(false);
+  const handleComment = () => {
+    setShowComments(true);
+    onComment?.(token.id);
   };
 
-  const loadSecurity = async () => {
-    if ((securityData && goPlusData) || !token.contractAddress || loadingSecurity) return;
-    setLoadingSecurity(true);
-    
-    // Fetch from both APIs in parallel
-    const [rugCheckData, goPlusSecurityData] = await Promise.all([
-      fetchRugCheckData(token.contractAddress),
-      fetchGoPlusSecurityData(token.contractAddress)
-    ]);
-    
-    setSecurityData(rugCheckData);
-    setGoPlusData(goPlusSecurityData);
-    setLoadingSecurity(false);
+  const copyAddress = () => {
+    navigator.clipboard.writeText(token.id);
+    toast({
+      title: "Address copied",
+      description: "Token address copied to clipboard",
+    });
   };
+
+  // Auto-refresh price every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const change = (Math.random() - 0.5) * 2;
+      setCurrentPrice(prev => prev * (1 + change / 100));
+      setPriceChange(prev => prev + change);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto-refresh transactions when tab is active
   useEffect(() => {
-    if (activeTab !== 'transactions') return;
-    
-    // Initial load
-    loadTransactions();
-    
-    // Set up interval for auto-refresh (increased to 30s to reduce API load)
-    const interval = setInterval(() => {
+    if (activeTab === 'transactions' && transactions.length === 0) {
       loadTransactions();
-    }, 30000); // Refresh every 30 seconds
-    
-    return () => clearInterval(interval);
-  }, [activeTab, token.pairAddress]);
+    }
+  }, [activeTab]);
 
-  // Auto-refresh price data every 10 seconds for real-time updates
+  const loadTransactions = async () => {
+    setLoadingTxs(true);
+    try {
+      const txs = await fetchTokenTransactions(token.id);
+      setTransactions(txs);
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+    } finally {
+      setLoadingTxs(false);
+    }
+  };
+
+  const loadHolders = async () => {
+    setLoadingHolders(true);
+    try {
+      const holdersData = await fetchTokenHolders(token.id);
+      setHolders(holdersData);
+    } catch (error) {
+      console.error('Error loading holders:', error);
+    } finally {
+      setLoadingHolders(false);
+    }
+  };
+
+  const loadSecurity = async () => {
+    setLoadingSecurity(true);
+    try {
+      const data = await fetchRugCheckData(token.id);
+      setSecurityData(data);
+    } catch (error) {
+      console.error('Error loading security data:', error);
+    } finally {
+      setLoadingSecurity(false);
+    }
+  };
+
   useEffect(() => {
-    const refreshPrice = async () => {
-      if (!token.contractAddress) return;
-      
-      try {
-        const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${token.contractAddress}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.pairs && data.pairs.length > 0) {
-            const bestPair = data.pairs[0];
-            setCurrentPrice(parseFloat(bestPair.priceUsd));
-            setPriceChange(bestPair.priceChange.h24);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to refresh price:', error);
-      }
-    };
+    if (activeTab === 'holders' && holders.length === 0) {
+      loadHolders();
+    }
+  }, [activeTab]);
 
-    // Initial price update
-    refreshPrice();
-
-    // Set up interval for real-time updates
-    const interval = setInterval(refreshPrice, 10000); // Refresh every 10 seconds
-    
-    return () => clearInterval(interval);
-  }, [token.contractAddress]);
+  useEffect(() => {
+    if (activeTab === 'security' && !securityData) {
+      loadSecurity();
+    }
+  }, [activeTab]);
 
   return (
     <>
-      <div className="h-[100dvh] snap-start relative flex flex-col bg-background overflow-hidden">
-        {/* Top spacing for trending bar and network selector */}
-        {showTopSpacing && (
-          <div className="h-[145px] sm:h-[150px] md:h-[155px] lg:h-[160px] flex-shrink-0" />
-        )}
-        
-        {/* Token Header */}
-        <div className="px-3 py-2 flex items-center justify-between bg-background flex-shrink-0 border-b border-border/50 z-10">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <img 
-              src={token.avatarUrl} 
-              alt={token.symbol}
-              className="w-8 h-8 rounded-full border-2 border-primary shadow-lg flex-shrink-0"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="font-bold text-foreground text-sm truncate">{token.symbol}</span>
-                {token.isNew && (
-                  <Badge className="bg-primary text-primary-foreground text-[10px] px-1 py-0">New</Badge>
-                )}
-                {token.contractAddress?.toLowerCase().endsWith('pump') && (
-                  <Badge className="bg-[#14F195] text-black text-[10px] px-1 py-0 flex items-center gap-0.5 font-bold">
-                    <img src={pumpfunIcon} alt="Pump.fun" className="w-3 h-3 rounded-full object-cover" />
-                    Pump.fun
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] text-muted-foreground truncate">{token.name}</span>
-                {token.contractAddress && (
-                  <>
-                    <span className="text-[10px] text-muted-foreground">·</span>
-                    <span className="text-[9px] text-muted-foreground font-mono truncate">
-                      {token.contractAddress.slice(0, 4)}...{token.contractAddress.slice(-4)}
-                    </span>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(token.contractAddress!);
-                        toast({
-                          title: "Copied!",
-                          description: "Contract address copied to clipboard",
-                        });
-                      }}
-                      className="flex-shrink-0 hover:text-primary transition-colors"
+      <div className={`w-full max-w-md mx-auto ${showTopSpacing ? 'mt-20' : ''}`}>
+        <div className="bg-background/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-border/50">
+          {/* Header */}
+          <div className="p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <img
+                    src={token.avatarUrl}
+                    alt={token.symbol}
+                    className="w-14 h-14 rounded-full ring-2 ring-primary/20"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-bold text-foreground">${token.symbol}</h2>
+                    <a
+                      href={`https://solscan.io/token/${token.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors"
                     >
-                      <Copy className="w-2.5 h-2.5 text-muted-foreground hover:text-primary" />
-                    </button>
-                  </>
-                )}
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{token.name}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">CA:</span>
+                <code className="text-xs font-mono text-foreground">
+                  {token.id.slice(0, 6)}...{token.id.slice(-4)}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={copyAddress}
+                  className="h-6 w-6 p-0"
+                >
+                  <Copy className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-3xl font-bold text-foreground">
+                {formatPrice(currentPrice)}
+              </div>
+              <div className={`text-sm font-medium flex items-center gap-1 ${isPositive ? 'text-success' : 'text-destructive'}`}>
+                <span>{isPositive ? '↑' : '↓'}</span>
+                <span>{Math.abs(priceChange).toFixed(2)}%</span>
+                <span className="text-muted-foreground">24h</span>
               </div>
             </div>
           </div>
-          
-          {/* Blockchain Explorer Links */}
-          <div className="flex items-center gap-0.5 flex-shrink-0">
-            {token.dexScreenerUrl && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => window.open(token.dexScreenerUrl, '_blank')}
-                title="View on DexScreener"
-              >
-                <ExternalLink className="w-3 h-3" />
-              </Button>
-            )}
-            {token.contractAddress && (
-              <>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => window.open(`https://solscan.io/token/${token.contractAddress}`, '_blank')}
-                  title="View on Solscan"
-                >
-                  <img 
-                    src="https://solscan.io/favicon.ico" 
-                    alt="Solscan"
-                    className="w-3 h-3"
-                  />
-                </Button>
-                {token.contractAddress.toLowerCase().endsWith('pump') && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => window.open(`https://pump.fun/${token.contractAddress}`, '_blank')}
-                    title="View on Pump.fun"
-                  >
-                    <img src={pumpfunIcon} alt="Pump.fun" className="w-4 h-4 rounded-full object-cover" />
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
 
-        {/* Chart/Transactions/Holders Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="w-full grid grid-cols-4 bg-secondary/50 backdrop-blur-sm h-8 flex-shrink-0 p-0.5 gap-0.5 rounded-lg">
-            <TabsTrigger 
-              value="chart" 
-              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
-            >
-              Chart
-            </TabsTrigger>
-            <TabsTrigger 
-              value="transactions" 
-              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
-            >
-              <span className="flex items-center gap-1">
-                Txns
-                {activeTab === 'transactions' && (
-                  <span className="w-1 h-1 bg-success rounded-full animate-pulse" />
-                )}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="holders" 
-              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
-              onClick={loadHolders}
-            >
-              Holders
-            </TabsTrigger>
-            <TabsTrigger 
-              value="security" 
-              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
-              onClick={loadSecurity}
-            >
-              <Shield className="w-3 h-3" />
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="chart" className="flex-1 min-h-0 mt-0 overflow-hidden">
-            <div ref={chartContainerRef} className="relative bg-card overflow-hidden h-full">
-              {token.dexScreenerUrl ? (
-                shouldLoadChart ? (
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent h-12 px-6">
+              <TabsTrigger value="chart" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+                Chart
+              </TabsTrigger>
+              <TabsTrigger value="transactions" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+                Transactions
+              </TabsTrigger>
+              <TabsTrigger value="holders" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+                Holders
+              </TabsTrigger>
+              <TabsTrigger value="security" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+                Security
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="chart" className="m-0 p-0" ref={chartContainerRef}>
+              <div className="w-full h-[400px] bg-muted/20">
+                {shouldLoadChart ? (
                   <iframe
                     key={chartKey}
-                    src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
-                    className="w-full border-0 bg-secondary"
-                    style={{ height: 'calc(100% + 120px)', marginBottom: '-120px' }}
+                    src={`https://dexscreener.com/solana/${token.id}?embed=1&theme=dark&trades=0&info=0`}
+                    className="w-full h-full border-0"
                     title={`${token.symbol} Chart`}
-                    loading="lazy"
                   />
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-secondary">
-                    <Skeleton className="w-4/5 h-8" />
-                    <Skeleton className="w-3/4 h-32" />
-                    <Skeleton className="w-4/5 h-8" />
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Skeleton className="w-full h-full" />
                   </div>
-                )
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="transactions" className="m-0 p-6">
+              {loadingTxs ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : transactions.length > 0 ? (
+                <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                  {transactions.map((tx, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${tx.type === 'buy' ? 'bg-success/20' : 'bg-destructive/20'}`}>
+                          {tx.type === 'buy' ? '↑' : '↓'}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-foreground">
+                            {tx.type === 'buy' ? 'Buy' : 'Sell'}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(tx.timestamp * 1000), { addSuffix: true })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-foreground">
+                          {formatCurrency(tx.value)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatNumber(tx.amount)} {token.symbol}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-secondary">
-                  <p className="text-muted-foreground">Chart not available</p>
+                <div className="text-center py-8 text-muted-foreground">
+                  No transactions found
                 </div>
               )}
-            </div>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="transactions" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
-            {loadingTxs && transactions.length === 0 ? (
-              <div className="p-3 space-y-2">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : transactions.length > 0 ? (
-              <div className="p-2 space-y-1">
-                {transactions.map((tx, idx) => (
-                  <div key={idx} className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2 flex-1">
-                        <Badge className={tx.type === 'buy' ? 'bg-success text-success-foreground' : 'bg-destructive text-destructive-foreground'}>
-                          {tx.type.toUpperCase()}
-                        </Badge>
-                        <span className="text-[10px] font-mono">
-                          {formatCurrency(tx.totalUsd)}
-                        </span>
+            <TabsContent value="holders" className="m-0 p-6">
+              {loadingHolders ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : holders.length > 0 ? (
+                <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                  {holders.map((holder, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/20 rounded-full">
+                          <User className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-foreground font-mono">
+                            {holder.address.slice(0, 6)}...{holder.address.slice(-4)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {holder.percentage}% of supply
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-[9px] text-muted-foreground">
-                        {formatDistanceToNow(tx.timestamp, { addSuffix: true })}
+                      <div className="text-sm font-medium text-foreground">
+                        {formatNumber(holder.amount)}
                       </div>
                     </div>
-                    <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
-                      <span>{formatNumber(tx.amount)} @ {formatPrice(tx.priceUsd)}</span>
-                      <button
-                        onClick={() => window.open(`https://solscan.io/tx/${tx.txHash}`, '_blank')}
-                        className="ml-auto hover:text-primary transition-colors"
-                      >
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                No transactions available
-              </div>
-            )}
-          </TabsContent>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No holder data available
+                </div>
+              )}
+            </TabsContent>
 
-          <TabsContent value="holders" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
-            {loadingHolders ? (
-              <div className="p-3 space-y-2">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : holders.length > 0 ? (
-              <div className="p-2 space-y-1">
-                {holders.map((holder, idx) => (
-                  <div key={idx} className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Badge variant="outline" className="text-[10px] px-1 py-0 flex-shrink-0">
-                          #{idx + 1}
-                        </Badge>
-                        <span className="text-[9px] font-mono truncate">
-                          {holder.address.slice(0, 4)}...{holder.address.slice(-4)}
-                        </span>
-                      </div>
-                      <div className="text-[10px] font-semibold text-primary flex-shrink-0">
-                        {holder.percentage.toFixed(2)}%
-                      </div>
-                    </div>
-                    <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
-                      <span>{formatNumber(holder.amount)} tokens</span>
-                      <button
-                        onClick={() => window.open(`https://solscan.io/account/${holder.address}`, '_blank')}
-                        className="ml-auto hover:text-primary transition-colors"
-                      >
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                No holder data available
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="security" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
-            {loadingSecurity ? (
-              <div className="p-3 space-y-3">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-              </div>
-            ) : securityData || goPlusData ? (
-              <div className="p-3 space-y-3">
-                {/* Overall Security Score */}
-                {securityData?.risks && securityData.risks.length > 0 && (
-                  <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-4 rounded-lg">
+            <TabsContent value="security" className="m-0 p-6">
+              {loadingSecurity ? (
+                <div className="space-y-3">
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="h-20 w-full" />
+                  ))}
+                </div>
+              ) : securityData ? (
+                <div className="space-y-4">
+                  {/* Risk Score */}
+                  <div className="p-4 bg-muted/30 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Shield className="w-5 h-5 text-primary" />
-                        <span className="text-sm font-semibold">Security Score</span>
-                      </div>
-                      <Badge className={getRiskLevelColor(securityData.risks[0].level)}>
-                        {securityData.risks[0].level?.toUpperCase()}
+                      <span className="text-sm font-medium text-muted-foreground">Risk Score</span>
+                      <Badge className={getRiskLevelColor(securityData.risks?.[0]?.level || 'unknown')}>
+                        {formatRiskScore(securityData.risks?.[0]?.score || 0)}
                       </Badge>
                     </div>
-                    <div className="text-2xl font-bold text-primary">
-                      {formatRiskScore(securityData.risks[0].score)}
-                    </div>
                   </div>
-                )}
 
-                {/* GoPlus - Honeypot & Scam Detection */}
-                {goPlusData && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Scam Detection (GoPlus)</h4>
-                    <div className="grid gap-2">
-                      {goPlusData.is_honeypot && (
-                        <div className={`p-3 rounded-lg flex items-center justify-between ${getHoneypotStatus(goPlusData.is_honeypot).status === 'danger' ? 'bg-destructive/10 border border-destructive/20' : 'bg-success/10 border border-success/20'}`}>
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className={`w-4 h-4 ${getHoneypotStatus(goPlusData.is_honeypot).status === 'danger' ? 'text-destructive' : 'text-success'}`} />
-                            <span className="text-xs">Honeypot Check</span>
-                          </div>
-                          <Badge variant="outline" className={`text-[9px] ${getHoneypotStatus(goPlusData.is_honeypot).status === 'danger' ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-success/10 text-success border-success/20'}`}>
-                            {getHoneypotStatus(goPlusData.is_honeypot).text}
-                          </Badge>
-                        </div>
-                      )}
-                      {goPlusData.is_airdrop_scam === '1' && (
-                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4 text-destructive" />
-                            <span className="text-xs">Airdrop Scam</span>
-                          </div>
-                          <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
-                            Detected
-                          </Badge>
-                        </div>
-                      )}
-                      {goPlusData.fake_token?.is_fake_token === '1' && (
-                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg">
-                          <div className="flex items-center gap-2 mb-1">
-                            <AlertTriangle className="w-4 h-4 text-destructive" />
-                            <span className="text-xs font-semibold">Fake Token Warning</span>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground">
-                            {goPlusData.fake_token.value || 'This may be a counterfeit token'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* GoPlus - Tax Information */}
-                {goPlusData && (goPlusData.buy_tax || goPlusData.sell_tax) && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Trading Taxes (GoPlus)</h4>
-                    <div className="grid gap-2">
-                      {goPlusData.buy_tax && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Buy Tax</span>
-                          <Badge variant={getTaxLevel(goPlusData.buy_tax).status === 'danger' ? 'destructive' : getTaxLevel(goPlusData.buy_tax).status === 'warning' ? 'outline' : 'secondary'} className="text-[9px]">
-                            {getTaxLevel(goPlusData.buy_tax).text}
-                          </Badge>
-                        </div>
-                      )}
-                      {goPlusData.sell_tax && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Sell Tax</span>
-                          <Badge variant={getTaxLevel(goPlusData.sell_tax).status === 'danger' ? 'destructive' : getTaxLevel(goPlusData.sell_tax).status === 'warning' ? 'outline' : 'secondary'} className="text-[9px]">
-                            {getTaxLevel(goPlusData.sell_tax).text}
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* GoPlus - Contract Risks */}
-                {goPlusData && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contract Analysis (GoPlus)</h4>
-                    <div className="space-y-2">
-                      {goPlusData.is_open_source === '0' && (
-                        <div className="bg-warning/10 border border-warning/20 p-3 rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-warning" />
-                          <span className="text-xs">Contract not open source</span>
-                        </div>
-                      )}
-                      {goPlusData.is_proxy === '1' && (
-                        <div className="bg-warning/10 border border-warning/20 p-3 rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-warning" />
-                          <span className="text-xs">Proxy contract detected</span>
-                        </div>
-                      )}
-                      {goPlusData.is_mintable === '1' && (
-                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-destructive" />
-                          <span className="text-xs">Token is mintable (can create more tokens)</span>
-                        </div>
-                      )}
-                      {goPlusData.transfer_pausable === '1' && (
-                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-destructive" />
-                          <span className="text-xs">Transfers can be paused by owner</span>
-                        </div>
-                      )}
-                      {goPlusData.cannot_sell_all === '1' && (
-                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-destructive" />
-                          <span className="text-xs">Cannot sell all tokens at once</span>
-                        </div>
-                      )}
-                      {goPlusData.trading_cooldown === '1' && (
-                        <div className="bg-warning/10 border border-warning/20 p-3 rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-warning" />
-                          <span className="text-xs">Trading cooldown active</span>
-                        </div>
-                      )}
-                      {goPlusData.is_anti_whale === '1' && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-success" />
-                          <span className="text-xs">Anti-whale mechanism enabled</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Authority Status - RugCheck */}
-                {securityData && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Authority Status (RugCheck)</h4>
-                    <div className="grid gap-2">
-                      <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Lock className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-xs">Mint Authority</span>
-                        </div>
-                        {securityData.mintAuthority ? (
-                          <div className="flex flex-col items-end gap-1">
-                            <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
-                              ⚠️ Active - High Risk
-                            </Badge>
-                            <span className="text-[8px] text-muted-foreground">Can mint unlimited tokens</span>
-                          </div>
-                        ) : (
-                          <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Revoked
-                          </Badge>
-                        )}
+                  {/* Liquidity */}
+                  {securityData.markets && securityData.markets[0] && (
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Droplets className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-foreground">Liquidity</span>
                       </div>
-                      <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Lock className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-xs">Freeze Authority</span>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Total</span>
+                          <span className="text-foreground">{formatCurrency(securityData.markets[0].liquidity)}</span>
                         </div>
-                        {securityData.freezeAuthority ? (
-                          <div className="flex flex-col items-end gap-1">
-                            <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
-                              ⚠️ Active - High Risk
-                            </Badge>
-                            <span className="text-[8px] text-muted-foreground">Can freeze user wallets</span>
-                          </div>
-                        ) : (
-                          <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Revoked
-                          </Badge>
-                        )}
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">LP Locked</span>
+                          <span className="text-foreground">{securityData.markets[0].lp.lpLockedPct}%</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">LP Burned</span>
+                          <span className="text-foreground">{securityData.markets[0].lp.lpBurnedPct}%</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-                    <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Lock className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-xs">Mint Authority</span>
-                      </div>
-                      {securityData.mintAuthority ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
-                            ⚠️ Active - High Risk
-                          </Badge>
-                          <span className="text-[8px] text-muted-foreground">Can mint unlimited tokens</span>
-                        </div>
-                      ) : (
-                        <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Revoked
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Lock className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-xs">Freeze Authority</span>
-                      </div>
-                      {securityData.freezeAuthority ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
-                            ⚠️ Active - High Risk
-                          </Badge>
-                          <span className="text-[8px] text-muted-foreground">Can freeze user wallets</span>
-                        </div>
-                      ) : (
-                        <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Revoked
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  )}
 
-                {/* Creator Holdings */}
-                {securityData.creator && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      Creator Holdings
-                    </h4>
-                    <div className="bg-secondary p-3 rounded-lg space-y-3">
+                  {/* Authorities */}
+                  <div className="p-4 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Lock className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-foreground">Authority Status</span>
+                    </div>
+                    <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Share</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={securityData.creator.share > 10 ? "destructive" : securityData.creator.share > 5 ? "outline" : "secondary"} className="text-[9px]">
-                            {(securityData.creator.share ?? 0).toFixed(2)}%
-                          </Badge>
-                          {securityData.creator.share > 10 && (
-                            <span className="text-[8px] text-destructive">High concentration</span>
-                          )}
-                        </div>
+                        <span className="text-sm text-muted-foreground">Mint Authority</span>
+                        <Badge variant={securityData.mintAuthority ? "destructive" : "default"}>
+                          {securityData.mintAuthority ? 'Active' : 'Disabled'}
+                        </Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Balance</span>
-                        <span className="text-xs font-semibold">{(securityData.creator.balance ?? 0).toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-muted-foreground">Address</span>
-                        <button
-                          onClick={() => {
-                            if (securityData.creator?.owner) {
-                              navigator.clipboard.writeText(securityData.creator.owner);
-                              toast({ description: "Address copied!" });
-                            }
-                          }}
-                          className="flex items-center gap-1 text-[9px] font-mono text-primary hover:text-primary/80 transition-colors"
-                        >
-                          {securityData.creator.owner?.slice(0, 6) || 'N/A'}...{securityData.creator.owner?.slice(-4) || ''}
-                          <Copy className="w-3 h-3" />
-                        </button>
+                        <span className="text-sm text-muted-foreground">Freeze Authority</span>
+                        <Badge variant={securityData.freezeAuthority ? "destructive" : "default"}>
+                          {securityData.freezeAuthority ? 'Active' : 'Disabled'}
+                        </Badge>
                       </div>
                     </div>
                   </div>
-                )}
 
-                {/* Rug History */}
-                {securityData.rugHistory && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      Rug History
-                    </h4>
-                    <div className={`p-3 rounded-lg ${securityData.rugHistory.detected ? 'bg-destructive/10 border border-destructive/20' : 'bg-success/10 border border-success/20'}`}>
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${securityData.rugHistory.detected ? 'text-destructive' : 'text-success'}`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-semibold mb-1">
-                            {securityData.rugHistory.detected ? '⚠️ Rug History Detected' : '✓ No Rug History'}
-                          </div>
-                          {securityData.rugHistory.details && (
-                            <p className="text-[10px] text-muted-foreground leading-relaxed">
-                              {securityData.rugHistory.details}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Token Supply */}
-                {(securityData.totalSupply || securityData.circulatingSupply) && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Token Supply</h4>
-                    <div className="grid gap-2">
-                      {securityData.totalSupply && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Total Supply</span>
-                          <span className="text-xs font-semibold">{(securityData.totalSupply ?? 0).toLocaleString()}</span>
-                        </div>
-                      )}
-                      {securityData.circulatingSupply && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Circulating Supply</span>
-                          <span className="text-xs font-semibold">{(securityData.circulatingSupply ?? 0).toLocaleString()}</span>
-                        </div>
-                      )}
-                      {securityData.token?.decimals && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Decimals</span>
-                          <span className="text-xs font-semibold">{securityData.token.decimals}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* LP Information */}
-                {securityData.markets && securityData.markets.length > 0 && securityData.markets[0].lp && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                      <Droplets className="w-4 h-4" />
-                      Liquidity Pool
-                    </h4>
-                    <div className="grid gap-2">
-                      <div className="bg-secondary p-3 rounded-lg">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-muted-foreground">LP Burned</span>
-                          <span className="text-xs font-semibold">{(securityData.markets[0].lp.lpBurnedPct ?? 0).toFixed(2)}%</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-1.5">
-                          <div 
-                            className="bg-success h-1.5 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(securityData.markets[0].lp.lpBurnedPct ?? 0, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="bg-secondary p-3 rounded-lg">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-muted-foreground">LP Locked</span>
-                          <span className="text-xs font-semibold">{(securityData.markets[0].lp.lpLockedPct ?? 0).toFixed(2)}%</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-1.5">
-                          <div 
-                            className="bg-primary h-1.5 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(securityData.markets[0].lp.lpLockedPct ?? 0, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                      {securityData.markets[0].liquidity && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Total Liquidity</span>
-                          <span className="text-xs font-semibold">${(securityData.markets[0].liquidity ?? 0).toLocaleString()}</span>
-                        </div>
-                      )}
-                      {securityData.markets[0].marketCap && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Market Cap</span>
-                          <span className="text-xs font-semibold">${(securityData.markets[0].marketCap ?? 0).toLocaleString()}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Lockers Info */}
-                    {securityData.lockers && securityData.lockers.length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        <span className="text-[10px] text-muted-foreground font-medium">Lock Details:</span>
-                        {securityData.lockers.map((locker: any, idx: number) => (
-                          <div key={idx} className="bg-muted/50 p-2 rounded text-[9px] space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Provider</span>
-                              <span className="font-medium">{locker.provider}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Amount</span>
-                              <span className="font-medium">{(locker.amount ?? 0).toLocaleString()}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Unlock Date</span>
-                              <span className="font-medium">{locker.unlockDate ? new Date(locker.unlockDate).toLocaleDateString() : 'N/A'}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Risk Factors */}
-                {securityData.risks && securityData.risks.length > 0 && securityData.risks[0].risks && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Risk Analysis</h4>
+                  {/* Risk Items */}
+                  {securityData.risks && securityData.risks[0]?.risks && (
                     <div className="space-y-2">
-                      {securityData.risks[0].risks.map((risk: any, idx: number) => (
-                        <div key={idx} className="bg-secondary p-3 rounded-lg animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
+                      {securityData.risks[0].risks.slice(0, 5).map((risk: any, index: number) => (
+                        <div key={index} className="p-3 bg-muted/30 rounded-lg">
                           <div className="flex items-start gap-2">
-                            <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
-                              risk.level === 'danger' ? 'text-destructive' :
-                              risk.level === 'warn' ? 'text-warning' :
-                              'text-success'
+                            <AlertTriangle className={`w-4 h-4 mt-0.5 ${
+                              risk.level === 'danger' ? 'text-destructive' : 
+                              risk.level === 'warn' ? 'text-warning' : 
+                              'text-muted-foreground'
                             }`} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2 mb-1">
-                                <span className="text-xs font-medium truncate">{risk.name}</span>
-                                <Badge variant="outline" className={`text-[9px] ${getRiskLevelColor(risk.level)}`}>
-                                  {risk.level}
-                                </Badge>
-                              </div>
-                              {risk.value && (
-                                <div className="text-[9px] font-semibold text-foreground mb-1">
-                                  {risk.value}
-                                </div>
-                              )}
-                              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                                {risk.description}
-                              </p>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-foreground">{risk.name}</div>
+                              <div className="text-xs text-muted-foreground">{risk.description}</div>
                             </div>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm p-6 text-center">
-                <Shield className="w-12 h-12 mb-3 opacity-50" />
-                <p>Security data not available</p>
-                <p className="text-xs mt-1">Check back later</p>
-              </div>
-            )}
-          </TabsContent>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No security data available
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
 
-        </Tabs>
-
-        {/* Bottom - Token Info */}
-        <div className="px-3 py-1 pb-16 flex flex-col gap-1 bg-background flex-shrink-0">
-          {/* Price Info & Actions - Single Row */}
-          <div className="mb-0.5 flex items-center justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="text-2xl font-bold text-foreground leading-tight truncate">
-                {formatPrice(currentPrice)}
+          {/* Footer Stats */}
+          <div className="p-6 bg-muted/20 border-t border-border">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Market Cap</div>
+                <div className="text-sm font-semibold text-foreground">{formatCurrency(token.marketCap)}</div>
               </div>
-              <div className={`text-xs font-semibold ${priceChange >= 0 ? 'text-positive' : 'text-negative'}`}>
-                {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}% (24h)
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Volume 24h</div>
+                <div className="text-sm font-semibold text-foreground">{formatCurrency(token.volume24h)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Liquidity</div>
+                <div className="text-sm font-semibold text-foreground">{formatCurrency(token.liquidity)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Chain</div>
+                <div className="text-sm font-semibold text-foreground capitalize">{token.chain}</div>
               </div>
             </div>
-            
-            {/* Action Buttons - Horizontal */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <button
-                onClick={toggleLike}
-                className="flex flex-col items-center gap-0.5 min-w-[40px] transition-transform hover:scale-110"
-              >
-                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center transition-all hover:bg-primary/10 hover:border-primary/50">
-                  <Sparkles 
-                    className={`w-3.5 h-3.5 transition-all ${isLiked ? 'fill-primary text-primary' : 'text-foreground'}`} 
-                  />
-                </div>
-                <span className="text-[9px] font-medium text-foreground">{likeCount}</span>
-              </button>
 
-              <button
-                onClick={() => setShowComments(true)}
-                className="flex flex-col items-center gap-0.5 min-w-[40px] transition-transform hover:scale-110"
+            {/* Action Buttons */}
+            <div className="grid grid-cols-5 gap-2">
+              <Button
+                onClick={() => setShowBuyDrawer(true)}
+                className="col-span-2 bg-success hover:bg-success/90 text-success-foreground"
               >
-                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center transition-all hover:bg-primary/10 hover:border-primary/50">
-                  <MessageSquare className="w-3.5 h-3.5 text-foreground" />
-                </div>
-                <span className="text-[9px] font-medium text-foreground">{comments.length}</span>
-              </button>
+                Buy
+              </Button>
+              <Button
+                onClick={() => setShowSellDrawer(true)}
+                variant="outline"
+                className="col-span-2"
+              >
+                Sell
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleLike}
+                className={isLiked ? "text-destructive" : ""}
+              >
+                <Sparkles className="w-4 h-4" />
+              </Button>
+            </div>
 
+            <div className="flex items-center justify-around mt-4 pt-4 border-t border-border">
+              <button
+                onClick={handleLike}
+                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Sparkles className={`w-5 h-5 ${isLiked ? 'fill-primary text-primary' : ''}`} />
+                <span className="text-sm font-medium">{likeCount}</span>
+              </button>
+              <button
+                onClick={handleComment}
+                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <MessageSquare className="w-5 h-5" />
+                <span className="text-sm font-medium">{comments?.length || 0}</span>
+              </button>
               <button
                 onClick={handleFavorite}
-                className="flex flex-col items-center gap-0.5 min-w-[40px] transition-transform hover:scale-110"
+                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
               >
-                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center transition-all hover:bg-primary/10 hover:border-primary/50">
-                  <Star 
-                    className={`w-3.5 h-3.5 transition-all ${isTokenFavorited ? 'fill-primary text-primary' : 'text-foreground'}`} 
-                  />
-                </div>
-                <span className="text-[9px] font-medium text-foreground">Save</span>
+                <Star className={`w-5 h-5 ${isTokenFavorited ? 'fill-primary text-primary' : ''}`} />
               </button>
             </div>
           </div>
-
-          {/* Stats Grid - Compact */}
-          <div className="space-y-0.5 mb-0.5">
-            <div className="grid grid-cols-2 gap-1">
-              <div className="bg-secondary rounded p-1">
-                <div className="text-[9px] text-muted-foreground">MCap</div>
-                <div className="text-[11px] font-bold text-foreground truncate">
-                  {formatCurrency(token.marketCap)}
-                </div>
-              </div>
-              <div className="bg-secondary rounded p-1">
-                <div className="text-[9px] text-muted-foreground">Vol 24h</div>
-                <div className="text-[11px] font-bold text-foreground truncate">
-                  {formatCurrency(token.volume24h)}
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-1">
-              <div className="bg-secondary rounded p-1">
-                <div className="text-[9px] text-muted-foreground">Liq</div>
-                <div className="text-[11px] font-bold text-foreground truncate">
-                  {formatCurrency(token.liquidity)}
-                </div>
-              </div>
-              <div className="bg-secondary rounded p-1">
-                <div className="text-[9px] text-muted-foreground">Chain</div>
-                <div className="text-[11px] font-bold text-foreground truncate">
-                  {token.chain}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons - Compact */}
-          <div className="grid grid-cols-2 gap-1.5">
-            <Button 
-              onClick={() => setShowBuyDrawer(true)}
-              size="sm"
-              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-xs h-8"
-            >
-              Buy
-            </Button>
-            <Button 
-              onClick={() => setShowSellDrawer(true)}
-              size="sm"
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-xs h-8"
-            >
-              Sell
-            </Button>
-          </div>
         </div>
-
       </div>
 
       <QuickTradeDrawer
-        token={token}
-        type="buy"
         open={showBuyDrawer}
         onOpenChange={setShowBuyDrawer}
-      />
-      <QuickTradeDrawer
         token={token}
-        type="sell"
+        type="buy"
+      />
+
+      <QuickTradeDrawer
         open={showSellDrawer}
         onOpenChange={setShowSellDrawer}
+        token={token}
+        type="sell"
       />
+
       <CommentsDrawer
         open={showComments}
         onOpenChange={setShowComments}
