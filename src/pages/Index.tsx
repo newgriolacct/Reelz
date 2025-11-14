@@ -5,11 +5,17 @@ import { NetworkSelector } from "@/components/NetworkSelector";
 import { WelcomePopup } from "@/components/WelcomePopup";
 import { SocialBar } from "@/components/SocialBar";
 import { fetchAggregatedTrending, fetchAggregatedRandom } from "@/services/tokenAggregator";
+import { fetchTokenByAddress } from "@/services/dexscreener";
+import { convertDexPairToToken } from "@/types/token";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Token } from "@/types/token";
+import { Pin } from "lucide-react";
+
+const PINNED_TOKEN_ADDRESS = "GzDuyMUMLnCWDteDcqDdUbG7qznVo9UoXZDBa6yqpump";
 
 const Index = () => {
   const [tokens, setTokens] = useState<Token[]>([]);
+  const [pinnedToken, setPinnedToken] = useState<Token | null>(null);
   const [trendingTokens, setTrendingTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +64,23 @@ const Index = () => {
     }
   };
 
+  // Load pinned token on mount
+  useEffect(() => {
+    const loadPinnedToken = async () => {
+      try {
+        const pair = await fetchTokenByAddress(PINNED_TOKEN_ADDRESS, selectedNetwork);
+        if (pair) {
+          const token = await convertDexPairToToken(pair);
+          setPinnedToken(token);
+        }
+      } catch (err) {
+        console.error('Failed to load pinned token:', err);
+      }
+    };
+
+    loadPinnedToken();
+  }, [selectedNetwork]);
+
   useEffect(() => {
     const loadTokens = async () => {
       try {
@@ -77,13 +100,16 @@ const Index = () => {
         
         console.log(`Loaded ${convertedRandom.length} tokens for ${selectedNetwork}`);
         
-        tokensRef.current = convertedRandom;
-        setTokens(convertedRandom);
-        setTrendingTokens(convertedTrending);
-        setSeenTokenIds(new Set(convertedRandom.map(t => t.id)));
+        // Filter out pinned token from regular feed
+        const filteredTokens = convertedRandom.filter(t => t.id !== PINNED_TOKEN_ADDRESS);
         
-        if (convertedRandom.length > 0) {
-          setCurrentTokenId(convertedRandom[0].id);
+        tokensRef.current = filteredTokens;
+        setTokens(filteredTokens);
+        setTrendingTokens(convertedTrending);
+        setSeenTokenIds(new Set(filteredTokens.map(t => t.id)));
+        
+        if (filteredTokens.length > 0) {
+          setCurrentTokenId(filteredTokens[0].id);
         }
         
         setLoading(false);
@@ -290,6 +316,24 @@ const Index = () => {
         className="h-screen overflow-y-auto snap-y snap-mandatory scrollbar-hide"
         style={{ scrollBehavior: 'smooth' }}
       >
+        {/* Pinned Token */}
+        {pinnedToken && (
+          <div className="relative snap-start">
+            <div className="absolute top-6 left-4 z-10 bg-primary text-primary-foreground px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold shadow-lg">
+              <Pin size={14} className="fill-current" />
+              <span>$RLZ</span>
+            </div>
+            <TokenCard
+              key={pinnedToken.id}
+              token={pinnedToken}
+              onLike={handleLike}
+              onComment={handleComment}
+              onBookmark={handleBookmark}
+              isEagerLoad={true}
+            />
+          </div>
+        )}
+        
         {tokens.map((token, index) => (
           <TokenCard
             key={`${token.id}-${index}`}

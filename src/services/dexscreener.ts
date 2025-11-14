@@ -49,6 +49,30 @@ export interface DexScreenerResponse {
 
 const API_BASE = 'https://api.dexscreener.com/latest/dex';
 
+/**
+ * Fetch a specific token by address
+ */
+export const fetchTokenByAddress = async (tokenAddress: string, chainId: string = 'solana'): Promise<DexPair | null> => {
+  try {
+    const response = await fetch(`${API_BASE}/tokens/${tokenAddress}`);
+    
+    if (!response.ok) {
+      console.error(`Failed to fetch token ${tokenAddress}`);
+      return null;
+    }
+    
+    const data: DexScreenerResponse = await response.json();
+    
+    // Find the pair for the specified chain
+    const pair = data.pairs?.find(p => p.chainId === chainId) || data.pairs?.[0];
+    
+    return pair || null;
+  } catch (error) {
+    console.error('Error fetching token by address:', error);
+    return null;
+  }
+};
+
 interface TokenProfile {
   url: string;
   chainId: string;
