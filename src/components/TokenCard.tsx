@@ -1,4 +1,4 @@
-import { Sparkles, MessageSquare, Star, ExternalLink, Copy, Shield, Lock, AlertTriangle, CheckCircle2, User, Clock, Droplets } from "lucide-react";
+import { Sparkles, MessageSquare, Star, ExternalLink, Copy } from "lucide-react";
 import { Token } from "@/types/token";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -11,9 +11,9 @@ import { Skeleton } from "./ui/skeleton";
 import { useTokenFavorites } from "@/hooks/useTokenFavorites";
 import { useTokenComments } from "@/hooks/useTokenComments";
 import { useTokenLikes } from "@/hooks/useTokenLikes";
+import pumpfunIcon from "@/assets/pumpfun-icon.png";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { fetchTokenTransactions, fetchTokenHolders } from "@/services/solscan";
-import { fetchRugCheckData, getRiskLevelColor, formatRiskScore } from "@/services/rugcheck";
 import { formatDistanceToNow } from "date-fns";
 
 interface TokenCardProps {
@@ -34,8 +34,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [loadingTxs, setLoadingTxs] = useState(false);
   const [holders, setHolders] = useState<any[]>([]);
   const [loadingHolders, setLoadingHolders] = useState(false);
-  const [securityData, setSecurityData] = useState<any>(null);
-  const [loadingSecurity, setLoadingSecurity] = useState(false);
   const [activeTab, setActiveTab] = useState('chart');
   const [currentPrice, setCurrentPrice] = useState(token.price);
   const [priceChange, setPriceChange] = useState(token.change24h);
@@ -71,7 +69,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           }
         });
       },
-      { rootMargin: '100px' }
+      { rootMargin: '100px' } // Load 100px before entering viewport
     );
 
     if (chartContainerRef.current) {
@@ -95,460 +93,439 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
         id: token.id,
         symbol: token.symbol,
         name: token.name,
-        price: token.price,
-        avatarUrl: token.avatarUrl || '',
         chain: token.chain,
+        avatarUrl: token.avatarUrl,
+        price: token.price,
       });
       if (success) {
         toast({
           title: "Added to favorites",
-          description: "Token added to your favorites",
+          description: "Token saved to your favorites",
         });
       }
     }
-    onBookmark?.(token.id);
   };
-
-  const handleLike = async () => {
-    const success = await toggleLike();
-    if (success) {
-      onLike?.(token.id);
-    }
-  };
-
-  const handleComment = () => {
-    setShowComments(true);
-    onComment?.(token.id);
-  };
-
-  const copyAddress = () => {
-    navigator.clipboard.writeText(token.id);
-    toast({
-      title: "Address copied",
-      description: "Token address copied to clipboard",
-    });
-  };
-
-  // Auto-refresh price every 10 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const change = (Math.random() - 0.5) * 2;
-      setCurrentPrice(prev => prev * (1 + change / 100));
-      setPriceChange(prev => prev + change);
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Auto-refresh transactions when tab is active
-  useEffect(() => {
-    if (activeTab === 'transactions' && transactions.length === 0) {
-      loadTransactions();
-    }
-  }, [activeTab]);
 
   const loadTransactions = async () => {
+    if (!token.pairAddress) return;
     setLoadingTxs(true);
-    try {
-      const txs = await fetchTokenTransactions(token.id);
-      setTransactions(txs);
-    } catch (error) {
-      console.error('Error loading transactions:', error);
-    } finally {
-      setLoadingTxs(false);
-    }
+    const txs = await fetchTokenTransactions(token.pairAddress);
+    setTransactions(txs);
+    setLoadingTxs(false);
   };
 
   const loadHolders = async () => {
+    if (!token.contractAddress || loadingHolders) return;
     setLoadingHolders(true);
-    try {
-      const holdersData = await fetchTokenHolders(token.id);
-      setHolders(holdersData);
-    } catch (error) {
-      console.error('Error loading holders:', error);
-    } finally {
-      setLoadingHolders(false);
-    }
+    const holderData = await fetchTokenHolders(token.contractAddress);
+    setHolders(holderData);
+    setLoadingHolders(false);
   };
 
-  const loadSecurity = async () => {
-    setLoadingSecurity(true);
-    try {
-      const data = await fetchRugCheckData(token.id);
-      setSecurityData(data);
-    } catch (error) {
-      console.error('Error loading security data:', error);
-    } finally {
-      setLoadingSecurity(false);
-    }
-  };
-
+  // Auto-refresh transactions when tab is active
   useEffect(() => {
-    if (activeTab === 'holders' && holders.length === 0) {
-      loadHolders();
-    }
-  }, [activeTab]);
+    if (activeTab !== 'transactions') return;
+    
+    // Initial load
+    loadTransactions();
+    
+    // Set up interval for auto-refresh (increased to 30s to reduce API load)
+    const interval = setInterval(() => {
+      loadTransactions();
+    }, 30000); // Refresh every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [activeTab, token.pairAddress]);
 
+  // Auto-refresh price data every 10 seconds for real-time updates
   useEffect(() => {
-    if (activeTab === 'security' && !securityData) {
-      loadSecurity();
-    }
-  }, [activeTab]);
+    const refreshPrice = async () => {
+      if (!token.contractAddress) return;
+      
+      try {
+        const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${token.contractAddress}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.pairs && data.pairs.length > 0) {
+            const bestPair = data.pairs[0];
+            setCurrentPrice(parseFloat(bestPair.priceUsd));
+            setPriceChange(bestPair.priceChange.h24);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to refresh price:', error);
+      }
+    };
+
+    // Initial price update
+    refreshPrice();
+
+    // Set up interval for real-time updates
+    const interval = setInterval(refreshPrice, 10000); // Refresh every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, [token.contractAddress]);
 
   return (
     <>
-      <div className={`w-full max-w-md mx-auto ${showTopSpacing ? 'mt-20' : ''}`}>
-        <div className="bg-background/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-border/50">
-          {/* Header */}
-          <div className="p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <img
-                    src={token.avatarUrl}
-                    alt={token.symbol}
-                    className="w-14 h-14 rounded-full ring-2 ring-primary/20"
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-2xl font-bold text-foreground">${token.symbol}</h2>
-                    <a
-                      href={`https://solscan.io/token/${token.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{token.name}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">CA:</span>
-                <code className="text-xs font-mono text-foreground">
-                  {token.id.slice(0, 6)}...{token.id.slice(-4)}
-                </code>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={copyAddress}
-                  className="h-6 w-6 p-0"
-                >
-                  <Copy className="w-3 h-3" />
-                </Button>
-              </div>
-            </div>
-
-            <div>
-              <div className="text-3xl font-bold text-foreground">
-                {formatPrice(currentPrice)}
-              </div>
-              <div className={`text-sm font-medium flex items-center gap-1 ${isPositive ? 'text-success' : 'text-destructive'}`}>
-                <span>{isPositive ? '↑' : '↓'}</span>
-                <span>{Math.abs(priceChange).toFixed(2)}%</span>
-                <span className="text-muted-foreground">24h</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent h-12 px-6">
-              <TabsTrigger value="chart" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                Chart
-              </TabsTrigger>
-              <TabsTrigger value="transactions" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                Transactions
-              </TabsTrigger>
-              <TabsTrigger value="holders" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                Holders
-              </TabsTrigger>
-              <TabsTrigger value="security" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                Security
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="chart" className="m-0 p-0" ref={chartContainerRef}>
-              <div className="w-full h-[400px] bg-muted/20">
-                {shouldLoadChart ? (
-                  <iframe
-                    key={chartKey}
-                    src={`https://dexscreener.com/solana/${token.id}?embed=1&theme=dark&trades=0&info=0`}
-                    className="w-full h-full border-0"
-                    title={`${token.symbol} Chart`}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Skeleton className="w-full h-full" />
-                  </div>
+      <div className="h-[100dvh] snap-start relative flex flex-col bg-background overflow-hidden">
+        {/* Top spacing for trending bar and network selector */}
+        {showTopSpacing && (
+          <div className="h-[145px] sm:h-[150px] md:h-[155px] lg:h-[160px] flex-shrink-0" />
+        )}
+        
+        {/* Token Header */}
+        <div className="px-3 py-2 flex items-center justify-between bg-background flex-shrink-0 border-b border-border/50 z-10">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <img 
+              src={token.avatarUrl} 
+              alt={token.symbol}
+              className="w-8 h-8 rounded-full border-2 border-primary shadow-lg flex-shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-bold text-foreground text-sm truncate">{token.symbol}</span>
+                {token.isNew && (
+                  <Badge className="bg-primary text-primary-foreground text-[10px] px-1 py-0">New</Badge>
+                )}
+                {token.contractAddress?.toLowerCase().endsWith('pump') && (
+                  <Badge className="bg-[#14F195] text-black text-[10px] px-1 py-0 flex items-center gap-0.5 font-bold">
+                    <img src={pumpfunIcon} alt="Pump.fun" className="w-3 h-3 rounded-full object-cover" />
+                    Pump.fun
+                  </Badge>
                 )}
               </div>
-            </TabsContent>
-
-            <TabsContent value="transactions" className="m-0 p-6">
-              {loadingTxs ? (
-                <div className="space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
-              ) : transactions.length > 0 ? (
-                <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                  {transactions.map((tx, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-full ${tx.type === 'buy' ? 'bg-success/20' : 'bg-destructive/20'}`}>
-                          {tx.type === 'buy' ? '↑' : '↓'}
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-foreground">
-                            {tx.type === 'buy' ? 'Buy' : 'Sell'}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(tx.timestamp * 1000), { addSuffix: true })}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-foreground">
-                          {formatCurrency(tx.value)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatNumber(tx.amount)} {token.symbol}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No transactions found
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="holders" className="m-0 p-6">
-              {loadingHolders ? (
-                <div className="space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
-              ) : holders.length > 0 ? (
-                <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                  {holders.map((holder, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/20 rounded-full">
-                          <User className="w-4 h-4 text-primary" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-foreground font-mono">
-                            {holder.address.slice(0, 6)}...{holder.address.slice(-4)}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {holder.percentage}% of supply
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-sm font-medium text-foreground">
-                        {formatNumber(holder.amount)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No holder data available
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="security" className="m-0 p-6">
-              {loadingSecurity ? (
-                <div className="space-y-3">
-                  {[...Array(4)].map((_, i) => (
-                    <Skeleton key={i} className="h-20 w-full" />
-                  ))}
-                </div>
-              ) : securityData ? (
-                <div className="space-y-4">
-                  {/* Risk Score */}
-                  <div className="p-4 bg-muted/30 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-muted-foreground">Risk Score</span>
-                      <Badge className={getRiskLevelColor(securityData.risks?.[0]?.level || 'unknown')}>
-                        {formatRiskScore(securityData.risks?.[0]?.score || 0)}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Liquidity */}
-                  {securityData.markets && securityData.markets[0] && (
-                    <div className="p-4 bg-muted/30 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Droplets className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-medium text-foreground">Liquidity</span>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Total</span>
-                          <span className="text-foreground">{formatCurrency(securityData.markets[0].liquidity)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">LP Locked</span>
-                          <span className="text-foreground">{securityData.markets[0].lp.lpLockedPct}%</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">LP Burned</span>
-                          <span className="text-foreground">{securityData.markets[0].lp.lpBurnedPct}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Authorities */}
-                  <div className="p-4 bg-muted/30 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Lock className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-medium text-foreground">Authority Status</span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Mint Authority</span>
-                        <Badge variant={securityData.mintAuthority ? "destructive" : "default"}>
-                          {securityData.mintAuthority ? 'Active' : 'Disabled'}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Freeze Authority</span>
-                        <Badge variant={securityData.freezeAuthority ? "destructive" : "default"}>
-                          {securityData.freezeAuthority ? 'Active' : 'Disabled'}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Risk Items */}
-                  {securityData.risks && securityData.risks[0]?.risks && (
-                    <div className="space-y-2">
-                      {securityData.risks[0].risks.slice(0, 5).map((risk: any, index: number) => (
-                        <div key={index} className="p-3 bg-muted/30 rounded-lg">
-                          <div className="flex items-start gap-2">
-                            <AlertTriangle className={`w-4 h-4 mt-0.5 ${
-                              risk.level === 'danger' ? 'text-destructive' : 
-                              risk.level === 'warn' ? 'text-warning' : 
-                              'text-muted-foreground'
-                            }`} />
-                            <div className="flex-1">
-                              <div className="text-sm font-medium text-foreground">{risk.name}</div>
-                              <div className="text-xs text-muted-foreground">{risk.description}</div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No security data available
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-
-          {/* Footer Stats */}
-          <div className="p-6 bg-muted/20 border-t border-border">
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Market Cap</div>
-                <div className="text-sm font-semibold text-foreground">{formatCurrency(token.marketCap)}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Volume 24h</div>
-                <div className="text-sm font-semibold text-foreground">{formatCurrency(token.volume24h)}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Liquidity</div>
-                <div className="text-sm font-semibold text-foreground">{formatCurrency(token.liquidity)}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Chain</div>
-                <div className="text-sm font-semibold text-foreground capitalize">{token.chain}</div>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-muted-foreground truncate">{token.name}</span>
+                {token.contractAddress && (
+                  <>
+                    <span className="text-[10px] text-muted-foreground">·</span>
+                    <span className="text-[9px] text-muted-foreground font-mono truncate">
+                      {token.contractAddress.slice(0, 4)}...{token.contractAddress.slice(-4)}
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(token.contractAddress!);
+                        toast({
+                          title: "Copied!",
+                          description: "Contract address copied to clipboard",
+                        });
+                      }}
+                      className="flex-shrink-0 hover:text-primary transition-colors"
+                    >
+                      <Copy className="w-2.5 h-2.5 text-muted-foreground hover:text-primary" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-5 gap-2">
-              <Button
-                onClick={() => setShowBuyDrawer(true)}
-                className="col-span-2 bg-success hover:bg-success/90 text-success-foreground"
-              >
-                Buy
-              </Button>
-              <Button
-                onClick={() => setShowSellDrawer(true)}
-                variant="outline"
-                className="col-span-2"
-              >
-                Sell
-              </Button>
-              <Button
-                variant="outline"
+          </div>
+          
+          {/* Blockchain Explorer Links */}
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            {token.dexScreenerUrl && (
+              <Button 
+                variant="ghost" 
                 size="icon"
-                onClick={handleLike}
-                className={isLiked ? "text-destructive" : ""}
+                className="h-6 w-6"
+                onClick={() => window.open(token.dexScreenerUrl, '_blank')}
+                title="View on DexScreener"
               >
-                <Sparkles className="w-4 h-4" />
+                <ExternalLink className="w-3 h-3" />
               </Button>
-            </div>
+            )}
+            {token.contractAddress && (
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => window.open(`https://solscan.io/token/${token.contractAddress}`, '_blank')}
+                  title="View on Solscan"
+                >
+                  <img 
+                    src="https://solscan.io/favicon.ico" 
+                    alt="Solscan"
+                    className="w-3 h-3"
+                  />
+                </Button>
+                {token.contractAddress.toLowerCase().endsWith('pump') && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => window.open(`https://pump.fun/${token.contractAddress}`, '_blank')}
+                    title="View on Pump.fun"
+                  >
+                    <img src={pumpfunIcon} alt="Pump.fun" className="w-4 h-4 rounded-full object-cover" />
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
 
-            <div className="flex items-center justify-around mt-4 pt-4 border-t border-border">
+        {/* Chart/Transactions/Holders Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+          <TabsList className="w-full grid grid-cols-3 bg-secondary/50 backdrop-blur-sm h-8 flex-shrink-0 p-0.5 gap-0.5 rounded-lg">
+            <TabsTrigger 
+              value="chart" 
+              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
+            >
+              Chart
+            </TabsTrigger>
+            <TabsTrigger 
+              value="transactions" 
+              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
+            >
+              <span className="flex items-center gap-1">
+                Txns
+                {activeTab === 'transactions' && (
+                  <span className="w-1 h-1 bg-success rounded-full animate-pulse" />
+                )}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="holders" 
+              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
+              onClick={loadHolders}
+            >
+              Holders
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="chart" className="flex-1 min-h-0 mt-0 overflow-hidden">
+            <div ref={chartContainerRef} className="relative bg-card overflow-hidden h-full">
+              {token.dexScreenerUrl ? (
+                shouldLoadChart ? (
+                  <iframe
+                    key={chartKey}
+                    src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
+                    className="w-full border-0 bg-secondary"
+                    style={{ height: 'calc(100% + 120px)', marginBottom: '-120px' }}
+                    title={`${token.symbol} Chart`}
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-secondary">
+                    <Skeleton className="w-4/5 h-8" />
+                    <Skeleton className="w-3/4 h-32" />
+                    <Skeleton className="w-4/5 h-8" />
+                  </div>
+                )
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-secondary">
+                  <p className="text-muted-foreground">Chart not available</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="transactions" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
+            {loadingTxs && transactions.length === 0 ? (
+              <div className="p-3 space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : transactions.length > 0 ? (
+              <div className="p-2 space-y-1">
+                {transactions.map((tx, idx) => (
+                  <div key={idx} className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2 flex-1">
+                        <Badge className={tx.type === 'buy' ? 'bg-success text-success-foreground' : 'bg-destructive text-destructive-foreground'}>
+                          {tx.type.toUpperCase()}
+                        </Badge>
+                        <span className="text-[10px] font-mono">
+                          {formatCurrency(tx.totalUsd)}
+                        </span>
+                      </div>
+                      <div className="text-[9px] text-muted-foreground">
+                        {formatDistanceToNow(tx.timestamp, { addSuffix: true })}
+                      </div>
+                    </div>
+                    <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
+                      <span>{formatNumber(tx.amount)} @ {formatPrice(tx.priceUsd)}</span>
+                      <button
+                        onClick={() => window.open(`https://solscan.io/tx/${tx.txHash}`, '_blank')}
+                        className="ml-auto hover:text-primary transition-colors"
+                      >
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                No transactions available
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="holders" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
+            {loadingHolders ? (
+              <div className="p-3 space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : holders.length > 0 ? (
+              <div className="p-2 space-y-1">
+                {holders.map((holder, idx) => (
+                  <div key={idx} className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Badge variant="outline" className="text-[10px] px-1 py-0 flex-shrink-0">
+                          #{idx + 1}
+                        </Badge>
+                        <span className="text-[9px] font-mono truncate">
+                          {holder.address.slice(0, 4)}...{holder.address.slice(-4)}
+                        </span>
+                      </div>
+                      <div className="text-[10px] font-semibold text-primary flex-shrink-0">
+                        {holder.percentage.toFixed(2)}%
+                      </div>
+                    </div>
+                    <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
+                      <span>{formatNumber(holder.amount)} tokens</span>
+                      <button
+                        onClick={() => window.open(`https://solscan.io/account/${holder.address}`, '_blank')}
+                        className="ml-auto hover:text-primary transition-colors"
+                      >
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                No holder data available
+              </div>
+            )}
+          </TabsContent>
+
+        </Tabs>
+
+        {/* Bottom - Token Info */}
+        <div className="px-3 py-1 pb-16 flex flex-col gap-1 bg-background flex-shrink-0">
+          {/* Price Info & Actions - Single Row */}
+          <div className="mb-0.5 flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="text-2xl font-bold text-foreground leading-tight truncate">
+                {formatPrice(currentPrice)}
+              </div>
+              <div className={`text-xs font-semibold ${priceChange >= 0 ? 'text-positive' : 'text-negative'}`}>
+                {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}% (24h)
+              </div>
+            </div>
+            
+            {/* Action Buttons - Horizontal */}
+            <div className="flex items-center gap-1 flex-shrink-0">
               <button
-                onClick={handleLike}
-                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+                onClick={toggleLike}
+                className="flex flex-col items-center gap-0.5 min-w-[40px] transition-transform hover:scale-110"
               >
-                <Sparkles className={`w-5 h-5 ${isLiked ? 'fill-primary text-primary' : ''}`} />
-                <span className="text-sm font-medium">{likeCount}</span>
+                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center transition-all hover:bg-primary/10 hover:border-primary/50">
+                  <Sparkles 
+                    className={`w-3.5 h-3.5 transition-all ${isLiked ? 'fill-primary text-primary' : 'text-foreground'}`} 
+                  />
+                </div>
+                <span className="text-[9px] font-medium text-foreground">{likeCount}</span>
               </button>
+
               <button
-                onClick={handleComment}
-                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+                onClick={() => setShowComments(true)}
+                className="flex flex-col items-center gap-0.5 min-w-[40px] transition-transform hover:scale-110"
               >
-                <MessageSquare className="w-5 h-5" />
-                <span className="text-sm font-medium">{comments?.length || 0}</span>
+                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center transition-all hover:bg-primary/10 hover:border-primary/50">
+                  <MessageSquare className="w-3.5 h-3.5 text-foreground" />
+                </div>
+                <span className="text-[9px] font-medium text-foreground">{comments.length}</span>
               </button>
+
               <button
                 onClick={handleFavorite}
-                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+                className="flex flex-col items-center gap-0.5 min-w-[40px] transition-transform hover:scale-110"
               >
-                <Star className={`w-5 h-5 ${isTokenFavorited ? 'fill-primary text-primary' : ''}`} />
+                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center transition-all hover:bg-primary/10 hover:border-primary/50">
+                  <Star 
+                    className={`w-3.5 h-3.5 transition-all ${isTokenFavorited ? 'fill-primary text-primary' : 'text-foreground'}`} 
+                  />
+                </div>
+                <span className="text-[9px] font-medium text-foreground">Save</span>
               </button>
             </div>
           </div>
+
+          {/* Stats Grid - Compact */}
+          <div className="space-y-0.5 mb-0.5">
+            <div className="grid grid-cols-2 gap-1">
+              <div className="bg-secondary rounded p-1">
+                <div className="text-[9px] text-muted-foreground">MCap</div>
+                <div className="text-[11px] font-bold text-foreground truncate">
+                  {formatCurrency(token.marketCap)}
+                </div>
+              </div>
+              <div className="bg-secondary rounded p-1">
+                <div className="text-[9px] text-muted-foreground">Vol 24h</div>
+                <div className="text-[11px] font-bold text-foreground truncate">
+                  {formatCurrency(token.volume24h)}
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-1">
+              <div className="bg-secondary rounded p-1">
+                <div className="text-[9px] text-muted-foreground">Liq</div>
+                <div className="text-[11px] font-bold text-foreground truncate">
+                  {formatCurrency(token.liquidity)}
+                </div>
+              </div>
+              <div className="bg-secondary rounded p-1">
+                <div className="text-[9px] text-muted-foreground">Chain</div>
+                <div className="text-[11px] font-bold text-foreground truncate">
+                  {token.chain}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons - Compact */}
+          <div className="grid grid-cols-2 gap-1.5">
+            <Button 
+              onClick={() => setShowBuyDrawer(true)}
+              size="sm"
+              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-xs h-8"
+            >
+              Buy
+            </Button>
+            <Button 
+              onClick={() => setShowSellDrawer(true)}
+              size="sm"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-xs h-8"
+            >
+              Sell
+            </Button>
+          </div>
         </div>
+
       </div>
 
       <QuickTradeDrawer
-        open={showBuyDrawer}
-        onOpenChange={setShowBuyDrawer}
         token={token}
         type="buy"
+        open={showBuyDrawer}
+        onOpenChange={setShowBuyDrawer}
       />
-
       <QuickTradeDrawer
-        open={showSellDrawer}
-        onOpenChange={setShowSellDrawer}
         token={token}
         type="sell"
+        open={showSellDrawer}
+        onOpenChange={setShowSellDrawer}
       />
-
       <CommentsDrawer
         open={showComments}
         onOpenChange={setShowComments}
