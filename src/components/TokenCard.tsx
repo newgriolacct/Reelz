@@ -525,12 +525,14 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                         <span className="text-xs text-muted-foreground">Address</span>
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(securityData.creator!.owner);
-                            toast({ description: "Address copied!" });
+                            if (securityData.creator?.owner) {
+                              navigator.clipboard.writeText(securityData.creator.owner);
+                              toast({ description: "Address copied!" });
+                            }
                           }}
                           className="flex items-center gap-1 text-[9px] font-mono text-primary hover:text-primary/80 transition-colors"
                         >
-                          {securityData.creator.owner.slice(0, 6)}...{securityData.creator.owner.slice(-4)}
+                          {securityData.creator.owner?.slice(0, 6) || 'N/A'}...{securityData.creator.owner?.slice(-4) || ''}
                           <Copy className="w-3 h-3" />
                         </button>
                       </div>
