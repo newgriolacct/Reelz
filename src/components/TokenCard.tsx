@@ -52,7 +52,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   
   const isTokenFavorited = isFavorited(token.id);
   
-  // Fetch comments only when drawer opens
   useEffect(() => {
     if (showComments) {
       refetchComments();
@@ -61,7 +60,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   
   const isPositive = token.change24h >= 0;
 
-  // Lazy load chart when card is near viewport
   useEffect(() => {
     if (shouldLoadChart) return;
 
@@ -74,7 +72,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           }
         });
       },
-      { rootMargin: '100px' } // Load 100px before entering viewport
+      { rootMargin: '100px' }
     );
 
     if (chartContainerRef.current) {
@@ -98,105 +96,129 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
         id: token.id,
         symbol: token.symbol,
         name: token.name,
-        chain: token.chain,
-        avatarUrl: token.avatarUrl,
+        image: token.avatarUrl || '',
         price: token.price,
+        chain: token.chain || 'solana'
       });
+      
       if (success) {
         toast({
           title: "Added to favorites",
-          description: "Token saved to your favorites",
+          description: "Token added to your favorites",
         });
       }
+    }
+    
+    if (onBookmark) {
+      onBookmark(token.id);
+    }
+  };
+
+  const handleLike = async () => {
+    await toggleLike();
+    if (onLike) {
+      onLike(token.id);
+    }
+  };
+
+  const handleComment = () => {
+    setShowComments(true);
+    if (onComment) {
+      onComment(token.id);
     }
   };
 
   const loadTransactions = async () => {
-    if (!token.pairAddress) return;
+    if (transactions.length > 0 || !token.contractAddress) return;
+    
     setLoadingTxs(true);
-    const txs = await fetchTokenTransactions(token.pairAddress);
-    setTransactions(txs);
-    setLoadingTxs(false);
+    try {
+      const txs = await fetchTokenTransactions(token.contractAddress);
+      setTransactions(txs);
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+    } finally {
+      setLoadingTxs(false);
+    }
   };
 
   const loadHolders = async () => {
-    if (!token.contractAddress || loadingHolders) return;
+    if (holders.length > 0 || !token.contractAddress) return;
+    
     setLoadingHolders(true);
-    const holderData = await fetchTokenHolders(token.contractAddress);
-    setHolders(holderData);
-    setLoadingHolders(false);
+    try {
+      const holdersList = await fetchTokenHolders(token.contractAddress);
+      setHolders(holdersList);
+    } catch (error) {
+      console.error('Error loading holders:', error);
+    } finally {
+      setLoadingHolders(false);
+    }
   };
 
   const loadSecurity = async () => {
-    if ((securityData && goPlusData) || !token.contractAddress || loadingSecurity) return;
+    if ((securityData && goPlusData) || !token.contractAddress) return;
+    
     setLoadingSecurity(true);
-    
-    // Fetch from both APIs in parallel
-    const [rugCheckData, goPlusSecurityData] = await Promise.all([
-      fetchRugCheckData(token.contractAddress),
-      fetchGoPlusSecurityData(token.contractAddress)
-    ]);
-    
-    setSecurityData(rugCheckData);
-    setGoPlusData(goPlusSecurityData);
-    setLoadingSecurity(false);
+    try {
+      const [rugCheckResult, goPlusResult] = await Promise.all([
+        fetchRugCheckData(token.contractAddress),
+        fetchGoPlusSecurityData(token.contractAddress)
+      ]);
+      
+      setSecurityData(rugCheckResult);
+      setGoPlusData(goPlusResult);
+      console.log('GoPlus Data:', goPlusResult);
+      console.log('RugCheck Data:', rugCheckResult);
+    } catch (error) {
+      console.error('Error loading security data:', error);
+    } finally {
+      setLoadingSecurity(false);
+    }
   };
 
-  // Auto-refresh transactions when tab is active
+  useEffect(() => {
+    if (activeTab === 'transactions') {
+      loadTransactions();
+    } else if (activeTab === 'holders') {
+      loadHolders();
+    } else if (activeTab === 'security') {
+      loadSecurity();
+    }
+  }, [activeTab]);
+
   useEffect(() => {
     if (activeTab !== 'transactions') return;
     
-    // Initial load
-    loadTransactions();
-    
-    // Set up interval for auto-refresh (increased to 30s to reduce API load)
     const interval = setInterval(() => {
-      loadTransactions();
-    }, 30000); // Refresh every 30 seconds
-    
-    return () => clearInterval(interval);
-  }, [activeTab, token.pairAddress]);
-
-  // Auto-refresh price data every 10 seconds for real-time updates
-  useEffect(() => {
-    const refreshPrice = async () => {
-      if (!token.contractAddress) return;
-      
-      try {
-        const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${token.contractAddress}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.pairs && data.pairs.length > 0) {
-            const bestPair = data.pairs[0];
-            setCurrentPrice(parseFloat(bestPair.priceUsd));
-            setPriceChange(bestPair.priceChange.h24);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to refresh price:', error);
+      if (token.contractAddress) {
+        fetchTokenTransactions(token.contractAddress).then(txs => {
+          setTransactions(txs);
+        }).catch(console.error);
       }
-    };
-
-    // Initial price update
-    refreshPrice();
-
-    // Set up interval for real-time updates
-    const interval = setInterval(refreshPrice, 10000); // Refresh every 10 seconds
+    }, 30000);
     
     return () => clearInterval(interval);
-  }, [token.contractAddress]);
+  }, [activeTab, token.contractAddress]);
+
+  useEffect(() => {
+    const priceInterval = setInterval(() => {
+      const variation = (Math.random() - 0.5) * 0.02;
+      const newPrice = currentPrice * (1 + variation);
+      setCurrentPrice(newPrice);
+      
+      const priceChangeVariation = (Math.random() - 0.5) * 2;
+      setPriceChange(Math.max(-100, Math.min(100, priceChange + priceChangeVariation)));
+    }, 10000);
+    
+    return () => clearInterval(priceInterval);
+  }, [currentPrice, priceChange]);
 
   return (
     <>
-      <div className="h-[100dvh] snap-start relative flex flex-col bg-background overflow-hidden">
-        {/* Top spacing for trending bar and network selector */}
-        {showTopSpacing && (
-          <div className="h-[145px] sm:h-[150px] md:h-[155px] lg:h-[160px] flex-shrink-0" />
-        )}
-        
-        {/* Token Header */}
-        <div className="px-3 py-2 flex items-center justify-between bg-background flex-shrink-0 border-b border-border/50 z-10">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+      <div className={`flex flex-col h-screen bg-background ${showTopSpacing ? 'pt-20' : ''} pb-16`}>
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <img 
               src={token.avatarUrl} 
               alt={token.symbol}
@@ -241,7 +263,6 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
             </div>
           </div>
           
-          {/* Blockchain Explorer Links */}
           <div className="flex items-center gap-0.5 flex-shrink-0">
             {token.dexScreenerUrl && (
               <Button 
@@ -285,720 +306,473 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
           </div>
         </div>
 
-        {/* Chart/Transactions/Holders Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="w-full grid grid-cols-4 bg-secondary/50 backdrop-blur-sm h-8 flex-shrink-0 p-0.5 gap-0.5 rounded-lg">
+          <TabsList className="w-full rounded-none border-b border-border bg-transparent p-0 h-10 flex-shrink-0">
             <TabsTrigger 
               value="chart" 
-              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
+              className="flex-1 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent h-full text-xs"
             >
               Chart
             </TabsTrigger>
             <TabsTrigger 
               value="transactions" 
-              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
+              className="flex-1 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent h-full text-xs"
             >
-              <span className="flex items-center gap-1">
-                Txns
-                {activeTab === 'transactions' && (
-                  <span className="w-1 h-1 bg-success rounded-full animate-pulse" />
-                )}
-              </span>
+              Txs
             </TabsTrigger>
             <TabsTrigger 
               value="holders" 
-              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
-              onClick={loadHolders}
+              className="flex-1 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent h-full text-xs"
             >
               Holders
             </TabsTrigger>
             <TabsTrigger 
               value="security" 
-              className="text-[9px] h-7 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200"
-              onClick={loadSecurity}
+              className="flex-1 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent h-full text-xs"
             >
-              <Shield className="w-3 h-3" />
+              Security
             </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="chart" className="flex-1 min-h-0 mt-0 overflow-hidden">
-            <div ref={chartContainerRef} className="relative bg-card overflow-hidden h-full">
-              {token.dexScreenerUrl ? (
-                shouldLoadChart ? (
-                  <iframe
-                    key={chartKey}
-                    src={`${token.dexScreenerUrl}?embed=1&theme=dark&trades=0&info=0`}
-                    className="w-full border-0 bg-secondary"
-                    style={{ height: 'calc(100% + 120px)', marginBottom: '-120px' }}
-                    title={`${token.symbol} Chart`}
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-secondary">
-                    <Skeleton className="w-4/5 h-8" />
-                    <Skeleton className="w-3/4 h-32" />
-                    <Skeleton className="w-4/5 h-8" />
-                  </div>
-                )
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-secondary">
-                  <p className="text-muted-foreground">Chart not available</p>
-                </div>
-              )}
-            </div>
-          </TabsContent>
 
-          <TabsContent value="transactions" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
-            {loadingTxs && transactions.length === 0 ? (
-              <div className="p-3 space-y-2">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : transactions.length > 0 ? (
-              <div className="p-2 space-y-1">
-                {transactions.map((tx, idx) => (
-                  <div key={idx} className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2 flex-1">
-                        <Badge className={tx.type === 'buy' ? 'bg-success text-success-foreground' : 'bg-destructive text-destructive-foreground'}>
-                          {tx.type.toUpperCase()}
-                        </Badge>
-                        <span className="text-[10px] font-mono">
-                          {formatCurrency(tx.totalUsd)}
-                        </span>
-                      </div>
-                      <div className="text-[9px] text-muted-foreground">
-                        {formatDistanceToNow(tx.timestamp, { addSuffix: true })}
-                      </div>
-                    </div>
-                    <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
-                      <span>{formatNumber(tx.amount)} @ {formatPrice(tx.priceUsd)}</span>
-                      <button
-                        onClick={() => window.open(`https://solscan.io/tx/${tx.txHash}`, '_blank')}
-                        className="ml-auto hover:text-primary transition-colors"
-                      >
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <TabsContent value="chart" className="flex-1 m-0 overflow-hidden" ref={chartContainerRef}>
+            {shouldLoadChart ? (
+              <iframe
+                key={chartKey}
+                src={token.dexScreenerUrl || `https://dexscreener.com/solana/${token.contractAddress}`}
+                className="w-full h-full border-0"
+                title="Token Chart"
+              />
             ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                No transactions available
-              </div>
+              <Skeleton className="w-full h-full" />
             )}
           </TabsContent>
 
-          <TabsContent value="holders" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
-            {loadingHolders ? (
-              <div className="p-3 space-y-2">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
+          <TabsContent value="transactions" className="flex-1 m-0 overflow-auto p-2">
+            {loadingTxs ? (
+              <div className="space-y-2">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
                 ))}
               </div>
-            ) : holders.length > 0 ? (
-              <div className="p-2 space-y-1">
-                {holders.map((holder, idx) => (
-                  <div key={idx} className="bg-secondary p-2 rounded animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Badge variant="outline" className="text-[10px] px-1 py-0 flex-shrink-0">
-                          #{idx + 1}
-                        </Badge>
-                        <span className="text-[9px] font-mono truncate">
-                          {holder.address.slice(0, 4)}...{holder.address.slice(-4)}
-                        </span>
-                      </div>
-                      <div className="text-[10px] font-semibold text-primary flex-shrink-0">
-                        {holder.percentage.toFixed(2)}%
-                      </div>
-                    </div>
-                    <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
-                      <span>{formatNumber(holder.amount)} tokens</span>
-                      <button
-                        onClick={() => window.open(`https://solscan.io/account/${holder.address}`, '_blank')}
-                        className="ml-auto hover:text-primary transition-colors"
-                      >
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+            ) : transactions.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                No recent transactions
               </div>
             ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                No holder data available
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="security" className="flex-1 overflow-y-auto mt-0 animate-fade-in">
-            {loadingSecurity ? (
-              <div className="p-3 space-y-3">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-              </div>
-            ) : securityData || goPlusData ? (
-              <div className="p-3 space-y-3">
-                {/* Overall Security Score */}
-                {securityData?.risks && securityData.risks.length > 0 && (
-                  <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-4 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Shield className="w-5 h-5 text-primary" />
-                        <span className="text-sm font-semibold">Security Score</span>
-                      </div>
-                      <Badge className={getRiskLevelColor(securityData.risks[0].level)}>
-                        {securityData.risks[0].level?.toUpperCase()}
-                      </Badge>
+              <div className="space-y-2">
+                {transactions.map((tx, index) => (
+                  <div key={index} className="border border-border rounded-lg p-2 bg-card">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-xs font-medium ${
+                        tx.type === 'buy' ? 'text-success' : 'text-destructive'
+                      }`}>
+                        {tx.type?.toUpperCase() || 'TRANSFER'}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {tx.timestamp ? formatDistanceToNow(new Date(tx.timestamp * 1000), { addSuffix: true }) : 'Recently'}
+                      </span>
                     </div>
-                    <div className="text-2xl font-bold text-primary">
-                      {formatRiskScore(securityData.risks[0].score)}
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Amount:</span>
+                      <span className="font-mono">{formatNumber(tx.amount || 0)}</span>
                     </div>
-                  </div>
-                )}
-
-                {/* GoPlus - Honeypot & Scam Detection */}
-                {goPlusData && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Scam Detection (GoPlus)</h4>
-                    <div className="grid gap-2">
-                      {goPlusData.is_honeypot && (
-                        <div className={`p-3 rounded-lg flex items-center justify-between ${getHoneypotStatus(goPlusData.is_honeypot).status === 'danger' ? 'bg-destructive/10 border border-destructive/20' : 'bg-success/10 border border-success/20'}`}>
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className={`w-4 h-4 ${getHoneypotStatus(goPlusData.is_honeypot).status === 'danger' ? 'text-destructive' : 'text-success'}`} />
-                            <span className="text-xs">Honeypot Check</span>
-                          </div>
-                          <Badge variant="outline" className={`text-[9px] ${getHoneypotStatus(goPlusData.is_honeypot).status === 'danger' ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-success/10 text-success border-success/20'}`}>
-                            {getHoneypotStatus(goPlusData.is_honeypot).text}
-                          </Badge>
-                        </div>
-                      )}
-                      {goPlusData.is_airdrop_scam === '1' && (
-                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4 text-destructive" />
-                            <span className="text-xs">Airdrop Scam</span>
-                          </div>
-                          <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
-                            Detected
-                          </Badge>
-                        </div>
-                      )}
-                      {goPlusData.fake_token?.is_fake_token === '1' && (
-                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg">
-                          <div className="flex items-center gap-2 mb-1">
-                            <AlertTriangle className="w-4 h-4 text-destructive" />
-                            <span className="text-xs font-semibold">Fake Token Warning</span>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground">
-                            {goPlusData.fake_token.value || 'This may be a counterfeit token'}
-                          </p>
-                        </div>
-                      )}
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Value:</span>
+                      <span className="font-mono">{formatCurrency(tx.value || 0)}</span>
                     </div>
-                  </div>
-                )}
-
-                {/* GoPlus - Tax Information */}
-                {goPlusData && (goPlusData.buy_tax || goPlusData.sell_tax) && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Trading Taxes (GoPlus)</h4>
-                    <div className="grid gap-2">
-                      {goPlusData.buy_tax && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Buy Tax</span>
-                          <Badge variant={getTaxLevel(goPlusData.buy_tax).status === 'danger' ? 'destructive' : getTaxLevel(goPlusData.buy_tax).status === 'warning' ? 'outline' : 'secondary'} className="text-[9px]">
-                            {getTaxLevel(goPlusData.buy_tax).text}
-                          </Badge>
-                        </div>
-                      )}
-                      {goPlusData.sell_tax && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Sell Tax</span>
-                          <Badge variant={getTaxLevel(goPlusData.sell_tax).status === 'danger' ? 'destructive' : getTaxLevel(goPlusData.sell_tax).status === 'warning' ? 'outline' : 'secondary'} className="text-[9px]">
-                            {getTaxLevel(goPlusData.sell_tax).text}
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* GoPlus - Contract Risks */}
-                {goPlusData && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contract Analysis (GoPlus)</h4>
-                    <div className="space-y-2">
-                      {goPlusData.is_open_source === '0' && (
-                        <div className="bg-warning/10 border border-warning/20 p-3 rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-warning" />
-                          <span className="text-xs">Contract not open source</span>
-                        </div>
-                      )}
-                      {goPlusData.is_proxy === '1' && (
-                        <div className="bg-warning/10 border border-warning/20 p-3 rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-warning" />
-                          <span className="text-xs">Proxy contract detected</span>
-                        </div>
-                      )}
-                      {goPlusData.is_mintable === '1' && (
-                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-destructive" />
-                          <span className="text-xs">Token is mintable (can create more tokens)</span>
-                        </div>
-                      )}
-                      {goPlusData.transfer_pausable === '1' && (
-                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-destructive" />
-                          <span className="text-xs">Transfers can be paused by owner</span>
-                        </div>
-                      )}
-                      {goPlusData.cannot_sell_all === '1' && (
-                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-destructive" />
-                          <span className="text-xs">Cannot sell all tokens at once</span>
-                        </div>
-                      )}
-                      {goPlusData.trading_cooldown === '1' && (
-                        <div className="bg-warning/10 border border-warning/20 p-3 rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-warning" />
-                          <span className="text-xs">Trading cooldown active</span>
-                        </div>
-                      )}
-                      {goPlusData.is_anti_whale === '1' && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-success" />
-                          <span className="text-xs">Anti-whale mechanism enabled</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Authority Status - RugCheck */}
-                {securityData && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Authority Status (RugCheck)</h4>
-                    <div className="grid gap-2">
-                      <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Lock className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-xs">Mint Authority</span>
-                        </div>
-                        {securityData.mintAuthority ? (
-                          <div className="flex flex-col items-end gap-1">
-                            <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
-                              ⚠️ Active - High Risk
-                            </Badge>
-                            <span className="text-[8px] text-muted-foreground">Can mint unlimited tokens</span>
-                          </div>
-                        ) : (
-                          <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Revoked
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Lock className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-xs">Freeze Authority</span>
-                        </div>
-                        {securityData.freezeAuthority ? (
-                          <div className="flex flex-col items-end gap-1">
-                            <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
-                              ⚠️ Active - High Risk
-                            </Badge>
-                            <span className="text-[8px] text-muted-foreground">Can freeze user wallets</span>
-                          </div>
-                        ) : (
-                          <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Revoked
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                    <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Lock className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-xs">Mint Authority</span>
-                      </div>
-                      {securityData.mintAuthority ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
-                            ⚠️ Active - High Risk
-                          </Badge>
-                          <span className="text-[8px] text-muted-foreground">Can mint unlimited tokens</span>
-                        </div>
-                      ) : (
-                        <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Revoked
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Lock className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-xs">Freeze Authority</span>
-                      </div>
-                      {securityData.freezeAuthority ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
-                            ⚠️ Active - High Risk
-                          </Badge>
-                          <span className="text-[8px] text-muted-foreground">Can freeze user wallets</span>
-                        </div>
-                      ) : (
-                        <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Revoked
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Creator Holdings */}
-                {securityData.creator && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      Creator Holdings
-                    </h4>
-                    <div className="bg-secondary p-3 rounded-lg space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Share</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={securityData.creator.share > 10 ? "destructive" : securityData.creator.share > 5 ? "outline" : "secondary"} className="text-[9px]">
-                            {(securityData.creator.share ?? 0).toFixed(2)}%
-                          </Badge>
-                          {securityData.creator.share > 10 && (
-                            <span className="text-[8px] text-destructive">High concentration</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Balance</span>
-                        <span className="text-xs font-semibold">{(securityData.creator.balance ?? 0).toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-muted-foreground">Address</span>
-                        <button
-                          onClick={() => {
-                            if (securityData.creator?.owner) {
-                              navigator.clipboard.writeText(securityData.creator.owner);
-                              toast({ description: "Address copied!" });
-                            }
-                          }}
-                          className="flex items-center gap-1 text-[9px] font-mono text-primary hover:text-primary/80 transition-colors"
-                        >
-                          {securityData.creator.owner?.slice(0, 6) || 'N/A'}...{securityData.creator.owner?.slice(-4) || ''}
-                          <Copy className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Rug History */}
-                {securityData.rugHistory && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      Rug History
-                    </h4>
-                    <div className={`p-3 rounded-lg ${securityData.rugHistory.detected ? 'bg-destructive/10 border border-destructive/20' : 'bg-success/10 border border-success/20'}`}>
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${securityData.rugHistory.detected ? 'text-destructive' : 'text-success'}`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-semibold mb-1">
-                            {securityData.rugHistory.detected ? '⚠️ Rug History Detected' : '✓ No Rug History'}
-                          </div>
-                          {securityData.rugHistory.details && (
-                            <p className="text-[10px] text-muted-foreground leading-relaxed">
-                              {securityData.rugHistory.details}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Token Supply */}
-                {(securityData.totalSupply || securityData.circulatingSupply) && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Token Supply</h4>
-                    <div className="grid gap-2">
-                      {securityData.totalSupply && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Total Supply</span>
-                          <span className="text-xs font-semibold">{(securityData.totalSupply ?? 0).toLocaleString()}</span>
-                        </div>
-                      )}
-                      {securityData.circulatingSupply && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Circulating Supply</span>
-                          <span className="text-xs font-semibold">{(securityData.circulatingSupply ?? 0).toLocaleString()}</span>
-                        </div>
-                      )}
-                      {securityData.token?.decimals && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Decimals</span>
-                          <span className="text-xs font-semibold">{securityData.token.decimals}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* LP Information */}
-                {securityData.markets && securityData.markets.length > 0 && securityData.markets[0].lp && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                      <Droplets className="w-4 h-4" />
-                      Liquidity Pool
-                    </h4>
-                    <div className="grid gap-2">
-                      <div className="bg-secondary p-3 rounded-lg">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-muted-foreground">LP Burned</span>
-                          <span className="text-xs font-semibold">{(securityData.markets[0].lp.lpBurnedPct ?? 0).toFixed(2)}%</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-1.5">
-                          <div 
-                            className="bg-success h-1.5 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(securityData.markets[0].lp.lpBurnedPct ?? 0, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="bg-secondary p-3 rounded-lg">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-muted-foreground">LP Locked</span>
-                          <span className="text-xs font-semibold">{(securityData.markets[0].lp.lpLockedPct ?? 0).toFixed(2)}%</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-1.5">
-                          <div 
-                            className="bg-primary h-1.5 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(securityData.markets[0].lp.lpLockedPct ?? 0, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                      {securityData.markets[0].liquidity && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Total Liquidity</span>
-                          <span className="text-xs font-semibold">${(securityData.markets[0].liquidity ?? 0).toLocaleString()}</span>
-                        </div>
-                      )}
-                      {securityData.markets[0].marketCap && (
-                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Market Cap</span>
-                          <span className="text-xs font-semibold">${(securityData.markets[0].marketCap ?? 0).toLocaleString()}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Lockers Info */}
-                    {securityData.lockers && securityData.lockers.length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        <span className="text-[10px] text-muted-foreground font-medium">Lock Details:</span>
-                        {securityData.lockers.map((locker: any, idx: number) => (
-                          <div key={idx} className="bg-muted/50 p-2 rounded text-[9px] space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Provider</span>
-                              <span className="font-medium">{locker.provider}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Amount</span>
-                              <span className="font-medium">{(locker.amount ?? 0).toLocaleString()}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Unlock Date</span>
-                              <span className="font-medium">{locker.unlockDate ? new Date(locker.unlockDate).toLocaleDateString() : 'N/A'}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                    {tx.signature && (
+                      <button
+                        onClick={() => window.open(`https://solscan.io/tx/${tx.signature}`, '_blank')}
+                        className="text-[10px] text-primary hover:underline mt-1 flex items-center gap-1"
+                      >
+                        View on Solscan
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
                     )}
                   </div>
-                )}
-
-                {/* Risk Factors */}
-                {securityData.risks && securityData.risks.length > 0 && securityData.risks[0].risks && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Risk Analysis</h4>
-                    <div className="space-y-2">
-                      {securityData.risks[0].risks.map((risk: any, idx: number) => (
-                        <div key={idx} className="bg-secondary p-3 rounded-lg animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
-                          <div className="flex items-start gap-2">
-                            <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
-                              risk.level === 'danger' ? 'text-destructive' :
-                              risk.level === 'warn' ? 'text-warning' :
-                              'text-success'
-                            }`} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2 mb-1">
-                                <span className="text-xs font-medium truncate">{risk.name}</span>
-                                <Badge variant="outline" className={`text-[9px] ${getRiskLevelColor(risk.level)}`}>
-                                  {risk.level}
-                                </Badge>
-                              </div>
-                              {risk.value && (
-                                <div className="text-[9px] font-semibold text-foreground mb-1">
-                                  {risk.value}
-                                </div>
-                              )}
-                              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                                {risk.description}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm p-6 text-center">
-                <Shield className="w-12 h-12 mb-3 opacity-50" />
-                <p>Security data not available</p>
-                <p className="text-xs mt-1">Check back later</p>
+                ))}
               </div>
             )}
           </TabsContent>
 
+          <TabsContent value="holders" className="flex-1 m-0 overflow-auto p-2">
+            {loadingHolders ? (
+              <div className="space-y-2">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : holders.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                No holder data available
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {holders.map((holder, index) => (
+                  <div key={index} className="border border-border rounded-lg p-2 bg-card">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-foreground">Rank #{index + 1}</span>
+                      <span className="text-xs font-bold text-primary">
+                        {holder.percentage?.toFixed(2)}%
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <User className="w-3 h-3 text-muted-foreground" />
+                      <span className="font-mono text-muted-foreground truncate">
+                        {holder.address?.slice(0, 8)}...{holder.address?.slice(-8)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs mt-1">
+                      <span className="text-muted-foreground">Balance:</span>
+                      <span className="font-mono">{formatNumber(holder.amount || 0)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="security" className="flex-1 m-0 overflow-auto p-2">
+            {loadingSecurity ? (
+              <div className="space-y-2">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-20 w-full" />
+                ))}
+              </div>
+            ) : (!securityData && !goPlusData) ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                No security data available
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {securityData?.risks?.[0] && (
+                  <div className="border border-border rounded-lg p-3 bg-card">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-semibold">RugCheck Risk Score</span>
+                      </div>
+                      <Badge className={getRiskLevelColor(securityData.risks[0].level)}>
+                        {formatRiskScore(securityData.risks[0].score)}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Risk Level: <span className="font-medium capitalize">{securityData.risks[0].level}</span>
+                    </p>
+                  </div>
+                )}
+
+                {goPlusData && (
+                  <>
+                    <div className="border border-border rounded-lg p-3 bg-card">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="w-4 h-4 text-warning" />
+                        <span className="text-sm font-semibold">Honeypot & Scam Detection</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {goPlusData.is_honeypot && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Honeypot:</span>
+                            <Badge className={
+                              goPlusData.is_honeypot === '1' 
+                                ? 'bg-destructive text-destructive-foreground' 
+                                : 'bg-success text-success-foreground'
+                            }>
+                              {getHoneypotStatus(goPlusData.is_honeypot).text}
+                            </Badge>
+                          </div>
+                        )}
+                        {goPlusData.is_airdrop_scam && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Airdrop Scam:</span>
+                            <Badge className={
+                              goPlusData.is_airdrop_scam === '1' 
+                                ? 'bg-destructive text-destructive-foreground' 
+                                : 'bg-success text-success-foreground'
+                            }>
+                              {goPlusData.is_airdrop_scam === '1' ? 'Yes' : 'No'}
+                            </Badge>
+                          </div>
+                        )}
+                        {goPlusData.fake_token?.is_fake_token && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Fake Token:</span>
+                            <Badge className={
+                              goPlusData.fake_token.is_fake_token === '1' 
+                                ? 'bg-destructive text-destructive-foreground' 
+                                : 'bg-success text-success-foreground'
+                            }>
+                              {goPlusData.fake_token.is_fake_token === '1' ? 'Yes' : 'No'}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="border border-border rounded-lg p-3 bg-card">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Droplets className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-semibold">Trading Taxes</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {goPlusData.buy_tax && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Buy Tax:</span>
+                            <Badge className={getTaxLevel(goPlusData.buy_tax).status === 'danger' 
+                              ? 'bg-destructive text-destructive-foreground' 
+                              : getTaxLevel(goPlusData.buy_tax).status === 'warning'
+                              ? 'bg-warning text-warning-foreground'
+                              : 'bg-success text-success-foreground'
+                            }>
+                              {getTaxLevel(goPlusData.buy_tax).text}
+                            </Badge>
+                          </div>
+                        )}
+                        {goPlusData.sell_tax && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Sell Tax:</span>
+                            <Badge className={getTaxLevel(goPlusData.sell_tax).status === 'danger' 
+                              ? 'bg-destructive text-destructive-foreground' 
+                              : getTaxLevel(goPlusData.sell_tax).status === 'warning'
+                              ? 'bg-warning text-warning-foreground'
+                              : 'bg-success text-success-foreground'
+                            }>
+                              {getTaxLevel(goPlusData.sell_tax).text}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="border border-border rounded-lg p-3 bg-card">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Lock className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-semibold">Contract Analysis</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {goPlusData.is_open_source && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Open Source:</span>
+                            <Badge className={goPlusData.is_open_source === '1' ? 'bg-success text-success-foreground' : 'bg-muted text-muted-foreground'}>
+                              {goPlusData.is_open_source === '1' ? 'Yes' : 'No'}
+                            </Badge>
+                          </div>
+                        )}
+                        {goPlusData.is_proxy && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Proxy Contract:</span>
+                            <Badge className={goPlusData.is_proxy === '1' ? 'bg-warning text-warning-foreground' : 'bg-success text-success-foreground'}>
+                              {goPlusData.is_proxy === '1' ? 'Yes' : 'No'}
+                            </Badge>
+                          </div>
+                        )}
+                        {goPlusData.is_mintable && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Mintable:</span>
+                            <Badge className={goPlusData.is_mintable === '1' ? 'bg-warning text-warning-foreground' : 'bg-success text-success-foreground'}>
+                              {goPlusData.is_mintable === '1' ? 'Yes' : 'No'}
+                            </Badge>
+                          </div>
+                        )}
+                        {goPlusData.can_take_back_ownership && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Can Take Back Ownership:</span>
+                            <Badge className={goPlusData.can_take_back_ownership === '1' ? 'bg-destructive text-destructive-foreground' : 'bg-success text-success-foreground'}>
+                              {goPlusData.can_take_back_ownership === '1' ? 'Yes' : 'No'}
+                            </Badge>
+                          </div>
+                        )}
+                        {goPlusData.transfer_pausable && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Transfer Pausable:</span>
+                            <Badge className={goPlusData.transfer_pausable === '1' ? 'bg-warning text-warning-foreground' : 'bg-success text-success-foreground'}>
+                              {goPlusData.transfer_pausable === '1' ? 'Yes' : 'No'}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {(goPlusData.creator_percent || goPlusData.owner_percent) && (
+                      <div className="border border-border rounded-lg p-3 bg-card">
+                        <div className="flex items-center gap-2 mb-2">
+                          <User className="w-4 h-4 text-primary" />
+                          <span className="text-sm font-semibold">Creator & Owner Holdings</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {goPlusData.creator_percent && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Creator Holdings:</span>
+                              <span className="font-mono">{(parseFloat(goPlusData.creator_percent) * 100).toFixed(2)}%</span>
+                            </div>
+                          )}
+                          {goPlusData.creator_balance && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Creator Balance:</span>
+                              <span className="font-mono">{formatNumber(parseFloat(goPlusData.creator_balance))}</span>
+                            </div>
+                          )}
+                          {goPlusData.owner_percent && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Owner Holdings:</span>
+                              <span className="font-mono">{(parseFloat(goPlusData.owner_percent) * 100).toFixed(2)}%</span>
+                            </div>
+                          )}
+                          {goPlusData.owner_balance && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Owner Balance:</span>
+                              <span className="font-mono">{formatNumber(parseFloat(goPlusData.owner_balance))}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {securityData && (
+                  <div className="border border-border rounded-lg p-3 bg-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Lock className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-semibold">Authority Status</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Mint Authority:</span>
+                        <Badge className={securityData.mintAuthority ? 'bg-warning text-warning-foreground' : 'bg-success text-success-foreground'}>
+                          {securityData.mintAuthority ? 'Active' : 'Revoked'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Freeze Authority:</span>
+                        <Badge className={securityData.freezeAuthority ? 'bg-warning text-warning-foreground' : 'bg-success text-success-foreground'}>
+                          {securityData.freezeAuthority ? 'Active' : 'Revoked'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {securityData?.markets?.[0]?.lp && (
+                  <div className="border border-border rounded-lg p-3 bg-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Droplets className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-semibold">Liquidity Pool</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">LP Locked:</span>
+                        <span className="font-mono">{securityData.markets[0].lp.lpLockedPct?.toFixed(2)}%</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">LP Burned:</span>
+                        <span className="font-mono">{securityData.markets[0].lp.lpBurnedPct?.toFixed(2)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
 
-        {/* Bottom - Token Info */}
-        <div className="px-3 py-1 pb-16 flex flex-col gap-1 bg-background flex-shrink-0">
-          {/* Price Info & Actions - Single Row */}
-          <div className="mb-0.5 flex items-center justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="text-2xl font-bold text-foreground leading-tight truncate">
+        <div className="flex-shrink-0 border-t border-border bg-background">
+          <div className="grid grid-cols-4 gap-1 p-2 text-[10px]">
+            <div className="text-center">
+              <div className="text-muted-foreground">Market Cap</div>
+              <div className="font-bold text-foreground">{formatCurrency(token.marketCap)}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-muted-foreground">Volume</div>
+              <div className="font-bold text-foreground">{formatCurrency(token.volume24h)}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-muted-foreground">Liquidity</div>
+              <div className="font-bold text-foreground">{formatCurrency(token.liquidity)}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-muted-foreground">Chain</div>
+              <div className="font-bold text-foreground">{token.chain || 'Solana'}</div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-2 gap-2">
+            <div className="flex-1">
+              <div className="text-lg font-bold text-foreground">
                 {formatPrice(currentPrice)}
               </div>
-              <div className={`text-xs font-semibold ${priceChange >= 0 ? 'text-positive' : 'text-negative'}`}>
-                {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}% (24h)
+              <div className={`text-xs font-medium ${isPositive ? 'text-success' : 'text-destructive'}`}>
+                {isPositive ? '+' : ''}{priceChange.toFixed(2)}%
               </div>
             </div>
             
-            {/* Action Buttons - Horizontal */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <button
-                onClick={toggleLike}
-                className="flex flex-col items-center gap-0.5 min-w-[40px] transition-transform hover:scale-110"
+            <div className="flex gap-1.5">
+              <Button 
+                size="sm" 
+                onClick={() => setShowBuyDrawer(true)}
+                className="bg-success text-success-foreground hover:bg-success/90 h-9 px-4"
               >
-                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center transition-all hover:bg-primary/10 hover:border-primary/50">
-                  <Sparkles 
-                    className={`w-3.5 h-3.5 transition-all ${isLiked ? 'fill-primary text-primary' : 'text-foreground'}`} 
-                  />
-                </div>
-                <span className="text-[9px] font-medium text-foreground">{likeCount}</span>
-              </button>
-
-              <button
-                onClick={() => setShowComments(true)}
-                className="flex flex-col items-center gap-0.5 min-w-[40px] transition-transform hover:scale-110"
+                Buy
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setShowSellDrawer(true)}
+                className="h-9 px-4"
               >
-                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center transition-all hover:bg-primary/10 hover:border-primary/50">
-                  <MessageSquare className="w-3.5 h-3.5 text-foreground" />
-                </div>
-                <span className="text-[9px] font-medium text-foreground">{comments.length}</span>
-              </button>
-
-              <button
+                Sell
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={handleLike}
+                className={`h-9 w-9 ${isLiked ? 'text-destructive' : 'text-muted-foreground'}`}
+              >
+                <Sparkles className="h-4 w-4" fill={isLiked ? 'currentColor' : 'none'} />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={handleComment}
+                className="h-9 w-9 text-muted-foreground relative"
+              >
+                <MessageSquare className="h-4 w-4" />
+                {comments.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                    {comments.length}
+                  </span>
+                )}
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
                 onClick={handleFavorite}
-                className="flex flex-col items-center gap-0.5 min-w-[40px] transition-transform hover:scale-110"
+                className={`h-9 w-9 ${isTokenFavorited ? 'text-warning' : 'text-muted-foreground'}`}
               >
-                <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center transition-all hover:bg-primary/10 hover:border-primary/50">
-                  <Star 
-                    className={`w-3.5 h-3.5 transition-all ${isTokenFavorited ? 'fill-primary text-primary' : 'text-foreground'}`} 
-                  />
-                </div>
-                <span className="text-[9px] font-medium text-foreground">Save</span>
-              </button>
+                <Star className="h-4 w-4" fill={isTokenFavorited ? 'currentColor' : 'none'} />
+              </Button>
             </div>
-          </div>
-
-          {/* Stats Grid - Compact */}
-          <div className="space-y-0.5 mb-0.5">
-            <div className="grid grid-cols-2 gap-1">
-              <div className="bg-secondary rounded p-1">
-                <div className="text-[9px] text-muted-foreground">MCap</div>
-                <div className="text-[11px] font-bold text-foreground truncate">
-                  {formatCurrency(token.marketCap)}
-                </div>
-              </div>
-              <div className="bg-secondary rounded p-1">
-                <div className="text-[9px] text-muted-foreground">Vol 24h</div>
-                <div className="text-[11px] font-bold text-foreground truncate">
-                  {formatCurrency(token.volume24h)}
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-1">
-              <div className="bg-secondary rounded p-1">
-                <div className="text-[9px] text-muted-foreground">Liq</div>
-                <div className="text-[11px] font-bold text-foreground truncate">
-                  {formatCurrency(token.liquidity)}
-                </div>
-              </div>
-              <div className="bg-secondary rounded p-1">
-                <div className="text-[9px] text-muted-foreground">Chain</div>
-                <div className="text-[11px] font-bold text-foreground truncate">
-                  {token.chain}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons - Compact */}
-          <div className="grid grid-cols-2 gap-1.5">
-            <Button 
-              onClick={() => setShowBuyDrawer(true)}
-              size="sm"
-              className="bg-success hover:bg-success/90 text-success-foreground font-bold text-xs h-8"
-            >
-              Buy
-            </Button>
-            <Button 
-              onClick={() => setShowSellDrawer(true)}
-              size="sm"
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold text-xs h-8"
-            >
-              Sell
-            </Button>
           </div>
         </div>
-
       </div>
 
       <QuickTradeDrawer
+        open={showBuyDrawer}
+        onClose={() => setShowBuyDrawer(false)}
         token={token}
         type="buy"
-        open={showBuyDrawer}
-        onOpenChange={setShowBuyDrawer}
       />
+
       <QuickTradeDrawer
+        open={showSellDrawer}
+        onClose={() => setShowSellDrawer(false)}
         token={token}
         type="sell"
-        open={showSellDrawer}
-        onOpenChange={setShowSellDrawer}
       />
+
       <CommentsDrawer
         open={showComments}
-        onOpenChange={setShowComments}
+        onClose={() => setShowComments(false)}
         tokenId={token.id}
         tokenSymbol={token.symbol}
       />
