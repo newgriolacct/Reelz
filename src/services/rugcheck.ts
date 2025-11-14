@@ -64,6 +64,14 @@ interface RugCheckResponse {
   totalSupply?: number;
   circulatingSupply?: number;
   lockers?: Locker[];
+  deployer?: string;
+  insiderPercentage?: number;
+  marketCapRank?: number;
+  tokenProgram?: string;
+  fileMeta?: {
+    image?: string;
+    description?: string;
+  };
 }
 
 const API_BASE = 'https://api.rugcheck.xyz/v1';

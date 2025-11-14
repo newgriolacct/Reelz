@@ -15,6 +15,7 @@ import pumpfunIcon from "@/assets/pumpfun-icon.png";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { fetchTokenTransactions, fetchTokenHolders } from "@/services/solscan";
 import { fetchRugCheckData, getRiskLevelColor, formatRiskScore } from "@/services/rugcheck";
+import { fetchGoPlusSecurityData, getHoneypotStatus, getTaxLevel } from "@/services/goplus";
 import { formatDistanceToNow } from "date-fns";
 
 interface TokenCardProps {
@@ -36,6 +37,7 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   const [holders, setHolders] = useState<any[]>([]);
   const [loadingHolders, setLoadingHolders] = useState(false);
   const [securityData, setSecurityData] = useState<any>(null);
+  const [goPlusData, setGoPlusData] = useState<any>(null);
   const [loadingSecurity, setLoadingSecurity] = useState(false);
   const [activeTab, setActiveTab] = useState('chart');
   const [currentPrice, setCurrentPrice] = useState(token.price);
@@ -126,10 +128,17 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
   };
 
   const loadSecurity = async () => {
-    if (securityData || !token.contractAddress || loadingSecurity) return;
+    if ((securityData && goPlusData) || !token.contractAddress || loadingSecurity) return;
     setLoadingSecurity(true);
-    const data = await fetchRugCheckData(token.contractAddress);
-    setSecurityData(data);
+    
+    // Fetch from both APIs in parallel
+    const [rugCheckData, goPlusSecurityData] = await Promise.all([
+      fetchRugCheckData(token.contractAddress),
+      fetchGoPlusSecurityData(token.contractAddress)
+    ]);
+    
+    setSecurityData(rugCheckData);
+    setGoPlusData(goPlusSecurityData);
     setLoadingSecurity(false);
   };
 
@@ -433,10 +442,10 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
               </div>
-            ) : securityData ? (
+            ) : securityData || goPlusData ? (
               <div className="p-3 space-y-3">
                 {/* Overall Security Score */}
-                {securityData.risks && securityData.risks.length > 0 && (
+                {securityData?.risks && securityData.risks.length > 0 && (
                   <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-4 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -453,10 +462,170 @@ export const TokenCard = ({ token, onLike, onComment, onBookmark, isEagerLoad = 
                   </div>
                 )}
 
-                {/* Authority Status */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Authority Status</h4>
-                  <div className="grid gap-2">
+                {/* GoPlus - Honeypot & Scam Detection */}
+                {goPlusData && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Scam Detection (GoPlus)</h4>
+                    <div className="grid gap-2">
+                      {goPlusData.is_honeypot && (
+                        <div className={`p-3 rounded-lg flex items-center justify-between ${getHoneypotStatus(goPlusData.is_honeypot).status === 'danger' ? 'bg-destructive/10 border border-destructive/20' : 'bg-success/10 border border-success/20'}`}>
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className={`w-4 h-4 ${getHoneypotStatus(goPlusData.is_honeypot).status === 'danger' ? 'text-destructive' : 'text-success'}`} />
+                            <span className="text-xs">Honeypot Check</span>
+                          </div>
+                          <Badge variant="outline" className={`text-[9px] ${getHoneypotStatus(goPlusData.is_honeypot).status === 'danger' ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-success/10 text-success border-success/20'}`}>
+                            {getHoneypotStatus(goPlusData.is_honeypot).text}
+                          </Badge>
+                        </div>
+                      )}
+                      {goPlusData.is_airdrop_scam === '1' && (
+                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4 text-destructive" />
+                            <span className="text-xs">Airdrop Scam</span>
+                          </div>
+                          <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
+                            Detected
+                          </Badge>
+                        </div>
+                      )}
+                      {goPlusData.fake_token?.is_fake_token === '1' && (
+                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg">
+                          <div className="flex items-center gap-2 mb-1">
+                            <AlertTriangle className="w-4 h-4 text-destructive" />
+                            <span className="text-xs font-semibold">Fake Token Warning</span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            {goPlusData.fake_token.value || 'This may be a counterfeit token'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* GoPlus - Tax Information */}
+                {goPlusData && (goPlusData.buy_tax || goPlusData.sell_tax) && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Trading Taxes (GoPlus)</h4>
+                    <div className="grid gap-2">
+                      {goPlusData.buy_tax && (
+                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Buy Tax</span>
+                          <Badge variant={getTaxLevel(goPlusData.buy_tax).status === 'danger' ? 'destructive' : getTaxLevel(goPlusData.buy_tax).status === 'warning' ? 'outline' : 'secondary'} className="text-[9px]">
+                            {getTaxLevel(goPlusData.buy_tax).text}
+                          </Badge>
+                        </div>
+                      )}
+                      {goPlusData.sell_tax && (
+                        <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Sell Tax</span>
+                          <Badge variant={getTaxLevel(goPlusData.sell_tax).status === 'danger' ? 'destructive' : getTaxLevel(goPlusData.sell_tax).status === 'warning' ? 'outline' : 'secondary'} className="text-[9px]">
+                            {getTaxLevel(goPlusData.sell_tax).text}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* GoPlus - Contract Risks */}
+                {goPlusData && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contract Analysis (GoPlus)</h4>
+                    <div className="space-y-2">
+                      {goPlusData.is_open_source === '0' && (
+                        <div className="bg-warning/10 border border-warning/20 p-3 rounded-lg flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-warning" />
+                          <span className="text-xs">Contract not open source</span>
+                        </div>
+                      )}
+                      {goPlusData.is_proxy === '1' && (
+                        <div className="bg-warning/10 border border-warning/20 p-3 rounded-lg flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-warning" />
+                          <span className="text-xs">Proxy contract detected</span>
+                        </div>
+                      )}
+                      {goPlusData.is_mintable === '1' && (
+                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-destructive" />
+                          <span className="text-xs">Token is mintable (can create more tokens)</span>
+                        </div>
+                      )}
+                      {goPlusData.transfer_pausable === '1' && (
+                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-destructive" />
+                          <span className="text-xs">Transfers can be paused by owner</span>
+                        </div>
+                      )}
+                      {goPlusData.cannot_sell_all === '1' && (
+                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-destructive" />
+                          <span className="text-xs">Cannot sell all tokens at once</span>
+                        </div>
+                      )}
+                      {goPlusData.trading_cooldown === '1' && (
+                        <div className="bg-warning/10 border border-warning/20 p-3 rounded-lg flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-warning" />
+                          <span className="text-xs">Trading cooldown active</span>
+                        </div>
+                      )}
+                      {goPlusData.is_anti_whale === '1' && (
+                        <div className="bg-secondary p-3 rounded-lg flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-success" />
+                          <span className="text-xs">Anti-whale mechanism enabled</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Authority Status - RugCheck */}
+                {securityData && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Authority Status (RugCheck)</h4>
+                    <div className="grid gap-2">
+                      <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-xs">Mint Authority</span>
+                        </div>
+                        {securityData.mintAuthority ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
+                              ⚠️ Active - High Risk
+                            </Badge>
+                            <span className="text-[8px] text-muted-foreground">Can mint unlimited tokens</span>
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            Revoked
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-xs">Freeze Authority</span>
+                        </div>
+                        {securityData.freezeAuthority ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
+                              ⚠️ Active - High Risk
+                            </Badge>
+                            <span className="text-[8px] text-muted-foreground">Can freeze user wallets</span>
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/20">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            Revoked
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
                     <div className="bg-secondary p-3 rounded-lg flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Lock className="w-4 h-4 text-muted-foreground" />
