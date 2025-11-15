@@ -167,10 +167,24 @@ const Index = () => {
         const clientHeight = container.clientHeight;
         const windowHeight = window.innerHeight;
         
-        // Update current token
-        const currentIndex = Math.round(scrollTop / windowHeight);
-        if (currentTokens[currentIndex]) {
-          setCurrentTokenId(currentTokens[currentIndex].id);
+        // Update current token - account for pinned token
+        let currentIndex = Math.round(scrollTop / windowHeight);
+        
+        // If we have a pinned token, adjust index
+        if (pinnedToken) {
+          if (currentIndex === 0) {
+            setCurrentTokenId(pinnedToken.id);
+          } else {
+            // Subtract 1 because pinned token is at index 0
+            const feedIndex = currentIndex - 1;
+            if (currentTokens[feedIndex]) {
+              setCurrentTokenId(currentTokens[feedIndex].id);
+            }
+          }
+        } else {
+          if (currentTokens[currentIndex]) {
+            setCurrentTokenId(currentTokens[currentIndex].id);
+          }
         }
         
         // Load when scrolled past 75% OR within 4 tokens of bottom
@@ -208,13 +222,27 @@ const Index = () => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
+    // Check if clicking on the pinned token
+    if (pinnedToken && tokenId === pinnedToken.id) {
+      container.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+      return;
+    }
+
     // Check if token is in the scrolling feed
     const tokenIndex = tokens.findIndex(t => t.id === tokenId);
     
     if (tokenIndex !== -1) {
       // Token exists in feed, scroll to it
+      // Add 1 to account for pinned token at the top
+      const scrollPosition = pinnedToken 
+        ? (tokenIndex + 1) * window.innerHeight 
+        : tokenIndex * window.innerHeight;
+      
       container.scrollTo({
-        top: tokenIndex * window.innerHeight,
+        top: scrollPosition,
         behavior: 'smooth'
       });
     } else {
@@ -224,10 +252,11 @@ const Index = () => {
       if (trendingToken) {
         setTokens(prev => [trendingToken, ...prev]);
         setSeenTokenIds(prev => new Set([...prev, tokenId]));
-        // Scroll to top after a short delay to let React update
+        // Scroll to position after pinned token
         setTimeout(() => {
+          const scrollPosition = pinnedToken ? window.innerHeight : 0;
           container.scrollTo({
-            top: 0,
+            top: scrollPosition,
             behavior: 'smooth'
           });
         }, 100);
