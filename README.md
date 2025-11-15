@@ -1,73 +1,43 @@
-# Welcome to your Lovable project
+Reelz
 
-## Project info
+Reelz is a TikTok-style app built for crypto traders. It delivers short, fast, scrollable crypto chart videos that help users spot trends, discover new tokens, and follow market movements in real time. No noise, no confusion — just pure market action in a format everyone already loves.
 
-**URL**: https://lovable.dev/projects/cf32d78b-4233-47fe-93a4-28a5bb2aec58
+Features
 
-## How can I edit this code?
+Vertical, swipe-based feed similar to TikTok
 
-There are several ways of editing your application.
+Auto-generated short videos of live crypto charts
 
-**Use Lovable**
+Trending and most-viewed tokens updated in real time
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/cf32d78b-4233-47fe-93a4-28a5bb2aec58) and start prompting.
+Token pages showing charts, info, and quick analytics
 
-Changes made via Lovable will be committed automatically to this repo.
+Custom feed based on watch history and preferences
 
-**Use your preferred IDE**
+Fast and lightweight backend optimized for high-volume traffic
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+How It Works
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+The backend fetches market data from top APIs.
 
-Follow these steps:
+Charts are processed into short video clips.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+The mobile UI displays these clips in a swipeable vertical feed.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Users interact by liking, sharing, saving, or opening token details.
 
-# Step 3: Install the necessary dependencies.
-npm i
+Why Reelz
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+Crypto charts are boring for most people — Reelz turns them into something fun, addictive, and easy to consume. It bridges trading and social-style content, letting users explore the market visually without reading endless charts and data tables.
 
-**Edit a file directly in GitHub**
+Tech Stack
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Frontend: React Native
 
-**Use GitHub Codespaces**
+Backend: Node.js
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Database: PostgreSQL
 
-## What technologies are used for this project?
+Market Data APIs: (GMGN, Bullx, or other supported providers)
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/cf32d78b-4233-47fe-93a4-28a5bb2aec58) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Video Rendering: FFmpeg based pipeline
