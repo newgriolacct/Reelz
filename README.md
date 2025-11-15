@@ -1,5 +1,3 @@
-Reelz
-
 Reelz is a TikTok-style app built for crypto traders. It delivers short, fast, scrollable crypto chart videos that help users spot trends, discover new tokens, and follow market movements in real time. No noise, no confusion — just pure market action in a format everyone already loves.
 
 Features
